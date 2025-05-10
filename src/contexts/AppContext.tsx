@@ -2,7 +2,7 @@
 "use client";
 
 import type { ReactNode } from 'react';
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { Theme } from './ThemeContext'; // Ensure Theme type is available if needed, though direct theme setting is removed here.
 
 export type Faction = 'Cyphers' | 'Shadows' | 'Observer';
@@ -74,11 +74,11 @@ function generateDailyTeamCode(): string {
 
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [faction, setFactionState] = useState<Faction>('Observer');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [playerSpyName, setPlayerSpyName] = useState<string | null>(null);
-  const [playerPiName, setPlayerPiName] = useState<string | null>(null);
-  const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>('welcome');
+  const [faction, _setFaction] = useState<Faction>('Observer');
+  const [isAuthenticated, _setIsAuthenticated] = useState(false);
+  const [playerSpyName, _setPlayerSpyName] = useState<string | null>(null);
+  const [playerPiName, _setPlayerPiName] = useState<string | null>(null);
+  const [onboardingStep, _setOnboardingStep] = useState<OnboardingStep>('welcome');
   const [isPiBrowser, setIsPiBrowser] = useState(false);
   const [playerStats, setPlayerStats] = useState<PlayerStats>({
     xp: 0,
@@ -87,49 +87,63 @@ export function AppProvider({ children }: { children: ReactNode }) {
     elintTransferred: 0,
   });
   const [dailyTeamCode, setDailyTeamCode] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, _setIsLoading] = useState(true);
   const [messages, setMessages] = useState<GameMessage[]>([]);
 
   useEffect(() => {
     // Simulate Pi Browser detection
-    // In a real app, this would involve checking window.Pi or similar
-    const inPiBrowser = navigator.userAgent.includes("PiBrowser"); // Basic check
+    const inPiBrowser = navigator.userAgent.includes("PiBrowser"); 
     setIsPiBrowser(inPiBrowser);
     
     setDailyTeamCode(generateDailyTeamCode());
-    setIsLoading(false); 
+    _setIsLoading(false); 
   }, []);
 
-  const setFaction = (newFaction: Faction) => {
-    setFactionState(newFaction);
-    // Theme changes are handled by ThemeUpdater component which listens to `faction`
-  };
+  const setFaction = useCallback((newFaction: Faction) => {
+    _setFaction(newFaction);
+  }, []);
 
-  const updatePlayerStats = (newStats: Partial<PlayerStats>) => {
+  const setIsAuthenticated = useCallback((auth: boolean) => {
+    _setIsAuthenticated(auth);
+  }, []);
+
+  const setPlayerSpyName = useCallback((name: string | null) => {
+    _setPlayerSpyName(name);
+  }, []);
+
+  const setPlayerPiName = useCallback((name: string | null) => {
+    _setPlayerPiName(name);
+  }, []);
+
+  const setOnboardingStep = useCallback((step: OnboardingStep) => {
+    _setOnboardingStep(step);
+  }, []);
+
+  const setIsLoading = useCallback((loading: boolean) => {
+    _setIsLoading(loading);
+  }, []);
+
+  const updatePlayerStats = useCallback((newStats: Partial<PlayerStats>) => {
     setPlayerStats(prevStats => ({ ...prevStats, ...newStats }));
-  };
+  }, []);
 
-  const addXp = (amount: number) => {
-    // TODO: Implement level up logic based on XP thresholds
-    // For now, just add XP
-    const newXp = playerStats.xp + amount;
-    updatePlayerStats({ xp: newXp });
-    // Add XP float animation trigger here if needed
-    addMessage({ text: `+${amount} XP`, type: 'notification'});
-  };
-
-  const addMessage = (message: Omit<GameMessage, 'id' | 'timestamp'>) => {
+  const addMessage = useCallback((message: Omit<GameMessage, 'id' | 'timestamp'>) => {
     const newMessage: GameMessage = {
       ...message,
-      id: Date.now().toString() + Math.random().toString(), // simple unique id
+      id: Date.now().toString() + Math.random().toString(), 
       timestamp: new Date(),
     };
     setMessages(prev => {
       const newMessages = [newMessage, ...prev.filter(m => !m.isPinned)];
       const pinnedMessages = prev.filter(m => m.isPinned);
-      return [...pinnedMessages, ...newMessages.slice(0, 50 - pinnedMessages.length)]; // Keep max 50 messages
+      return [...pinnedMessages, ...newMessages.slice(0, 50 - pinnedMessages.length)]; 
     });
-  };
+  }, []);
+
+  const addXp = useCallback((amount: number) => {
+    setPlayerStats(prevStats => ({ ...prevStats, xp: prevStats.xp + amount }));
+    addMessage({ text: `+${amount} XP`, type: 'notification'});
+  }, [addMessage]);
 
 
   return (
