@@ -4,7 +4,6 @@
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { Theme } from './ThemeContext';
-import { useTheme } from './ThemeContext';
 
 export type Faction = 'Cyphers' | 'Shadows' | 'Observer';
 export type OnboardingStep = 'welcome' | 'factionChoice' | 'authPrompt' | 'fingerprint' | 'tod';
@@ -90,8 +89,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [dailyTeamCode, setDailyTeamCode] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [messages, setMessages] = useState<GameMessage[]>([]);
-
-  const { setTheme: applyTheme } = useTheme();
 
   useEffect(() => {
     // Simulate Pi Browser detection

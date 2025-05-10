@@ -5,15 +5,11 @@ import { GeistMono } from 'geist/font/mono';
 import './globals.css';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AppProvider } from '@/contexts/AppContext';
+import { ThemeUpdater } from '@/components/theme-updater';
 import { Toaster } from "@/components/ui/toaster";
 
-const geistSans = GeistSans({
-  variable: '--font-geist-sans',
-});
-
-const geistMono = GeistMono({
-  variable: '--font-geist-mono',
-});
+const geistSans = GeistSans;
+const geistMono = GeistMono;
 
 const orbitron = Orbitron({
   subsets: ['latin'],
@@ -44,14 +40,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark"> {/* Force dark class for holographic theme */}
+    <html lang="en" className="dark">
       <body 
-        className={`${geistSans.variable} ${geistMono.variable} ${orbitron.variable} ${exo2.variable} ${rajdhani.variable} antialiased bg-background text-foreground`}
-      >
+        className={`${geistSans.className} ${geistSans.variable} ${geistMono.className} ${geistMono.variable} ${orbitron.variable} ${exo2.variable} ${rajdhani.variable} antialiased bg-background text-foreground`}>
         <AppProvider>
-          <ThemeProvider>
+          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
             {children}
-            <Toaster />
+            <ThemeUpdater />
           </ThemeProvider>
         </AppProvider>
       </body>

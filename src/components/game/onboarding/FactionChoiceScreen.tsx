@@ -1,56 +1,75 @@
 
 "use client";
 import { useState } from 'react';
+import { HolographicPanel } from '../shared/HolographicPanel';
 import type { Dispatch, SetStateAction } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import type { Faction } from '@/contexts/AppContext';
-import { HolographicPanel, HolographicButton } from '@/components/game/shared/HolographicPanel';
+import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Code, Eye, ShieldQuestion } from 'lucide-react'; // Example icons
+import { Code, Eye, ShieldQuestion, Fingerprint } from 'lucide-react'; // Example icons // Added Fingerprint for completeness if needed
 
 interface FactionChoiceScreenProps {
   setShowAuthPrompt: Dispatch<SetStateAction<boolean>>;
 }
 
 export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenProps) {
-  const { setFaction, setOnboardingStep, isPiBrowser, setIsAuthenticated, setPlayerSpyName, setPlayerPiName } = useAppContext();
+  const { 
+    setFaction: setAppContextFaction, 
+    setOnboardingStep, 
+    isPiBrowser, 
+    setIsAuthenticated, 
+    setPlayerSpyName, 
+    setPlayerPiName 
+  } = useAppContext();
+  const { setTheme } = useTheme();
   const [selectedFaction, setSelectedFaction] = useState<Faction | null>(null);
 
   const handleFactionSelect = (faction: Faction) => {
     setSelectedFaction(faction);
+    setAppContextFaction(faction); // Update AppContext faction state
+    if (faction === 'Cyphers') {
+      setTheme('cyphers');
+    } else if (faction === 'Shadows') {
+      setTheme('shadows');
+    }
   };
 
   const handleJoinFaction = () => {
     if (!selectedFaction || selectedFaction === 'Observer') return;
 
-    if (isPiBrowser) {
-      // Simulate Pi Auth Success
-      console.log(`Initiating Pi Auth for ${selectedFaction}...`);
-      setTimeout(() => {
-        setIsAuthenticated(true);
-        setFaction(selectedFaction);
-        // Simulate getting Pi username and setting a default spy name
-        const piName = "PiUser" + Math.floor(Math.random() * 1000);
-        setPlayerPiName(piName);
-        setPlayerSpyName(`Agent${piName}`);
-        setOnboardingStep('fingerprint');
-      }, 1000);
-    } else {
-      setShowAuthPrompt(true);
+    // For local dev, bypass Pi auth logic shown in original comments
+    // if (!isPiBrowser) {
+    //   setShowAuthPrompt(true);
+    //   return;
+    // }
+
+    const piName = "DevBypassUser" + Math.floor(Math.random() * 1000); 
+
+    setIsAuthenticated(true);
+    setAppContextFaction(selectedFaction); // Corrected
+    if (selectedFaction === 'Cyphers') {
+      setTheme('cyphers');
+    } else if (selectedFaction === 'Shadows') {
+      setTheme('shadows');
     }
+    setPlayerPiName(piName);
+    setPlayerSpyName(`Agent-${piName.slice(-4)}`); // Simplified SpyName
+    setOnboardingStep('fingerprint');
   };
 
   const handleProceedAsObserver = () => {
-    setFaction('Observer');
-    setIsAuthenticated(false); // Observers are not "authenticated" in game terms
+    setAppContextFaction('Observer'); // Corrected
+    setIsAuthenticated(false); 
+    setTheme('cyphers'); // Observers use default/Cyphers theme
     setOnboardingStep('tod');
   };
   
   const factionDetails = {
     Cyphers: {
       tagline: "Information is Power. Decode the Network.",
-      theme: "theme-cyphers", // Class from globals.css
+      theme: "theme-cyphers", 
       icon: <Code className="w-12 h-12 mb-2 text-blue-400 icon-glow" />,
       color: "border-blue-500 hover:border-blue-400",
       primaryColorClass: "text-blue-400",
@@ -89,12 +108,15 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
       </div>
 
       {selectedFaction && selectedFaction !== 'Observer' && (
-        <HolographicButton 
-          className="w-full md:w-1/2 mx-auto text-lg py-3 mb-6 block"
+        <Button 
+          className={cn(
+            "w-full md:w-1/2 mx-auto text-lg py-3 mb-6 block holographic-button",
+            selectedFaction === 'Cyphers' ? "border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-primary-foreground" : "border-red-500 text-red-400 hover:bg-red-500 hover:text-primary-foreground"
+          )}
           onClick={handleJoinFaction}
         >
           {selectedFaction === 'Cyphers' ? "Join The Cyphers" : "Align with The Shadows"}
-        </HolographicButton>
+        </Button>
       )}
 
       <Button 
@@ -107,5 +129,3 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
     </HolographicPanel>
   );
 }
-
-    
