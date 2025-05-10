@@ -1,11 +1,11 @@
 
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { HolographicPanel, HolographicButton } from '@/components/game/shared/HolographicPanel';
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Settings, MessageSquare, User, BookOpen, Briefcase, Zap, Info, Wifi, CheckCircle } from 'lucide-react';
+import { Settings, MessageSquare, User, BookOpen, Briefcase, Zap, Info, Wifi, CheckCircle, Fingerprint } from 'lucide-react';
 import { MessageFeed } from '@/components/game/shared/MessageFeed';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -295,7 +295,7 @@ export function CommandCenterSection({ parallaxOffset, style }: SectionProps) {
 
   return (
     <div className="tod-section flex flex-col p-4 md:p-6 h-full overflow-hidden" style={style}>
-      <ScrollArea className="flex-grow h-full"> {/* Allows Command Center to be vertically scrollable */}
+      <ScrollArea className="flex-grow"> {/* Allows Command Center to be vertically scrollable, h-full might be redundant with flex-grow in a fixed height parent */}
         <div className="min-h-full flex flex-col">
           {/* Player Info Header */}
           <HolographicPanel className="mb-4 text-center">
@@ -369,6 +369,3 @@ export function CommandCenterSection({ parallaxOffset, style }: SectionProps) {
     </div>
   );
 }
-
-
-    
