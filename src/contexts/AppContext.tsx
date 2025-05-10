@@ -3,7 +3,7 @@
 
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { Theme } from './ThemeContext';
+import type { Theme } from './ThemeContext'; // Ensure Theme type is available if needed, though direct theme setting is removed here.
 
 export type Faction = 'Cyphers' | 'Shadows' | 'Observer';
 export type OnboardingStep = 'welcome' | 'factionChoice' | 'authPrompt' | 'fingerprint' | 'tod';
@@ -102,12 +102,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const setFaction = (newFaction: Faction) => {
     setFactionState(newFaction);
-    if (newFaction === 'Cyphers') {
-      applyTheme('cyphers');
-    } else if (newFaction === 'Shadows') {
-      applyTheme('shadows');
-    }
-    // Observer keeps current/default theme
+    // Theme changes are handled by ThemeUpdater component which listens to `faction`
   };
 
   const updatePlayerStats = (newStats: Partial<PlayerStats>) => {
