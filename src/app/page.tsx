@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { WelcomeScreen } from '@/components/game/onboarding/WelcomeScreen';
 import { FactionChoiceScreen } from '@/components/game/onboarding/FactionChoiceScreen';
@@ -12,7 +12,6 @@ import { SpyShopSection } from '@/components/game/tod/SpyShopSection';
 import { VaultSection } from '@/components/game/tod/VaultSection';
 import { ScannerSection } from '@/components/game/tod/ScannerSection';
 import { generateWelcomeMessage, type WelcomeMessageInput } from '@/ai/flows/welcome-message';
-import { Button } from '@/components/ui/button'; // For TOD navigation if needed
 import React from 'react';
 
 // Desired actual order: CommandCenter, Scanner, SpyShop, Vault
@@ -50,8 +49,7 @@ export default function HomePage() {
   useEffect(() => {
     if (onboardingStep === 'tod' && isAuthenticated) {
       setIsLoading(true);
-      // New user or first login of day logic
-      const isNewUser = !playerStats.xp && !playerStats.elintReserves; // Simple check
+      const isNewUser = !playerStats.xp && !playerStats.elintReserves; 
       
       if (isNewUser) {
         addMessage({
@@ -62,13 +60,12 @@ export default function HomePage() {
         addMessage({ text: `Daily Team Code: ${dailyTeamCode}`, type: 'system', isPinned: true });
         setIsLoading(false);
       } else {
-        // Returning user - AI welcome message
         const welcomeInput: WelcomeMessageInput = {
           playerName: playerSpyName || "Agent",
           faction: faction,
           elintReserves: playerStats.elintReserves,
-          networkActivity: "Medium", // Placeholder
-          vaultDefenses: "Holding", // Placeholder
+          networkActivity: "Medium", 
+          vaultDefenses: "Holding", 
         };
         generateWelcomeMessage(welcomeInput)
           .then(response => {
@@ -86,47 +83,66 @@ export default function HomePage() {
   }, [onboardingStep, isAuthenticated, playerSpyName, faction, playerStats, addMessage, dailyTeamCode, setIsLoading]);
 
 
-  const handleScroll = () => {
+  const handleScroll = useCallback(() => {
     if (todContainerRef.current) {
       const scrollLeft = todContainerRef.current.scrollLeft;
       const scrollWidth = todContainerRef.current.scrollWidth;
-      const clientWidth = todContainerRef.current.clientWidth; // This is the viewport width for one section
+      const clientWidth = todContainerRef.current.clientWidth; 
 
       setParallaxOffset(scrollLeft);
 
-      // Looping logic
-      // clientWidth is the width of one TOD section (100vw)
+      if (clientWidth === 0) return; 
+
       if (scrollLeft <= 0.1) { 
-        // Scrolled to the visual start (clone of the last item: Vault-clone-start)
-        // Jump to the actual last item (Vault-actual).
-        // scrollWidth = (numActualSections + 2) * clientWidth. Here, numActualSections = 4. So, scrollWidth = 6 * clientWidth.
-        // ActualLast is at index 4 (0-indexed for 5th element). Its scrollLeft is 4 * clientWidth.
-        // Jump to: 6*clientWidth - 2*clientWidth + 1 = 4*clientWidth + 1. Correctly lands at start of Vault-actual.
         todContainerRef.current.scrollLeft = scrollWidth - (2 * clientWidth) + 1; 
       } else if (scrollLeft >= scrollWidth - clientWidth - 0.1) {
-        // Scrolled to the visual end (clone of the first item: CommandCenter-clone-end)
-        // Jump to the actual first item (CommandCenter-actual).
-        // ActualFirst is at index 1. Its scrollLeft is 1 * clientWidth.
-        // Jump to: clientWidth - 1. Correctly lands at start of CommandCenter-actual.
         todContainerRef.current.scrollLeft = clientWidth - 1;
       }
     }
-  };
+  }, []); // setParallaxOffset is stable
 
   useEffect(() => {
     const container = todContainerRef.current;
-    if (container && onboardingStep === 'tod') {
-      // Initial centering on Command Center (ActualFirst)
-      // Which is the second item in sectionComponents array (index 1)
-      container.scrollLeft = container.clientWidth; 
+    // Only setup scroll when TOD is active, not loading, and the container element exists.
+    if (onboardingStep === 'tod' && !isAppLoading && container) {
+      const setInitialScrollPosition = () => {
+        if (todContainerRef.current) { // Re-check ref in case of unmount during async operation
+          const currentContainer = todContainerRef.current;
+          // Each .tod-section is 100vw.
+          // The container's clientWidth should also be 100vw if it fills the screen.
+          const sectionWidth = currentContainer.clientWidth;
+
+          if (sectionWidth > 0) {
+            // Scroll to the second section (index 1, which is Command Center)
+            currentContainer.scrollLeft = sectionWidth;
+          } else {
+            // This case indicates a layout timing issue.
+            // Retry on the next animation frame if clientWidth is still not available.
+            console.warn("TOD container clientWidth is 0 during initial scroll setup. Retrying on next frame.");
+            requestAnimationFrame(() => {
+              if (todContainerRef.current) {
+                todContainerRef.current.scrollLeft = todContainerRef.current.clientWidth;
+              }
+            });
+          }
+        }
+      };
+
+      // Use requestAnimationFrame to ensure DOM is painted and dimensions are available.
+      const animationFrameId = requestAnimationFrame(setInitialScrollPosition);
+      
       container.addEventListener('scroll', handleScroll, { passive: true });
+
+      return () => {
+        cancelAnimationFrame(animationFrameId);
+        // Use the 'container' variable captured at effect run time for removal
+        // to avoid issues if todContainerRef.current changes.
+        if (container) { 
+          container.removeEventListener('scroll', handleScroll);
+        }
+      };
     }
-    return () => {
-      if (container) {
-        container.removeEventListener('scroll', handleScroll);
-      }
-    };
-  }, [onboardingStep]);
+  }, [onboardingStep, isAppLoading, handleScroll]);
 
 
   if (!isMounted || isAppLoading) {
@@ -161,28 +177,24 @@ export default function HomePage() {
     );
   }
   
-  // Desired actual order: CommandCenter, Scanner, SpyShop, Vault
-  // sectionComponents for looping: [Vault (clone), CC, Scanner, SpyShop, Vault, CC (clone)]
   const sectionComponents = [
-    <VaultSection key="vault-clone-start" parallaxOffset={parallaxOffset} />,        // Clone of ActualLast (Vault)
-    <CommandCenterSection key="command-center-actual" parallaxOffset={parallaxOffset} />,    // ActualFirst
-    <ScannerSection key="scanner-actual" parallaxOffset={parallaxOffset} />,                // ActualSecond
-    <SpyShopSection key="spy-shop-actual" parallaxOffset={parallaxOffset} />,                // ActualThird
-    <VaultSection key="vault-actual" parallaxOffset={parallaxOffset} />,                    // ActualFourth (ActualLast)
-    <CommandCenterSection key="command-center-clone-end" parallaxOffset={parallaxOffset} />, // Clone of ActualFirst (CommandCenter)
+    <VaultSection key="vault-clone-start" parallaxOffset={parallaxOffset} />,
+    <CommandCenterSection key="command-center-actual" parallaxOffset={parallaxOffset} />,
+    <ScannerSection key="scanner-actual" parallaxOffset={parallaxOffset} />,
+    <SpyShopSection key="spy-shop-actual" parallaxOffset={parallaxOffset} />,
+    <VaultSection key="vault-actual" parallaxOffset={parallaxOffset} />,
+    <CommandCenterSection key="command-center-clone-end" parallaxOffset={parallaxOffset} />,
   ];
-
 
   return (
     <main className="relative h-screen w-screen overflow-hidden">
-      <ParallaxBackground /> {/* Static background, z-index managed by component */}
+      <ParallaxBackground />
       
       <div 
         className="parallax-layer z-[5]" 
         style={{ 
           transform: `translateX(-${parallaxOffset * 0.5}px)`,
-          // Width should accommodate the parallax movement across all actual and cloned sections
-          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`, // adjusted for smoother parallax overscroll
+          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`, 
         }}
       >
         <div className="absolute inset-0 opacity-10" style={{
@@ -217,7 +229,6 @@ export default function HomePage() {
   );
 }
 
-// Helper for scrollbar hiding
 const scrollbarHideCss = `
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
@@ -231,10 +242,8 @@ if (typeof window !== 'undefined') {
   const styleSheet = document.createElement("style");
   styleSheet.type = "text/css";
   styleSheet.innerText = scrollbarHideCss;
-  // Check if already appended to prevent duplicates during HMR
   if (!document.head.querySelector('style[data-scrollbar-hide="true"]')) {
     styleSheet.setAttribute('data-scrollbar-hide', 'true');
     document.head.appendChild(styleSheet);
   }
 }
-
