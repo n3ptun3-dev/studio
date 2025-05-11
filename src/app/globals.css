@@ -8,25 +8,25 @@
     --theme-name: "cyphers";
     --background-hsl: 210 60% 8%; /* Darker blue for depth */
     --foreground-hsl: 200 100% 90%; /* Light blue/white text */
-    
+
     --primary-hsl: 204 100% 50%; /* Electric Blue #0077CC */
     --primary-foreground-hsl: 0 0% 100%; /* White */
-    
+
     --secondary-hsl: 195 53% 79%; /* Light Blue #ADD8E6 */
     --secondary-foreground-hsl: 210 60% 15%; /* Darker Blue for text on light blue */
-    
+
     --accent-hsl: 0 0% 100%; /* Glowing White */
     --accent-foreground-hsl: 204 100% 50%; /* Electric Blue for text on white */
 
     --muted-hsl: 210 40% 25%;
     --muted-foreground-hsl: 200 80% 70%;
-    
+
     --card-hsl: 210 50% 12%;
     --card-foreground-hsl: 200 100% 90%;
-    
+
     --popover-hsl: 210 50% 10%;
     --popover-foreground-hsl: 200 100% 90%;
-    
+
     --border-hsl: 204 100% 60%; /* Brighter blue for glowing borders */
     --input-hsl: 210 40% 30%;
     --ring-hsl: 204 100% 50%;
@@ -66,15 +66,15 @@
 
   .theme-shadows {
     --theme-name: "shadows";
-    --background-hsl: 0 60% 8%; 
+    --background-hsl: 0 60% 8%;
     --foreground-hsl: 0 0% 90%;
-    
+
     --primary-hsl: 0 100% 40%; /* Intense Red #CC0000 */
     --primary-foreground-hsl: 0 0% 100%;
-    
+
     --secondary-hsl: 16 100% 71%; /* Light Salmon #FFA07A */
     --secondary-foreground-hsl: 0 60% 15%;
-    
+
     --accent-hsl: 0 0% 100%;
     --accent-foreground-hsl: 0 100% 40%;
 
@@ -83,7 +83,7 @@
 
     --card-hsl: 0 50% 12%;
     --card-foreground-hsl: 0 0% 90%;
-    
+
     --popover-hsl: 0 50% 10%;
     --popover-foreground-hsl: 0 0% 90%;
 
@@ -119,7 +119,7 @@
     --border-hsl: 54 100% 60%;
     --ring-hsl: 54 100% 50%;
   }
-  
+
   /* Apply HSL variables to ShadCN CSS variables */
   :root, .theme-shadows, .theme-level-2-green, .theme-level-3-yellow {
     --background: hsl(var(--background-hsl));
@@ -228,6 +228,7 @@
 
 .font-rajdhani {
   font-family: var(--font-rajdhani);
+
 }
 
 .font-digital7 { /* For Digital-7 like appearance */
@@ -258,13 +259,14 @@
 
 @keyframes pulse {
   0%, 100% { opacity: 1; }
+
   50% { opacity: 0.5; }
+
 }
 
 /* TOD specific for horizontal scrolling */
 .tod-scroll-container {
   display: flex;
-  width: max-content; /* Allow it to be wider than screen */
   min-width: 100%;
   height: 100vh; /* Full viewport height */
   overflow-y: hidden; /* Prevent vertical scroll within this container */

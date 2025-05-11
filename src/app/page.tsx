@@ -120,27 +120,79 @@ export default function HomePage() {
   }, [setParallaxOffset, sectionComponents.length]); 
 
   useEffect(() => {
-    const container = todContainerRef.current;
-    if (onboardingStep === 'tod' && !isAppLoading && container) {
-      const setInitialScrollPosition = () => {
-        if (todContainerRef.current) { 
-          const currentContainer = todContainerRef.current;
-          const sectionWidth = currentContainer.clientWidth;
+    // This effect handles setting the initial scroll position and attaching/detaching the scroll listener.
+    // It should run when onboardingStep is 'tod' and the app is no longer loading and the component is mounted.
+    // We use setInterval to repeatedly attempt to set the scroll position until it's correct.
 
-          if (sectionWidth > 0) {
-            currentContainer.scrollLeft = sectionWidth; // Scroll to the second section (index 1: Command Center)
-          } else {
-            requestAnimationFrame(setInitialScrollPosition); // Retry if clientWidth is 0
-          }
+    let intervalId: NodeJS.Timeout | null = null;
+    const maxAttempts = 20; // Maximum number of attempts to set scroll
+    let attempts = 0;
+
+    const setInitialScrollPosition = () => {
+      const container = todContainerRef.current;
+      if (container && container.clientWidth > 0) {
+        const sectionWidth = container.clientWidth;
+        console.log(`Attempting to set initial scroll. clientWidth: ${sectionWidth}`);
+
+        // Log details of each section
+        const sectionElements = container.querySelectorAll('.tod-section');
+        console.log(`Scroll Width: ${container.scrollWidth}`);
+        sectionElements.forEach((element, index) => {
+          console.log(`Section ${index}: offsetLeft=${(element as HTMLElement).offsetLeft}, clientWidth=${(element as HTMLElement).clientWidth}`);
+        });
+
+        // The target scrollLeft is the offset of the Command Center section (index 1)
+        const targetScrollLeft = sectionWidth;
+
+        container.scrollLeft = targetScrollLeft;
+
+        // Check if scrollLeft is close to the target (allowing for potential floating point inaccuracies)
+        if (Math.abs(container.scrollLeft - targetScrollLeft) < 1) {
+          console.log(`Initial scroll successfully set to: ${container.scrollLeft}`);
+          // Stop attempting and attach the scroll listener
+          if (intervalId !== null) clearInterval(intervalId);
+          container.addEventListener('scroll', handleScroll, { passive: true });
+        } else if (attempts < maxAttempts) {
+          // If not successful and max attempts not reached, continue trying
+          console.log(`Initial scroll set to: ${container.scrollLeft}. Expected: ${targetScrollLeft}. Attempt ${attempts + 1}/${maxAttempts}. Retrying...`);
+          attempts++;
+        } else {
+          console.warn(`Failed to set initial scroll position after ${maxAttempts} attempts.`);
+          if (intervalId !== null) clearInterval(intervalId);
         }
-      };
-
-      const animationFrameId = requestAnimationFrame(setInitialScrollPosition);
-      container.addEventListener('scroll', handleScroll, { passive: true });
+      } else {
+        // If ref is not available yet, wait for the next render cycle with a small delay
+        const timeoutId = setTimeout(() => {
+          if (todContainerRef.current) {
+            attemptSetInitialScroll();
+          }
+        }, 50); // Small delay to allow ref to be available
+        return () => clearTimeout(timeoutId); // Cleanup the timeout if component unmounts
+      }
 
       return () => {
-        cancelAnimationFrame(animationFrameId);
-        if (container) { 
+        // Cleanup function for the effect
+        // Remove the scroll event listener
+        const container = todContainerRef.current;
+        if (container) {
+          container.removeEventListener('scroll', handleScroll);
+        }
+        // Clear the interval if it's active
+        if (intervalId !== null) {
+          clearInterval(intervalId);
+        }
+      };
+    };
+
+    // Start attempting to set the initial scroll position when the conditions are met
+    if (onboardingStep === 'tod' && !isAppLoading && isMounted) {
+      // Set an interval to repeatedly check and set the scroll position
+      intervalId = setInterval(setInitialScrollPosition, 50); // Attempt every 50ms
+
+      return () => {
+        // Cleanup: remove event listener and clear interval
+        const container = todContainerRef.current;
+        if (container) { // Check if container is still available on cleanup
           container.removeEventListener('scroll', handleScroll);
         }
       };
@@ -151,7 +203,7 @@ export default function HomePage() {
   if (!isMounted || isAppLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
-        <ParallaxBackground />
+        <ParallaxBackground parallaxOffset={parallaxOffset} />
         <div className="animate-pulse text-2xl font-orbitron holographic-text">INITIALIZING TOD...</div>
       </div>
     );
@@ -173,7 +225,7 @@ export default function HomePage() {
   if (onboardingStep !== 'tod') {
     return (
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground overflow-hidden">
-        <ParallaxBackground />
+        <ParallaxBackground parallaxOffset={parallaxOffset} />
         {renderOnboarding()}
         {showAuthPrompt && <AuthPromptModal onClose={() => setShowAuthPrompt(false)} />}
       </main>
@@ -182,7 +234,7 @@ export default function HomePage() {
   
   return (
     <main className="relative h-screen w-screen overflow-hidden">
-      <ParallaxBackground />
+      <ParallaxBackground parallaxOffset={parallaxOffset} />
       
       <div 
         className="parallax-layer z-[5]" 
@@ -213,6 +265,7 @@ export default function HomePage() {
         ref={todContainerRef} 
         className="tod-scroll-container absolute inset-0 z-10 overflow-x-auto overflow-y-hidden scrollbar-hide"
       >
+        {/* Inspect the CSS of this div and its parent elements in the browser dev tools for anything interfering with horizontal scrolling. */}
         {sectionComponents.map((SectionComponentInstance, index) => (
           <div key={SectionComponentInstance.key || `tod-section-${index}`} className="tod-section">
             {SectionComponentInstance}
