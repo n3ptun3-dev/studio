@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 
 interface SectionProps {
   parallaxOffset: number;
-  style?: React.CSSProperties;
+  // style?: React.CSSProperties; // Removed as it's no longer needed for root transform
 }
 
 const XP_LEVELS = [0, 100, 200, 400, 800, 1600, 3200, 6400, 12800]; // XP needed for next level
@@ -239,7 +239,7 @@ const EquipmentLockerInterface = () => <HolographicPanel className="h-full p-4">
 
 
 
-export function CommandCenterSection({ parallaxOffset, style }: SectionProps) {
+export function CommandCenterSection({ parallaxOffset }: SectionProps) {
   const { playerSpyName, faction, playerStats } = useAppContext();
   const [activeInfoView, setActiveInfoView] = useState<InfoAreaView>('networkTap');
   const [transferWindowActive, setTransferWindowActive] = useState(false);
@@ -294,8 +294,8 @@ export function CommandCenterSection({ parallaxOffset, style }: SectionProps) {
 
 
   return (
-    <div className="tod-section flex flex-col p-4 md:p-6 h-full overflow-hidden" style={style}>
-      <ScrollArea className="flex-grow"> {/* Allows Command Center to be vertically scrollable, h-full might be redundant with flex-grow in a fixed height parent */}
+    <div className="flex flex-col p-4 md:p-6 h-full overflow-hidden">
+      <ScrollArea className="flex-grow"> 
         <div className="min-h-full flex flex-col">
           {/* Player Info Header */}
           <HolographicPanel className="mb-4 text-center">

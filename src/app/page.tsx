@@ -14,6 +14,7 @@ import { VaultSection } from '@/components/game/tod/VaultSection';
 import { ScannerSection } from '@/components/game/tod/ScannerSection';
 import { generateWelcomeMessage, type WelcomeMessageInput } from '@/ai/flows/welcome-message';
 import { Button } from '@/components/ui/button'; // For TOD navigation if needed
+import React from 'react';
 
 const TOD_SECTION_ORDER = ['CommandCenter', 'SpyShop', 'Vault', 'Scanner'] as const;
 type TODSectionName = typeof TOD_SECTION_ORDER[number];
@@ -154,21 +155,13 @@ export default function HomePage() {
     );
   }
   
-  // Tactical Overlay Device (TOD)
-  // For parallax, intermediate layer scrolls at 0.5x, foreground at 1.0x
-  // The actual content of sections will be the foreground.
-  // We can add an intermediate layer div if needed.
-  // The looping requires prepending the last element and appending the first element visually.
-  // So, if sections are A, B, C, D, we render D', A, B, C, D, A'
-  // And start scroll at A.
-
-  const sections = [
-    <ScannerSection key="scanner-clone-start" parallaxOffset={parallaxOffset * 1.0} style={{ transform: `translateX(-${parallaxOffset * 1.0}px)`}}/>, // Clone of last for start
-    <CommandCenterSection key="command-center" parallaxOffset={parallaxOffset * 1.0} style={{ transform: `translateX(-${parallaxOffset * 1.0}px)`}}/>,
-    <SpyShopSection key="spy-shop" parallaxOffset={parallaxOffset * 1.0} style={{ transform: `translateX(-${parallaxOffset * 1.0}px)`}}/>,
-    <VaultSection key="vault" parallaxOffset={parallaxOffset * 1.0} style={{ transform: `translateX(-${parallaxOffset * 1.0}px)`}}/>,
-    <ScannerSection key="scanner" parallaxOffset={parallaxOffset * 1.0} style={{ transform: `translateX(-${parallaxOffset * 1.0}px)`}}/>,
-    <CommandCenterSection key="command-center-clone-end" parallaxOffset={parallaxOffset * 1.0} style={{ transform: `translateX(-${parallaxOffset * 1.0}px)`}}/>, // Clone of first for end
+  const sectionComponents = [
+    <ScannerSection key="scanner-clone-start" parallaxOffset={parallaxOffset} />,
+    <CommandCenterSection key="command-center" parallaxOffset={parallaxOffset} />,
+    <SpyShopSection key="spy-shop" parallaxOffset={parallaxOffset} />,
+    <VaultSection key="vault" parallaxOffset={parallaxOffset} />,
+    <ScannerSection key="scanner" parallaxOffset={parallaxOffset} />,
+    <CommandCenterSection key="command-center-clone-end" parallaxOffset={parallaxOffset} />,
   ];
 
 
@@ -176,17 +169,13 @@ export default function HomePage() {
     <main className="relative h-screen w-screen overflow-hidden">
       <ParallaxBackground /> {/* Static background, z-index managed by component */}
       
-      {/* Intermediate Parallax Layer Example */}
       <div 
-        className="parallax-layer z-[5]" // Ensure it's above background but below foreground
+        className="parallax-layer z-[5]" 
         style={{ 
           transform: `translateX(-${parallaxOffset * 0.5}px)`,
-          // Example content: large, diffuse holographic shapes or grid lines
-          // This layer also needs to be wide enough to cover the scroll width * 0.5
-          width: `${sections.length * 100 * 0.5}vw`, 
+          width: `${sectionComponents.length * 100 * 0.5}vw`, 
         }}
       >
-        {/* Placeholder for intermediate elements, e.g., subtle grid lines */}
         <div className="absolute inset-0 opacity-10" style={{
           backgroundImage: `repeating-linear-gradient(
             45deg,
@@ -208,14 +197,11 @@ export default function HomePage() {
       <div 
         ref={todContainerRef} 
         className="tod-scroll-container absolute inset-0 z-10 snap-x snap-mandatory_if_needed overflow-x-auto overflow-y-hidden scrollbar-hide"
-        style={{ scrollBehavior: 'smooth' }}
+        // Removed: style={{ scrollBehavior: 'smooth' }} 
       >
-        {sections.map((section, index) => (
-          // The transform for parallax is applied within each section component
-          // to its own content, or we apply it here to the section wrapper.
-          // For simplicity, applying to wrapper.
+        {sectionComponents.map((SectionComponentInstance, index) => (
           <div key={index} className="tod-section">
-            {section}
+            {SectionComponentInstance}
           </div>
         ))}
       </div>
@@ -240,6 +226,3 @@ if (typeof window !== 'undefined') {
   styleSheet.innerText = scrollbarHideCss;
   document.head.appendChild(styleSheet);
 }
-
-
-    

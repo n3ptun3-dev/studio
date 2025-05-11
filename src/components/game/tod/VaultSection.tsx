@@ -8,12 +8,12 @@ import { cn } from '@/lib/utils';
 
 interface SectionProps {
   parallaxOffset: number;
-  style?: React.CSSProperties;
+  // style?: React.CSSProperties; // Removed as it's no longer needed for root transform
 }
 
 const MAX_SLOTS = 8; // 4 Lock, 4 Vault-Wide
 
-export function VaultSection({ parallaxOffset, style }: SectionProps) {
+export function VaultSection({ parallaxOffset }: SectionProps) {
   const { faction, playerSpyName } = useAppContext(); // For theming and owner display
   const [vaultTitle, setVaultTitle] = useState("[UNCLASSIFIED]");
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -42,7 +42,7 @@ export function VaultSection({ parallaxOffset, style }: SectionProps) {
   const centralHexagonColor = faction === 'Cyphers' ? 'hsl(var(--primary-hsl))' : faction === 'Shadows' ? 'hsl(var(--primary-hsl))' : 'hsl(var(--muted-hsl))';
 
   return (
-    <div className="tod-section flex flex-col items-center justify-center p-4 md:p-6 h-full" style={style}>
+    <div className="flex flex-col items-center justify-center p-4 md:p-6 h-full">
       <HolographicPanel className="w-full h-full max-w-4xl flex flex-col items-center relative">
         <div className="text-center mb-2 mt-2">
           {isEditingTitle ? (
@@ -134,5 +134,3 @@ export function VaultSection({ parallaxOffset, style }: SectionProps) {
 // .animate-spin-slow { animation: spin-slow 20s linear infinite; }
 // In tailwind.config.ts animations: 'spin-slow': 'spin 20s linear infinite',
 // This is already present in the thought process, so I'll assume it will be added to tailwind.config.ts or use existing 'spin' with custom duration.
-
-    

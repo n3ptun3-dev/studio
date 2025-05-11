@@ -7,7 +7,7 @@ import { useState } from 'react';
 
 interface SectionProps {
   parallaxOffset: number;
-  style?: React.CSSProperties;
+  // style?: React.CSSProperties; // Removed as it's no longer needed for root transform
 }
 
 interface NetworkNode {
@@ -44,7 +44,7 @@ const generateNodes = (count = 15): NetworkNode[] => {
 };
 
 
-export function ScannerSection({ parallaxOffset, style }: SectionProps) {
+export function ScannerSection({ parallaxOffset }: SectionProps) {
   const [nodes, setNodes] = useState<NetworkNode[]>(generateNodes());
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -73,7 +73,7 @@ export function ScannerSection({ parallaxOffset, style }: SectionProps) {
   };
 
   return (
-    <div className="tod-section flex flex-col p-4 md:p-6 h-full" style={style}>
+    <div className="flex flex-col p-4 md:p-6 h-full">
       <HolographicPanel className="flex-none mb-4 p-3 flex items-center justify-between">
         <h2 className="text-2xl font-orbitron holographic-text">Network Scanner</h2>
         <HolographicButton onClick={refreshScanner} disabled={isLoading} className="p-2">
@@ -169,5 +169,3 @@ export function ScannerSection({ parallaxOffset, style }: SectionProps) {
 // @keyframes slideInUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 // .animate-slide-in-bottom { animation: slideInUp 0.3s ease-out forwards; } 
 // (Using existing animation 'slide-in-from-bottom-2' or similar from shadcn/ui would be better, or define 'slideInUp')
-
-    
