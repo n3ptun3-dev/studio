@@ -40,7 +40,7 @@
     --hologram-glow-color-hsl: var(--primary-hsl);
     --hologram-base-text-color-hsl: var(--foreground-hsl);
     --hologram-wireframe-color-hsl: var(--primary-hsl);
-    --hologram-panel-bg-hsl: var(--background-hsl);
+    --hologram-panel-bg-hsl: var(--background-hsl); /* Matched to --background-hsl */
     --hologram-panel-border-hsl: var(--primary-hsl);
     --hologram-button-bg-hsl: var(--primary-hsl);
     --hologram-button-text-hsl: var(--primary-foreground-hsl);
@@ -188,7 +188,7 @@
 
 /* Custom holographic styles */
 .holographic-panel {
-  background-color: var(--hologram-panel-bg);
+  background-color: var(--hologram-panel-bg); /* Updated to use hsla with opacity */
   border-color: var(--hologram-panel-border);
   @apply border rounded-lg shadow-[0_0_15px_var(--hologram-glow-color),inset_0_0_10px_var(--hologram-glow-color)];
   backdrop-filter: blur(2px);
@@ -273,7 +273,7 @@
 .tod-section {
   @apply flex-shrink-0 h-full relative;
   width: 100vw; /* Each section is one viewport width */
-  scroll-snap-align: start; /* Optional: for snap scrolling if desired, but prompt says free scroll */
+  /* scroll-snap-align: start; */ /* Optional: for snap scrolling if desired, but prompt says free scroll. Commented out to test if it fixes "stuck" scrolling. */
 }
 
 /* Parallax layers */

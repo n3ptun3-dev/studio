@@ -82,6 +82,15 @@ export default function HomePage() {
     }
   }, [onboardingStep, isAuthenticated, playerSpyName, faction, playerStats, addMessage, dailyTeamCode, setIsLoading]);
 
+  const sectionComponents = React.useMemo(() => [
+    <VaultSection key="vault-clone-start" parallaxOffset={parallaxOffset} />,
+    <CommandCenterSection key="command-center-actual" parallaxOffset={parallaxOffset} />,
+    <ScannerSection key="scanner-actual" parallaxOffset={parallaxOffset} />,
+    <SpyShopSection key="spy-shop-actual" parallaxOffset={parallaxOffset} />,
+    <VaultSection key="vault-actual" parallaxOffset={parallaxOffset} />,
+    <CommandCenterSection key="command-center-clone-end" parallaxOffset={parallaxOffset} />,
+  ], [parallaxOffset]);
+
 
   const handleScroll = useCallback(() => {
     if (todContainerRef.current) {
@@ -93,50 +102,44 @@ export default function HomePage() {
 
       if (clientWidth === 0) return; 
 
-      if (scrollLeft <= 0.1) { 
-        todContainerRef.current.scrollLeft = scrollWidth - (2 * clientWidth) + 1; 
-      } else if (scrollLeft >= scrollWidth - clientWidth - 0.1) {
-        todContainerRef.current.scrollLeft = clientWidth - 1;
+      const numSections = sectionComponents.length; // Should be 6
+
+      // Check if at the far left (scrolled past the first actual item, into the left clone)
+      if (scrollLeft <= clientWidth * 0.1) { 
+        // We are at the first cloned Vault section (index 0). Jump to the actual Vault section (index 4).
+        // Index 4 is at scrollLeft = 4 * clientWidth
+        todContainerRef.current.scrollLeft = (numSections - 2) * clientWidth + 1; 
+      } 
+      // Check if at the far right (scrolled past the last actual item, into the right clone)
+      else if (scrollLeft >= scrollWidth - clientWidth - (clientWidth * 0.1)) {
+        // We are at the last cloned CC section (index 5). Jump to the actual CC section (index 1).
+        // Index 1 is at scrollLeft = 1 * clientWidth
+        todContainerRef.current.scrollLeft = clientWidth -1;
       }
     }
-  }, []); // setParallaxOffset is stable
+  }, [setParallaxOffset, sectionComponents.length]); 
 
   useEffect(() => {
     const container = todContainerRef.current;
-    // Only setup scroll when TOD is active, not loading, and the container element exists.
     if (onboardingStep === 'tod' && !isAppLoading && container) {
       const setInitialScrollPosition = () => {
-        if (todContainerRef.current) { // Re-check ref in case of unmount during async operation
+        if (todContainerRef.current) { 
           const currentContainer = todContainerRef.current;
-          // Each .tod-section is 100vw.
-          // The container's clientWidth should also be 100vw if it fills the screen.
           const sectionWidth = currentContainer.clientWidth;
 
           if (sectionWidth > 0) {
-            // Scroll to the second section (index 1, which is Command Center)
-            currentContainer.scrollLeft = sectionWidth;
+            currentContainer.scrollLeft = sectionWidth; // Scroll to the second section (index 1: Command Center)
           } else {
-            // This case indicates a layout timing issue.
-            // Retry on the next animation frame if clientWidth is still not available.
-            console.warn("TOD container clientWidth is 0 during initial scroll setup. Retrying on next frame.");
-            requestAnimationFrame(() => {
-              if (todContainerRef.current) {
-                todContainerRef.current.scrollLeft = todContainerRef.current.clientWidth;
-              }
-            });
+            requestAnimationFrame(setInitialScrollPosition); // Retry if clientWidth is 0
           }
         }
       };
 
-      // Use requestAnimationFrame to ensure DOM is painted and dimensions are available.
       const animationFrameId = requestAnimationFrame(setInitialScrollPosition);
-      
       container.addEventListener('scroll', handleScroll, { passive: true });
 
       return () => {
         cancelAnimationFrame(animationFrameId);
-        // Use the 'container' variable captured at effect run time for removal
-        // to avoid issues if todContainerRef.current changes.
         if (container) { 
           container.removeEventListener('scroll', handleScroll);
         }
@@ -177,15 +180,6 @@ export default function HomePage() {
     );
   }
   
-  const sectionComponents = [
-    <VaultSection key="vault-clone-start" parallaxOffset={parallaxOffset} />,
-    <CommandCenterSection key="command-center-actual" parallaxOffset={parallaxOffset} />,
-    <ScannerSection key="scanner-actual" parallaxOffset={parallaxOffset} />,
-    <SpyShopSection key="spy-shop-actual" parallaxOffset={parallaxOffset} />,
-    <VaultSection key="vault-actual" parallaxOffset={parallaxOffset} />,
-    <CommandCenterSection key="command-center-clone-end" parallaxOffset={parallaxOffset} />,
-  ];
-
   return (
     <main className="relative h-screen w-screen overflow-hidden">
       <ParallaxBackground />
@@ -217,7 +211,7 @@ export default function HomePage() {
 
       <div 
         ref={todContainerRef} 
-        className="tod-scroll-container absolute inset-0 z-10 snap-x snap-mandatory_if_needed overflow-x-auto overflow-y-hidden scrollbar-hide"
+        className="tod-scroll-container absolute inset-0 z-10 overflow-x-auto overflow-y-hidden scrollbar-hide"
       >
         {sectionComponents.map((SectionComponentInstance, index) => (
           <div key={SectionComponentInstance.key || `tod-section-${index}`} className="tod-section">
