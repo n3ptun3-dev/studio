@@ -242,12 +242,12 @@
 
 /* Default for Cyphers theme or when no specific theme class is on a higher parent */
 .bg-pad-backing {
-  background-color: hsla(210, 60%, 8%, 0.3) !important; /* Cyphers --background-hsl with 0.3 alpha */
+  background-color: hsla(210, 60%, 8%, 0.7) !important; /* Cyphers --background-hsl with 0.7 alpha */
 }
 
 /* For Shadows theme */
 .theme-shadows .bg-pad-backing {
-  background-color: hsla(0, 60%, 8%, 0.3) !important; /* Shadows --background-hsl with 0.3 alpha */
+  background-color: hsla(0, 60%, 8%, 0.7) !important; /* Shadows --background-hsl with 0.7 alpha */
 }
 
 
@@ -307,7 +307,3 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-
-    
-
-    
