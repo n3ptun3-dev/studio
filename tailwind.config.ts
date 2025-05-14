@@ -1,8 +1,9 @@
+
 import type { Config } from "tailwindcss";
 import { fontFamily } from "tailwindcss/defaultTheme";
 
 export default {
-    darkMode: ["class"], // Keep class-based dark mode, but our app is always "dark" styled
+    darkMode: ["class"], 
     content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -25,7 +26,6 @@ export default {
         rajdhani: ["var(--font-rajdhani)", "var(--font-geist-sans)", ...fontFamily.sans],
       },
   		colors: {
-        // These will be driven by CSS variables defined in globals.css
   			background: 'hsl(var(--background-hsl))',
   			foreground: 'hsl(var(--foreground-hsl))',
   			card: {
@@ -66,7 +66,6 @@ export default {
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
   			},
-        // Item level colors for direct use if needed, prefer CSS vars
         'level-1': 'hsl(var(--level-1-color-hsl))',
         'level-2': 'hsl(var(--level-2-color-hsl))',
         'level-3': 'hsl(var(--level-3-color-hsl))',
@@ -83,20 +82,12 @@ export default {
   		},
   		keyframes: {
   			'accordion-down': {
-  				from: {
-  					height: '0'
-  				},
-  				to: {
-  					height: 'var(--radix-accordion-content-height)'
-  				}
+  				from: { height: '0' },
+  				to: { height: 'var(--radix-accordion-content-height)' }
   			},
   			'accordion-up': {
-  				from: {
-  					height: 'var(--radix-accordion-content-height)'
-  				},
-  				to: {
-  					height: '0'
-  				}
+  				from: { height: 'var(--radix-accordion-content-height)' },
+  				to: { height: '0' }
   			},
         'holographic-scan': {
           '0%': { transform: 'translateY(-100%)', opacity: '0.5' },
@@ -111,13 +102,21 @@ export default {
           'from': { transform: 'translateX(0)', opacity: '1' },
   				'to': { transform: 'translateX(-100%)', opacity: '0' },
         },
-        'slide-in-right': {
+        'slide-in-right': { // General purpose slide in from right
           'from': { transform: 'translateX(100%)', opacity: '0' },
           'to': { transform: 'translateX(0)', opacity: '1' },
         },
-        'slide-out-right': {
+        'slide-out-right': { // General purpose slide out to right
           'from': { transform: 'translateX(0)', opacity: '1' },
   				'to': { transform: 'translateX(100%)', opacity: '0' },
+        },
+        'slide-in-right-tod': { // TOD Window specific
+          'from': { transform: 'translateX(100%) scale(0.95)', opacity: '0' },
+          'to': { transform: 'translateX(0) scale(1)', opacity: '1' },
+        },
+        'slide-out-right-tod': { // TOD Window specific
+          'from': { transform: 'translateX(0) scale(1)', opacity: '1' },
+          'to': { transform: 'translateX(100%) scale(0.95)', opacity: '0' },
         },
         'float-up': {
           '0%': { transform: 'translateY(0)', opacity: '1' },
@@ -132,11 +131,11 @@ export default {
         'slide-out-left': 'slide-out-left 0.5s ease-out forwards',
         'slide-in-right': 'slide-in-right 0.5s ease-out forwards',
         'slide-out-right': 'slide-out-right 0.5s ease-out forwards',
+        'slide-in-right-tod': 'slide-in-right-tod 0.2s ease-out forwards',
+        'slide-out-right-tod': 'slide-out-right-tod 0.2s ease-out forwards',
         'float-up': 'float-up 1.5s ease-out forwards',
   		}
   	}
   },
   plugins: [require("tailwindcss-animate")],
 } satisfies Config;
-
-    

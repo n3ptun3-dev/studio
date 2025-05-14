@@ -1,22 +1,24 @@
 
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { WelcomeScreen } from '@/components/game/onboarding/WelcomeScreen';
 import { FactionChoiceScreen } from '@/components/game/onboarding/FactionChoiceScreen';
 import { AuthPromptModal } from '@/components/game/onboarding/AuthPromptModal';
 import { FingerprintScannerScreen } from '@/components/game/onboarding/FingerprintScannerScreen';
 import { ParallaxBackground } from '@/components/game/shared/ParallaxBackground';
-import { CommandCenterSection } from '@/components/game/tod/CommandCenterSection';
+import { AgentSection } from '@/components/game/tod/AgentSection';
+import { ControlCenterSection } from '@/components/game/tod/ControlCenterSection';
 import { EquipmentLockerSection } from '@/components/game/tod/EquipmentLockerSection';
 import { VaultSection } from '@/components/game/tod/VaultSection';
 import { ScannerSection } from '@/components/game/tod/ScannerSection';
+import { TODWindow } from '@/components/game/shared/TODWindow';
 import { generateWelcomeMessage, type WelcomeMessageInput } from '@/ai/flows/welcome-message';
-import React from 'react';
 
-// Desired actual order: CommandCenter, Scanner, EquipmentLocker, Vault
-// For looping, sections will be: [Vault (clone), CC, Scanner, EquipmentLocker, Vault, CC (clone)]
+
+// Desired actual order: Agent, ControlCenter, Scanner, EquipmentLocker, Vault
+// For looping, sections will be: [Vault (clone), Agent, ControlCenter, Scanner, EquipmentLocker, Vault, Agent (clone)]
 
 export default function HomePage() {
   const { 
@@ -30,6 +32,10 @@ export default function HomePage() {
     dailyTeamCode,
     setIsLoading,
     isLoading: isAppLoading,
+    isTODWindowOpen,
+    todWindowTitle,
+    todWindowContent,
+    closeTODWindow,
    } = useAppContext();
   
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
@@ -37,7 +43,6 @@ export default function HomePage() {
   const [parallaxOffset, setParallaxOffset] = useState(0);
   const [isMounted, setIsMounted] = useState(false);
   const initialScrollSetRef = useRef(false);
-
 
   useEffect(() => {
     setIsMounted(true);
@@ -49,49 +54,52 @@ export default function HomePage() {
     }
   }, [isAuthenticated, onboardingStep, setOnboardingStep]);
 
-  useEffect(() => {
-    if (onboardingStep === 'tod' && isAuthenticated && isMounted) {
+  // Welcome message generation logic might move to AgentSection or be triggered differently
+   useEffect(() => {
+    if (onboardingStep === 'tod' && isAuthenticated && isMounted && !isAppLoading) { // Ensure not already loading
       setIsLoading(true);
       const isNewUser = !playerStats.xp && !playerStats.elintReserves; 
       
       if (isNewUser) {
         addMessage({
-          text: "Welcome, Agent. HQ guidance protocol initiated. Familiarize yourself with the Tactical Overlay Device. Your first objective: activate the Network Tap in the Command Center.",
+          text: "Welcome, Agent. HQ guidance protocol initiated. Familiarize yourself with the Tactical Overlay Device. Your first objective: explore your Agent PAD.",
           type: 'hq',
           isPinned: true,
         });
-        addMessage({ text: `Daily Team Code: ${dailyTeamCode}`, type: 'system', isPinned: true });
+        // Daily team code is now handled by the Comms section in ControlCenter
         setIsLoading(false);
       } else {
         const welcomeInput: WelcomeMessageInput = {
           playerName: playerSpyName || "Agent",
           faction: faction,
           elintReserves: playerStats.elintReserves,
-          networkActivity: "Medium", 
-          vaultDefenses: "Holding", 
+          networkActivity: "Medium", // This might come from context later
+          vaultDefenses: "Holding", // This might come from context later
         };
         generateWelcomeMessage(welcomeInput)
           .then(response => {
             addMessage({ text: response.message, type: 'hq', isPinned: true });
-            addMessage({ text: `Daily Team Code: ${dailyTeamCode}`, type: 'system', isPinned: true });
           })
           .catch(error => {
             console.error("Failed to generate welcome message:", error);
             addMessage({ text: "HQ Comms Error. Standard protocols active.", type: 'error', isPinned: true });
-            addMessage({ text: `Daily Team Code: ${dailyTeamCode}`, type: 'system', isPinned: true });
           })
           .finally(() => setIsLoading(false));
       }
     }
-  }, [onboardingStep, isAuthenticated, playerSpyName, faction, playerStats, addMessage, dailyTeamCode, setIsLoading, isMounted]);
+  }, [onboardingStep, isAuthenticated, playerSpyName, faction, playerStats, addMessage, setIsLoading, isMounted, isAppLoading]);
 
+
+  // Order: Agent, ControlCenter, Scanner, EquipmentLocker, Vault
+  // Clones: Vault(prev), Agent(actual), CC(actual), Scanner(actual), EL(actual), Vault(actual), Agent(next)
   const sectionComponents = React.useMemo(() => [
-    <VaultSection key="vault-clone-start" parallaxOffset={parallaxOffset} />,
-    <CommandCenterSection key="command-center-actual" parallaxOffset={parallaxOffset} />,
+    <VaultSection key="vault-clone-start" parallaxOffset={parallaxOffset} />, // Clone of last
+    <AgentSection key="agent-actual" parallaxOffset={parallaxOffset} />, // Actual first
+    <ControlCenterSection key="control-center-actual" parallaxOffset={parallaxOffset} />,
     <ScannerSection key="scanner-actual" parallaxOffset={parallaxOffset} />,
     <EquipmentLockerSection key="equipment-locker-actual" parallaxOffset={parallaxOffset} />,
-    <VaultSection key="vault-actual" parallaxOffset={parallaxOffset} />,
-    <CommandCenterSection key="command-center-clone-end" parallaxOffset={parallaxOffset} />,
+    <VaultSection key="vault-actual" parallaxOffset={parallaxOffset} />, // Actual last
+    <AgentSection key="agent-clone-end" parallaxOffset={parallaxOffset} />, // Clone of first
   ], [parallaxOffset]);
 
 
@@ -105,20 +113,18 @@ export default function HomePage() {
 
       if (clientWidth === 0) return; 
 
-      // Number of actual sections is sectionComponents.length - 2
-      // Cloned Vault (index 0) maps to actual Vault (index sectionComponents.length - 2)
-      // Cloned CC (index sectionComponents.length - 1) maps to actual CC (index 1)
+      // Number of actual sections is sectionComponents.length - 2 (5 actual sections)
+      // Cloned Vault (index 0) maps to actual Vault (index 5 -> sectionComponents.length - 2)
+      // Cloned Agent (index 6 -> sectionComponents.length - 1) maps to actual Agent (index 1)
       
       // If scrolled to the far left clone (Vault)
       if (scrollLeft < clientWidth * 0.5) { 
-        // Jump to the actual Vault section (index 4 for 6 total sections)
-        // scrollLeft value for actual Vault is (sectionComponents.length - 2) * clientWidth
+        // Jump to the actual Vault section (index 5 for 7 total sections)
         todContainerRef.current.scrollLeft = (sectionComponents.length - 2) * clientWidth;
       } 
-      // If scrolled to the far right clone (Command Center)
+      // If scrolled to the far right clone (Agent)
       else if (scrollLeft >= (scrollWidth - clientWidth) - (clientWidth * 0.5)) {
-        // Jump to the actual Command Center section (index 1)
-        // scrollLeft value for actual CC is 1 * clientWidth
+        // Jump to the actual Agent section (index 1)
         todContainerRef.current.scrollLeft = clientWidth;
       }
     }
@@ -131,20 +137,19 @@ export default function HomePage() {
       const setInitialScroll = () => {
         if (container.clientWidth > 0 && !initialScrollSetRef.current) {
           const sectionWidth = container.clientWidth;
-          // Start at the first "actual" section, which is CommandCenterSection (index 1 in sectionComponents array)
+          // Start at the first "actual" section, which is AgentSection (index 1 in sectionComponents array)
           const initialScrollPosition = sectionWidth; 
           container.scrollLeft = initialScrollPosition;
-          console.log(`Initial scroll attempted to: ${initialScrollPosition}, actual: ${container.scrollLeft}`);
           
-          // Check if scroll was successful (within a small tolerance)
           if (Math.abs(container.scrollLeft - initialScrollPosition) < 5) {
-            initialScrollSetRef.current = true; // Mark as set
+            initialScrollSetRef.current = true; 
+          } else {
+            // Retry if scroll wasn't successful (e.g. layout shift)
+            requestAnimationFrame(setInitialScroll);
           }
         }
       };
 
-      // Attempt to set initial scroll. If clientWidth is not yet available,
-      // use a short timeout or rAF to retry.
       if (container.clientWidth === 0) {
         requestAnimationFrame(setInitialScroll);
       } else {
@@ -159,10 +164,10 @@ export default function HomePage() {
   }, [onboardingStep, isAppLoading, isMounted, handleScroll]);
 
 
-  if (!isMounted || isAppLoading) {
+  if (!isMounted || (isAppLoading && onboardingStep !== 'tod')) { // Allow TOD to render even if AI message is loading
     return (
       <div className="flex items-center justify-center h-screen bg-background">
-        <ParallaxBackground parallaxOffset={0} />
+        <ParallaxBackground />
         <div className="animate-pulse text-2xl font-orbitron holographic-text">INITIALIZING TOD...</div>
       </div>
     );
@@ -184,7 +189,7 @@ export default function HomePage() {
   if (onboardingStep !== 'tod') {
     return (
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground overflow-hidden">
-        <ParallaxBackground parallaxOffset={0} />
+        <ParallaxBackground />
         {renderOnboarding()}
         {showAuthPrompt && <AuthPromptModal onClose={() => setShowAuthPrompt(false)} />}
       </main>
@@ -193,7 +198,7 @@ export default function HomePage() {
   
   return (
     <main className="relative h-screen w-screen overflow-hidden">
-      <ParallaxBackground parallaxOffset={parallaxOffset} />
+      <ParallaxBackground />
       
       <div 
         className="parallax-layer z-[5]" 
@@ -223,13 +228,27 @@ export default function HomePage() {
       <div 
         ref={todContainerRef} 
         className="tod-scroll-container absolute inset-0 z-10 scrollbar-hide"
+        style={{
+          width: `${sectionComponents.length * 100}vw`, // Ensure container is wide enough
+          scrollSnapType: 'x mandatory', // Enforce snapping
+          WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
+        }}
       >
         {sectionComponents.map((SectionComponentInstance, index) => (
-          <div key={SectionComponentInstance.key || `tod-section-${index}`} className="tod-section">
+          <div 
+            key={SectionComponentInstance.key || `tod-section-${index}`} 
+            className="tod-section"
+            style={{ scrollSnapAlign: 'start' }} // Ensure each section snaps
+          >
             {SectionComponentInstance}
           </div>
         ))}
       </div>
+      
+      <TODWindow isOpen={isTODWindowOpen} onClose={closeTODWindow} title={todWindowTitle}>
+        {todWindowContent}
+      </TODWindow>
     </main>
   );
 }
+

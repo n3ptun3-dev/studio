@@ -3,7 +3,6 @@
 
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import type { Theme } from './ThemeContext'; // Ensure Theme type is available if needed, though direct theme setting is removed here.
 
 export type Faction = 'Cyphers' | 'Shadows' | 'Observer';
 export type OnboardingStep = 'welcome' | 'factionChoice' | 'authPrompt' | 'fingerprint' | 'tod';
@@ -13,7 +12,18 @@ interface PlayerStats {
   level: number;
   elintReserves: number;
   elintTransferred: number;
-  // Add other stats as needed
+  // Add other stats as needed from Agent Dossier
+  successfulVaultInfiltrations: number;
+  successfulLockInfiltrations: number;
+  elintObtainedTotal: number;
+  elintObtainedCycle: number;
+  elintLostTotal: number;
+  elintLostCycle: number;
+  elintGeneratedTotal: number;
+  elintGeneratedCycle: number;
+  elintTransferredToHQCyle: number;
+  successfulInterferences: number;
+  elintSpentSpyShop: number;
 }
 
 interface AppContextType {
@@ -31,19 +41,27 @@ interface AppContextType {
   playerStats: PlayerStats;
   updatePlayerStats: (newStats: Partial<PlayerStats>) => void;
   addXp: (amount: number) => void;
-  dailyTeamCode: string;
-  isLoading: boolean; // For async operations like AI message
+  dailyTeamCode: Record<Faction, string>; // Changed to object
+  isLoading: boolean; 
   setIsLoading: (loading: boolean) => void;
   messages: GameMessage[];
   addMessage: (message: Omit<GameMessage, 'id' | 'timestamp'>) => void;
+
+  // TOD Window State
+  isTODWindowOpen: boolean;
+  todWindowTitle: string;
+  todWindowContent: ReactNode | null;
+  openTODWindow: (title: string, content: ReactNode) => void;
+  closeTODWindow: () => void;
 }
 
 export interface GameMessage {
   id: string;
   text: string;
-  type: 'system' | 'hq' | 'notification' | 'error' | 'lore';
+  type: 'system' | 'hq' | 'notification' | 'error' | 'lore' | 'alert'; // Added 'alert'
   timestamp: Date;
   isPinned?: boolean;
+  sender?: string; // For player messages
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -55,23 +73,22 @@ const NATO_ALPHABET = [
   "X-ray", "Yankee", "Zulu"
 ];
 
-function generateDailyTeamCode(): string {
-  const today = new Date();
-  // Simple seed based on day of year to ensure it changes daily
-  const start = new Date(today.getFullYear(), 0, 0);
-  const diff = today.getTime() - start.getTime();
+function generateFactionTeamCode(seedDate: Date, faction: Faction): string {
+  const start = new Date(seedDate.getFullYear(), 0, 0);
+  const diff = seedDate.getTime() - start.getTime();
   const oneDay = 1000 * 60 * 60 * 24;
   const dayOfYear = Math.floor(diff / oneDay);
 
-  const getRandomWord = (seed: number, index: number) => {
-    // Simple pseudo-random selection based on dayOfYear and index
-    const combinedSeed = dayOfYear + index * 100; // Make it different for each word
+  // Incorporate faction into the seed for word selection
+  const factionSeedOffset = faction === 'Cyphers' ? 1000 : faction === 'Shadows' ? 2000 : 3000;
+
+  const getRandomWord = (baseSeed: number, index: number) => {
+    const combinedSeed = baseSeed + index * 100 + factionSeedOffset;
     return NATO_ALPHABET[combinedSeed % NATO_ALPHABET.length];
   };
   
   return `${getRandomWord(dayOfYear, 1)}-${getRandomWord(dayOfYear, 2)}-${getRandomWord(dayOfYear, 3)}`;
 }
-
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [faction, _setFaction] = useState<Faction>('Observer');
@@ -81,22 +98,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [onboardingStep, _setOnboardingStep] = useState<OnboardingStep>('welcome');
   const [isPiBrowser, setIsPiBrowser] = useState(false);
   const [playerStats, setPlayerStats] = useState<PlayerStats>({
-    xp: 0,
-    level: 0,
-    elintReserves: 0,
-    elintTransferred: 0,
+    xp: 0, level: 0, elintReserves: 0, elintTransferred: 0,
+    successfulVaultInfiltrations: 0, successfulLockInfiltrations: 0,
+    elintObtainedTotal: 0, elintObtainedCycle: 0, elintLostTotal: 0, elintLostCycle: 0,
+    elintGeneratedTotal: 0, elintGeneratedCycle: 0, elintTransferredToHQCyle: 0,
+    successfulInterferences: 0, elintSpentSpyShop: 0,
   });
-  const [dailyTeamCode, setDailyTeamCode] = useState('');
+  const [dailyTeamCode, setDailyTeamCode] = useState<Record<Faction, string>>({
+    Cyphers: '', Shadows: '', Observer: ''
+  });
   const [isLoading, _setIsLoading] = useState(true);
   const [messages, setMessages] = useState<GameMessage[]>([]);
 
+  // TOD Window State
+  const [isTODWindowOpen, setIsTODWindowOpen] = useState(false);
+  const [todWindowTitle, setTODWindowTitle] = useState('');
+  const [todWindowContent, setTODWindowContent] = useState<ReactNode | null>(null);
+  const [canOpenTODWindow, setCanOpenTODWindow] = useState(true);
+  const todWindowCooldownTimer = useRef<NodeJS.Timeout | null>(null);
+
+
   useEffect(() => {
-    // Simulate Pi Browser detection
     const inPiBrowser = navigator.userAgent.includes("PiBrowser"); 
     setIsPiBrowser(inPiBrowser);
     
-    setDailyTeamCode(generateDailyTeamCode());
+    const today = new Date();
+    setDailyTeamCode({
+      Cyphers: generateFactionTeamCode(today, 'Cyphers'),
+      Shadows: generateFactionTeamCode(today, 'Shadows'),
+      Observer: generateFactionTeamCode(today, 'Observer'), // Or a generic one
+    });
     _setIsLoading(false); 
+    return () => {
+      if (todWindowCooldownTimer.current) clearTimeout(todWindowCooldownTimer.current);
+    };
   }, []);
 
   const setFaction = useCallback((newFaction: Faction) => {
@@ -134,9 +169,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       timestamp: new Date(),
     };
     setMessages(prev => {
-      const newMessages = [newMessage, ...prev.filter(m => !m.isPinned)];
-      const pinnedMessages = prev.filter(m => m.isPinned);
-      return [...pinnedMessages, ...newMessages.slice(0, 50 - pinnedMessages.length)]; 
+      const newMessagesList = [newMessage, ...prev.filter(m => !m.isPinned)];
+      const pinnedMessages = prev.filter(m => m.isPinned); // Keep existing pinned
+      return [...pinnedMessages, ...newMessagesList.slice(0, 50 - pinnedMessages.length)]; 
     });
   }, []);
 
@@ -144,6 +179,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setPlayerStats(prevStats => ({ ...prevStats, xp: prevStats.xp + amount }));
     addMessage({ text: `+${amount} XP`, type: 'notification'});
   }, [addMessage]);
+
+  const openTODWindow = useCallback((title: string, content: ReactNode) => {
+    if (!canOpenTODWindow) return;
+    setTODWindowTitle(title);
+    setTODWindowContent(content);
+    setIsTODWindowOpen(true);
+    setCanOpenTODWindow(false); // Prevent immediate re-open
+  }, [canOpenTODWindow]);
+
+  const closeTODWindow = useCallback(() => {
+    setIsTODWindowOpen(false);
+    // Set a cooldown before another window can be opened
+    if (todWindowCooldownTimer.current) clearTimeout(todWindowCooldownTimer.current);
+    todWindowCooldownTimer.current = setTimeout(() => {
+      setCanOpenTODWindow(true);
+    }, 200); // 200ms cooldown
+  }, []);
 
 
   return (
@@ -157,7 +209,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       playerStats, updatePlayerStats, addXp,
       dailyTeamCode,
       isLoading, setIsLoading,
-      messages, addMessage
+      messages, addMessage,
+      isTODWindowOpen, todWindowTitle, todWindowContent, openTODWindow, closeTODWindow
     }}>
       {children}
     </AppContext.Provider>
@@ -172,4 +225,3 @@ export function useAppContext() {
   return context;
 }
 
-    
