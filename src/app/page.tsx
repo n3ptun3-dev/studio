@@ -29,7 +29,7 @@ export default function HomePage() {
     playerSpyName,
     playerStats,
     addMessage,
-    dailyTeamCode,
+    // dailyTeamCode, // Handled in ControlCenterSection
     setIsLoading,
     isLoading: isAppLoading,
     isTODWindowOpen,
@@ -54,9 +54,9 @@ export default function HomePage() {
     }
   }, [isAuthenticated, onboardingStep, setOnboardingStep]);
 
-  // Welcome message generation logic might move to AgentSection or be triggered differently
+  // Welcome message generation logic
    useEffect(() => {
-    if (onboardingStep === 'tod' && isAuthenticated && isMounted && !isAppLoading) { // Ensure not already loading
+    if (onboardingStep === 'tod' && isAuthenticated && isMounted && !isAppLoading) { 
       setIsLoading(true);
       const isNewUser = !playerStats.xp && !playerStats.elintReserves; 
       
@@ -66,15 +66,14 @@ export default function HomePage() {
           type: 'hq',
           isPinned: true,
         });
-        // Daily team code is now handled by the Comms section in ControlCenter
         setIsLoading(false);
       } else {
         const welcomeInput: WelcomeMessageInput = {
           playerName: playerSpyName || "Agent",
           faction: faction,
           elintReserves: playerStats.elintReserves,
-          networkActivity: "Medium", // This might come from context later
-          vaultDefenses: "Holding", // This might come from context later
+          networkActivity: "Medium", 
+          vaultDefenses: "Holding", 
         };
         generateWelcomeMessage(welcomeInput)
           .then(response => {
@@ -105,30 +104,35 @@ export default function HomePage() {
 
   const handleScroll = useCallback(() => {
     if (todContainerRef.current) {
-      const scrollLeft = todContainerRef.current.scrollLeft;
-      const scrollWidth = todContainerRef.current.scrollWidth;
-      const clientWidth = todContainerRef.current.clientWidth; 
-
-      setParallaxOffset(scrollLeft);
-
-      if (clientWidth === 0) return; 
-
-      // Number of actual sections is sectionComponents.length - 2 (5 actual sections)
-      // Cloned Vault (index 0) maps to actual Vault (index 5 -> sectionComponents.length - 2)
-      // Cloned Agent (index 6 -> sectionComponents.length - 1) maps to actual Agent (index 1)
+      const currentScrollLeft = todContainerRef.current.scrollLeft;
+      const clientWidth = todContainerRef.current.clientWidth; // Width of one section (viewport width)
       
-      // If scrolled to the far left clone (Vault)
-      if (scrollLeft < clientWidth * 0.5) { 
-        // Jump to the actual Vault section (index 5 for 7 total sections)
-        todContainerRef.current.scrollLeft = (sectionComponents.length - 2) * clientWidth;
+      if (clientWidth === 0) return;
+
+      setParallaxOffset(currentScrollLeft);
+
+      const numActualSections = sectionComponents.length - 2; // e.g., 5 if total 7 sections
+      
+      // Scroll position for the actual Agent section (index 1)
+      const scrollPosActualAgent = clientWidth;
+      // Scroll position for the actual Vault section (index L-2, e.g., 5 for 7 sections)
+      const scrollPosActualVault = numActualSections * clientWidth;
+      
+      // Maximum scrollLeft when the rightmost clone (Agent clone) is aligned at the start of the viewport
+      const maxPossibleScrollLeft = (sectionComponents.length - 1) * clientWidth;
+
+      // If scrolled to the far left (viewing the cloned Vault at index 0)
+      // currentScrollLeft will be near 0. We jump to the actual Vault.
+      if (currentScrollLeft <= 5) { // Use a small threshold like 5px
+        todContainerRef.current.scrollLeft = scrollPosActualVault;
       } 
-      // If scrolled to the far right clone (Agent)
-      else if (scrollLeft >= (scrollWidth - clientWidth) - (clientWidth * 0.5)) {
-        // Jump to the actual Agent section (index 1)
-        todContainerRef.current.scrollLeft = clientWidth;
+      // If scrolled to the far right (viewing the cloned Agent at index L-1)
+      // currentScrollLeft will be near maxPossibleScrollLeft. We jump to the actual Agent.
+      else if (currentScrollLeft >= maxPossibleScrollLeft - 5) { // Use a small threshold
+        todContainerRef.current.scrollLeft = scrollPosActualAgent;
       }
     }
-  }, [setParallaxOffset, sectionComponents.length]); 
+  }, [sectionComponents.length, setParallaxOffset]); 
 
   useEffect(() => {
     const container = todContainerRef.current;
@@ -137,23 +141,18 @@ export default function HomePage() {
       const setInitialScroll = () => {
         if (container.clientWidth > 0 && !initialScrollSetRef.current) {
           const sectionWidth = container.clientWidth;
-          // Start at the first "actual" section, which is AgentSection (index 1 in sectionComponents array)
           const initialScrollPosition = sectionWidth; 
           container.scrollLeft = initialScrollPosition;
-          setParallaxOffset(initialScrollPosition); // Initialize parallaxOffset here
+          setParallaxOffset(initialScrollPosition); 
           
-          if (Math.abs(container.scrollLeft - initialScrollPosition) < 5) { // Check if scroll was successful
+          if (Math.abs(container.scrollLeft - initialScrollPosition) < 5) { 
             initialScrollSetRef.current = true; 
           } else {
-            // Retry if scroll wasn't successful (e.g. layout shift)
-            // This can happen if clientWidth isn't fully resolved yet or if there's a layout shift
              requestAnimationFrame(setInitialScroll);
           }
         }
       };
 
-      // If clientWidth is 0, the container might not be rendered yet,
-      // use a short timeout or rAF to retry.
       if (container.clientWidth === 0) {
         requestAnimationFrame(setInitialScroll);
       } else {
@@ -165,10 +164,10 @@ export default function HomePage() {
         container.removeEventListener('scroll', handleScroll);
       };
     }
-  }, [onboardingStep, isAppLoading, isMounted, handleScroll]);
+  }, [onboardingStep, isAppLoading, isMounted, handleScroll, setParallaxOffset]);
 
 
-  if (!isMounted || (isAppLoading && onboardingStep !== 'tod')) { // Allow TOD to render even if AI message is loading
+  if (!isMounted || (isAppLoading && onboardingStep !== 'tod')) { 
     return (
       <div className="flex items-center justify-center h-screen bg-background">
         <ParallaxBackground parallaxOffset={parallaxOffset}/>
@@ -233,14 +232,13 @@ export default function HomePage() {
         ref={todContainerRef} 
         className="tod-scroll-container absolute inset-0 z-10 scrollbar-hide"
         style={{
-          // width: `${sectionComponents.length * 100}vw`, // This is now handled by the flex items directly
-          WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
+          WebkitOverflowScrolling: 'touch', 
         }}
       >
         {sectionComponents.map((SectionComponentInstance, index) => (
           <div 
             key={SectionComponentInstance.key || `tod-section-${index}`} 
-            className="tod-section" // tod-section class defines width: 100vw
+            className="tod-section"
           >
             {SectionComponentInstance}
           </div>
@@ -253,4 +251,3 @@ export default function HomePage() {
     </main>
   );
 }
-
