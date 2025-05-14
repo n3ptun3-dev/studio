@@ -111,28 +111,25 @@ export default function HomePage() {
 
       setParallaxOffset(currentScrollLeft);
 
-      const numActualSections = sectionComponents.length - 2; // e.g., 5 if total 7 sections
+      const numActualSections = sectionComponents.length - 2; 
       
-      // Scroll position for the actual Agent section (index 1)
       const scrollPosActualAgent = clientWidth;
-      // Scroll position for the actual Vault section (index L-2, e.g., 5 for 7 sections)
       const scrollPosActualVault = numActualSections * clientWidth;
       
-      // Maximum scrollLeft when the rightmost clone (Agent clone) is aligned at the start of the viewport
       const maxPossibleScrollLeft = (sectionComponents.length - 1) * clientWidth;
 
       // If scrolled to the far left (viewing the cloned Vault at index 0)
       // currentScrollLeft will be near 0. We jump to the actual Vault.
-      if (currentScrollLeft <= 5) { // Use a small threshold like 5px
+      if (currentScrollLeft <= 5) { 
         todContainerRef.current.scrollLeft = scrollPosActualVault;
       } 
       // If scrolled to the far right (viewing the cloned Agent at index L-1)
       // currentScrollLeft will be near maxPossibleScrollLeft. We jump to the actual Agent.
-      else if (currentScrollLeft >= maxPossibleScrollLeft - 5) { // Use a small threshold
+      else if (currentScrollLeft >= maxPossibleScrollLeft - 5) { 
         todContainerRef.current.scrollLeft = scrollPosActualAgent;
       }
     }
-  }, [sectionComponents.length, setParallaxOffset]); 
+  }, [sectionComponents.length]); 
 
   useEffect(() => {
     const container = todContainerRef.current;
@@ -164,7 +161,7 @@ export default function HomePage() {
         container.removeEventListener('scroll', handleScroll);
       };
     }
-  }, [onboardingStep, isAppLoading, isMounted, handleScroll, setParallaxOffset]);
+  }, [onboardingStep, isAppLoading, isMounted, handleScroll]);
 
 
   if (!isMounted || (isAppLoading && onboardingStep !== 'tod')) { 
@@ -191,7 +188,7 @@ export default function HomePage() {
 
   if (onboardingStep !== 'tod') {
     return (
-      <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground overflow-hidden">
+      <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
         <ParallaxBackground parallaxOffset={parallaxOffset} />
         {renderOnboarding()}
         {showAuthPrompt && <AuthPromptModal onClose={() => setShowAuthPrompt(false)} />}
@@ -213,15 +210,15 @@ export default function HomePage() {
         <div className="absolute inset-0 opacity-30" style={{
           backgroundImage: `repeating-linear-gradient(
             45deg,
-            hsl(var(--primary-hsl) / 0.2),
-            hsl(var(--primary-hsl) / 0.2) 1px,
+            hsl(var(--accent-hsl) / 0.3),
+            hsl(var(--accent-hsl) / 0.3) 1px,
             transparent 2px,
             transparent 60px
           ),
           repeating-linear-gradient(
             -45deg,
-            hsl(var(--primary-hsl) / 0.2),
-            hsl(var(--primary-hsl) / 0.2) 1px,
+            hsl(var(--accent-hsl) / 0.3),
+            hsl(var(--accent-hsl) / 0.3) 1px,
             transparent 2px,
             transparent 60px
           )`
@@ -251,3 +248,4 @@ export default function HomePage() {
     </main>
   );
 }
+
