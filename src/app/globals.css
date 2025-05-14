@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -161,7 +162,7 @@
     --level-8-color: hsl(var(--level-8-color-hsl));
   }
 
-  /* The app is always "dark" in the sense of a dark background holographic theme */
+  /* The app is always "dark" in the sense of a dark holographic theme */
   .dark {
     /* All variables are already defined in :root for the dark holographic theme */
   }
@@ -173,12 +174,11 @@
   }
   body {
     @apply bg-background text-foreground font-exo2; /* Exo 2 as default body font */
-    /* Prevent background image from repeating if it's smaller than viewport */
     background-repeat: no-repeat;
     background-size: cover;
-    background-attachment: fixed; /* Parallax background behavior */
-    overflow-x: hidden; /* Prevent body scroll for main horizontal scroll */
-    overflow-y: auto; /* Allow vertical scroll for Command Center etc. */
+    background-attachment: fixed; 
+    overflow-x: hidden; 
+    overflow-y: auto; 
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -207,7 +207,7 @@
 }
 .holographic-button:hover {
   background-color: var(--hologram-button-bg);
-  @apply text-background; /* text-background maps to color: hsl(var(--background-hsl)) */
+  color: var(--background); /* Use CSS var for background text color on hover */
   box-shadow: 0 0 15px var(--hologram-button-bg), 0 0 25px var(--hologram-button-bg);
 }
 .holographic-button:disabled {
@@ -226,14 +226,20 @@
 
 .font-rajdhani {
   font-family: var(--font-rajdhani);
-
 }
 
-.font-digital7 { /* For Digital-7 like appearance */
+.font-digital7 { 
   font-family: var(--font-geist-mono), monospace;
-  letter-spacing: 0.1em; /* Adjust for blocky feel */
+  letter-spacing: 0.1em; 
   font-variant-numeric: tabular-nums;
 }
+
+.pad-screen-grid {
+  background-image:
+    repeating-linear-gradient(0deg, hsl(var(--muted-foreground-hsl) / 0.1) 0px 1px, transparent 1px 20px),
+    repeating-linear-gradient(90deg, hsl(var(--muted-foreground-hsl) / 0.1) 0px 1px, transparent 1px 20px);
+}
+
 
 /* For glowing icons */
 .icon-glow {
@@ -263,14 +269,14 @@
 /* TOD specific for horizontal scrolling */
 .tod-scroll-container {
   display: flex;
-  height: 100vh; /* Full viewport height */
-  overflow-y: hidden; /* Prevent vertical scroll within this container */
-  overflow-x: auto; /* Allow horizontal scrolling */
+  height: 100vh; 
+  overflow-y: hidden; 
+  overflow-x: auto; 
 }
 
 .tod-section {
   @apply flex-shrink-0 h-full relative;
-  width: 100vw; /* Each section is one viewport width */
+  width: 100vw; 
 }
 
 /* Parallax layers */
@@ -280,7 +286,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  will-change: transform; /* Performance optimization */
+  will-change: transform; 
 }
 
 /* Scrollbar hiding utilities */
@@ -288,7 +294,6 @@
   display: none;
 }
 .scrollbar-hide {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;  
+  scrollbar-width: none;  
 }
-

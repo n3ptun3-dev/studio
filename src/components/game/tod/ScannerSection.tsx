@@ -2,23 +2,25 @@
 "use client";
 
 import { HolographicPanel, HolographicButton } from '@/components/game/shared/HolographicPanel';
-import { RefreshCw, MapPin, AlertTriangle, Gift } from 'lucide-react';
+import { RefreshCw, MapPin, AlertTriangle, Gift, Info } from 'lucide-react';
 import { useState } from 'react';
+import { useAppContext } from '@/contexts/AppContext';
+import { cn } from '@/lib/utils';
+
 
 interface SectionProps {
   parallaxOffset: number;
-  // style?: React.CSSProperties; // Removed as it's no longer needed for root transform
 }
 
 interface NetworkNode {
   id: string;
   type: 'vault' | 'highPriority' | 'droppedItem';
   title: string;
-  level?: number; // For vaults
-  owner?: string; // For vaults/HPT
-  team?: string; // For vaults/HPT
-  elintAmount?: number; // For HPT
-  position: { x: number; y: number }; // Percentage based for responsiveness
+  level?: number; 
+  owner?: string; 
+  team?: string; 
+  elintAmount?: number; 
+  position: { x: number; y: number }; 
 }
 
 const generateNodes = (count = 15): NetworkNode[] => {
@@ -35,8 +37,8 @@ const generateNodes = (count = 15): NetworkNode[] => {
       team: type !== 'droppedItem' ? (Math.random() > 0.5 ? "Cyphers" : "Shadows") : undefined,
       elintAmount: type === 'highPriority' ? Math.floor(Math.random() * 5000) + 1000 : undefined,
       position: { 
-        x: Math.random() * 80 + 10, // 10% to 90%
-        y: Math.random() * 70 + 15  // 15% to 85% (leave space for header/footer)
+        x: Math.random() * 80 + 10, 
+        y: Math.random() * 70 + 15  
       },
     });
   }
@@ -45,6 +47,7 @@ const generateNodes = (count = 15): NetworkNode[] => {
 
 
 export function ScannerSection({ parallaxOffset }: SectionProps) {
+  const { openTODWindow } = useAppContext();
   const [nodes, setNodes] = useState<NetworkNode[]>(generateNodes());
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -59,29 +62,41 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
   };
 
   const handleNodeClick = (node: NetworkNode) => {
-    // TODO: Real-time availability check
     setSelectedNode(node);
   };
   
   const getNodeIcon = (type: NetworkNode['type']) => {
     switch(type) {
-      case 'vault': return <MapPin className="w-full h-full text-primary group-hover:text-accent" />;
-      case 'highPriority': return <AlertTriangle className="w-full h-full text-destructive group-hover:text-accent animate-pulse" />;
-      case 'droppedItem': return <Gift className="w-full h-full text-yellow-400 group-hover:text-accent animate-ping" />;
+      case 'vault': return <MapPin className="w-full h-full text-primary group-hover:text-accent icon-glow" />;
+      case 'highPriority': return <AlertTriangle className="w-full h-full text-destructive group-hover:text-accent animate-pulse icon-glow" />;
+      case 'droppedItem': return <Gift className="w-full h-full text-yellow-400 group-hover:text-accent animate-ping icon-glow" />;
       default: return <MapPin className="w-full h-full text-muted-foreground" />;
     }
   };
 
   return (
-    <div className="flex flex-col p-4 md:p-6 h-full">
-      <HolographicPanel className="flex-none mb-4 p-3 flex items-center justify-between">
+    // Entire section is a holographic panel
+    <div className="holographic-panel flex flex-col p-4 md:p-6 h-full overflow-hidden">
+      {/* Title Area - Not a separate panel component, blends into the section panel */}
+      <div className="flex-none mb-4 p-0 flex items-center justify-between">
         <h2 className="text-2xl font-orbitron holographic-text">Network Scanner</h2>
-        <HolographicButton onClick={refreshScanner} disabled={isLoading} className="p-2">
-          <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
-          <span className="ml-2 hidden sm:inline">Ping Network</span>
-        </HolographicButton>
-      </HolographicPanel>
+        <div className="flex items-center">
+          <HolographicButton onClick={refreshScanner} disabled={isLoading} className="p-2">
+            <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
+            <span className="ml-2 hidden sm:inline">Ping Network</span>
+          </HolographicButton>
+          <HolographicButton 
+            onClick={() => openTODWindow("Scanner Intel", <p className="font-rajdhani text-muted-foreground">The Network Scanner pings the local digital vicinity for active vaults, high-priority ELINT transfers, and dropped item caches. Use Team Codes to claim dropped items for your faction.</p>)} 
+            variant="ghost" 
+            size="icon" 
+            className="!p-1 ml-2"
+          >
+            <Info className="w-5 h-5 icon-glow" />
+          </HolographicButton>
+        </div>
+      </div>
 
+      {/* Node Display Area - This IS a HolographicPanel for layering effect */}
       <HolographicPanel className="flex-grow relative overflow-hidden">
         {/* Stylized Network Map Background */}
         <div className="absolute inset-0 opacity-20" style={{
@@ -93,9 +108,9 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             backgroundPosition: '0 0, 10px 10px',
           }}></div>
         
-        {/* Connecting Lines - simple example, more complex logic for actual connections */}
+        {/* Connecting Lines */}
         {nodes.map((node, i) => 
-          i < nodes.length -1 && (
+          i < nodes.length -1 && ( // Ensure we don't try to connect the last node to a non-existent next one
             <svg key={`line-${i}`} className="absolute inset-0 w-full h-full" style={{ pointerEvents: 'none' }}>
               <line 
                 x1={`${node.position.x}%`} y1={`${node.position.y}%`} 
@@ -115,7 +130,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
               top: `${node.position.y}%`, 
               transform: 'translate(-50%, -50%)',
               borderColor: selectedNode?.id === node.id ? 'hsl(var(--accent-hsl))' : 'transparent',
-              boxShadow: selectedNode?.id === node.id ? '0 0 15px hsl(var(--accent-hsl))' : 'none',
+              boxShadow: selectedNode?.id === node.id ? '0 0 15px hsl(var(--accent-hsl)), inset 0 0 8px hsl(var(--accent-hsl))' : 'none',
             }}
             onClick={() => handleNodeClick(node)}
             title={node.title}
@@ -127,8 +142,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
         {/* Selected Node Details Overlay */}
         {selectedNode && (
           <HolographicPanel 
-            className="absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 p-4 z-20 animate-slide-in-bottom"
-            style={{animationName: 'slideInUp', animationDuration: '0.3s'}}
+            className="absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 p-4 z-20 animate-slide-in-bottom font-rajdhani"
           >
             <h3 className="text-lg font-orbitron mb-2 holographic-text">{selectedNode.title}</h3>
             {selectedNode.type === 'vault' && (
@@ -157,15 +171,10 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
                 <HolographicButton className="w-full mt-1">Claim Item</HolographicButton>
               </>
             )}
-             <HolographicButton variant="ghost" onClick={() => setSelectedNode(null)} className="absolute top-1 right-1 p-1 text-xs">Close</HolographicButton>
+             <HolographicButton variant="ghost" onClick={() => setSelectedNode(null)} className="absolute top-1 right-1 !p-1 text-xs hover:bg-primary/20">Close</HolographicButton>
           </HolographicPanel>
         )}
       </HolographicPanel>
     </div>
   );
 }
-
-// Keyframes for slideInUp if not in tailwind.config.js (using slide-in-bottom as example)
-// @keyframes slideInUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-// .animate-slide-in-bottom { animation: slideInUp 0.3s ease-out forwards; } 
-// (Using existing animation 'slide-in-from-bottom-2' or similar from shadcn/ui would be better, or define 'slideInUp')
