@@ -18,7 +18,7 @@ const XP_LEVELS = [0, 100, 200, 400, 800, 1600, 3200, 6400, 12800]; // XP needed
 
 const AgentDossierView = () => {
   const { playerSpyName, playerPiName, faction, playerStats, setFaction: setAppFaction, addMessage } = useAppContext();
-  // const { setTheme } = useTheme(); // setTheme from useTheme is not used here, ThemeUpdater handles it
+  // const { setTheme } = useTheme(); // setTheme from useTheme is handled by ThemeUpdater
 
   const handleFactionChange = () => {
     const newFaction = faction === 'Cyphers' ? 'Shadows' : 'Cyphers';
@@ -100,8 +100,8 @@ const IntelFilesView = () => {
 
   const handleCategorySelect = (category: (typeof categories[0]) | null) => {
     if (category) {
-      setSelectedCategory(category.id); 
-      setContentTitle(category.title); 
+      setSelectedCategory(category.id);
+      setContentTitle(category.title);
       openTODWindow(category.title,
         <div className="font-rajdhani">
           <h4 className="text-lg font-orbitron mb-2 holographic-text">{category.heading}</h4>
@@ -113,6 +113,10 @@ const IntelFilesView = () => {
       setContentTitle("Intel Files");
     }
   };
+
+
+  // Logic for slide animations between category list and content would go here
+  // For now, it just opens a TODWindow for the content.
 
   return (
     <ScrollArea className="h-full p-3">
@@ -137,11 +141,13 @@ const IntelFilesView = () => {
           ))}
         </ul>
       ) : (
+        // Content is now shown in TODWindow, so this part might not be needed or could show a summary
         <p className="text-muted-foreground font-rajdhani">Details for {contentTitle} are displayed in a TOD Window.</p>
       )}
     </ScrollArea>
   );
 };
+
 
 const SettingsView = () => (
   <ScrollArea className="h-full p-3 font-rajdhani">
@@ -169,23 +175,25 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
   // const padTopPosition = useRef<number>(0); // Store target Y positions for PAD - Not currently used
 
   useEffect(() => {
-    const cycleDuration = 4 * 60 * 60;
-    const openDuration = 1 * 60 * 60;
+    const cycleDuration = 4 * 60 * 60; // 4 hours in seconds
+    const openDuration = 1 * 60 * 60; // 1 hour in seconds
 
     const updateTimer = () => {
-      const now = Math.floor(Date.now() / 1000);
+      const now = Math.floor(Date.now() / 1000); // current time in seconds
       const cycleProgress = now % cycleDuration;
 
       if (cycleProgress < openDuration) {
+        // Window is open
         setIsTransferWindowOpen(true);
         setTransferTimer(openDuration - cycleProgress);
       } else {
+        // Window is closed
         setIsTransferWindowOpen(false);
         setTransferTimer(cycleDuration - cycleProgress);
       }
     };
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
+    updateTimer(); // Initial call
+    const interval = setInterval(updateTimer, 1000); // Update every second
     return () => clearInterval(interval);
   }, []);
 
@@ -200,24 +208,28 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
   const handlePadInteractionStart = (clientY: number) => {
     if (padRef.current) {
       dragStartY.current = clientY;
-      padRef.current.style.transition = 'none'; 
+      padRef.current.style.transition = 'none'; // Disable transition during drag for smoother movement
     }
   };
   
   const handlePadInteractionMove = (clientY: number) => {
     if (dragStartY.current === null || !padRef.current) return;
+
+    // Basic drag logic - further refinement might be needed for snap/thresholds
     // const deltaY = clientY - dragStartY.current;
-    // Drag interaction logic not fully implemented, relying on power button
+    // For now, rely on power button, full drag interaction requires more complex state management
   };
 
   const handlePadInteractionEnd = () => {
+    // Re-enable transition after drag/touch ends
     if (padRef.current) {
       padRef.current.style.transition = 'transform 0.3s ease-out, height 0.3s ease-out';
     }
     dragStartY.current = null;
+    // Add logic here to snap to top/bottom based on current position if desired
   };
 
-  const padGlossClass = "pad-gloss-effect";
+  const padGlossClass = "pad-gloss-effect"; // Placeholder for gloss effect styling
 
   const renderPadScreen = () => {
     switch(padScreenView) {
@@ -267,14 +279,13 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
         ref={padRef}
         className={cn(
           "absolute bottom-0 left-0 right-0 transition-all duration-300 ease-out mx-auto w-full max-w-2xl",
-          "border-t rounded-t-lg",
-          padGlossClass, // "pad-gloss-effect"
-          "bg-[hsla(var(--background-hsl),0.3)]", // Apply background using Tailwind arbitrary value
+          "border-t rounded-t-lg bg-pad-backing", // Added .bg-pad-backing
+          // padGlossClass, // Temporarily removed to ensure background applies
           isPadUp ? "h-[75%]" : "h-[100px]",
         )}
         style={{
-          // backgroundColor is now handled by Tailwind class above
-          borderColor: 'hsla(var(--background-hsl), 0.5)', 
+          // backgroundColor removed, handled by .bg-pad-backing
+          borderColor: 'hsla(var(--background-hsl), 0.5)',
           transform: isPadUp ? 'translateY(0)' : `translateY(calc(100% - 100px - env(safe-area-inset-bottom, 0px)))`,
         }}
         onTouchStart={(e) => handlePadInteractionStart(e.touches[0].clientY)}
