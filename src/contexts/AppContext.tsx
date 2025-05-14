@@ -2,7 +2,7 @@
 "use client";
 
 import type { ReactNode } from 'react';
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 
 export type Faction = 'Cyphers' | 'Shadows' | 'Observer';
 export type OnboardingStep = 'welcome' | 'factionChoice' | 'authPrompt' | 'fingerprint' | 'tod';
