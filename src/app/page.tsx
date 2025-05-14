@@ -140,16 +140,20 @@ export default function HomePage() {
           // Start at the first "actual" section, which is AgentSection (index 1 in sectionComponents array)
           const initialScrollPosition = sectionWidth; 
           container.scrollLeft = initialScrollPosition;
+          setParallaxOffset(initialScrollPosition); // Initialize parallaxOffset here
           
-          if (Math.abs(container.scrollLeft - initialScrollPosition) < 5) {
+          if (Math.abs(container.scrollLeft - initialScrollPosition) < 5) { // Check if scroll was successful
             initialScrollSetRef.current = true; 
           } else {
             // Retry if scroll wasn't successful (e.g. layout shift)
-            requestAnimationFrame(setInitialScroll);
+            // This can happen if clientWidth isn't fully resolved yet or if there's a layout shift
+             requestAnimationFrame(setInitialScroll);
           }
         }
       };
 
+      // If clientWidth is 0, the container might not be rendered yet,
+      // use a short timeout or rAF to retry.
       if (container.clientWidth === 0) {
         requestAnimationFrame(setInitialScroll);
       } else {
@@ -167,7 +171,7 @@ export default function HomePage() {
   if (!isMounted || (isAppLoading && onboardingStep !== 'tod')) { // Allow TOD to render even if AI message is loading
     return (
       <div className="flex items-center justify-center h-screen bg-background">
-        <ParallaxBackground />
+        <ParallaxBackground parallaxOffset={parallaxOffset}/>
         <div className="animate-pulse text-2xl font-orbitron holographic-text">INITIALIZING TOD...</div>
       </div>
     );
@@ -189,7 +193,7 @@ export default function HomePage() {
   if (onboardingStep !== 'tod') {
     return (
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground overflow-hidden">
-        <ParallaxBackground />
+        <ParallaxBackground parallaxOffset={parallaxOffset} />
         {renderOnboarding()}
         {showAuthPrompt && <AuthPromptModal onClose={() => setShowAuthPrompt(false)} />}
       </main>
@@ -197,8 +201,8 @@ export default function HomePage() {
   }
   
   return (
-    <main className="relative h-screen w-screen overflow-hidden">
-      <ParallaxBackground />
+    <main className="relative h-screen w-screen">
+      <ParallaxBackground parallaxOffset={parallaxOffset} />
       
       <div 
         className="parallax-layer z-[5]" 
@@ -229,7 +233,7 @@ export default function HomePage() {
         ref={todContainerRef} 
         className="tod-scroll-container absolute inset-0 z-10 scrollbar-hide"
         style={{
-          width: `${sectionComponents.length * 100}vw`, // Ensure container is wide enough
+          // width: `${sectionComponents.length * 100}vw`, // This is now handled by the flex items directly
           scrollSnapType: 'x mandatory', // Enforce snapping
           WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
         }}
@@ -237,7 +241,7 @@ export default function HomePage() {
         {sectionComponents.map((SectionComponentInstance, index) => (
           <div 
             key={SectionComponentInstance.key || `tod-section-${index}`} 
-            className="tod-section"
+            className="tod-section" // tod-section class defines width: 100vw
             style={{ scrollSnapAlign: 'start' }} // Ensure each section snaps
           >
             {SectionComponentInstance}
