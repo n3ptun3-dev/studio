@@ -113,8 +113,8 @@ export default function HomePage() {
 
       const numActualSections = sectionComponents.length - 2; 
       
-      const scrollPosActualAgent = clientWidth;
-      const scrollPosActualVault = numActualSections * clientWidth;
+      const scrollPosActualAgent = clientWidth; // Agent is at index 1 (after cloned Vault)
+      const scrollPosActualVault = numActualSections * clientWidth; // Vault is at index numActualSections (before cloned Agent)
       
       const maxPossibleScrollLeft = (sectionComponents.length - 1) * clientWidth;
 
@@ -138,18 +138,22 @@ export default function HomePage() {
       const setInitialScroll = () => {
         if (container.clientWidth > 0 && !initialScrollSetRef.current) {
           const sectionWidth = container.clientWidth;
+          // Start at the actual first section (AgentSection, index 1 after the cloned Vault)
           const initialScrollPosition = sectionWidth; 
           container.scrollLeft = initialScrollPosition;
           setParallaxOffset(initialScrollPosition); 
           
-          if (Math.abs(container.scrollLeft - initialScrollPosition) < 5) { 
+          // Confirm scroll position before marking as set to handle potential race conditions
+          if (Math.abs(container.scrollLeft - initialScrollPosition) < 5) { // Allow small deviation
             initialScrollSetRef.current = true; 
           } else {
+             // If not set correctly, retry. This can happen if clientWidth was briefly 0.
              requestAnimationFrame(setInitialScroll);
           }
         }
       };
 
+      // If clientWidth is 0 initially, wait for layout to complete
       if (container.clientWidth === 0) {
         requestAnimationFrame(setInitialScroll);
       } else {
@@ -204,22 +208,25 @@ export default function HomePage() {
         className="parallax-layer z-[5]" 
         style={{ 
           transform: `translateX(-${parallaxOffset * 0.5}px)`,
+          // Adjust width to account for the number of sections and the parallax scroll factor
+          // This ensures the background layer is wide enough to cover the entire scroll range
           width: `${sectionComponents.length * 100 * 0.5 + 100}vw`, 
         }}
       >
+        {/* Subtle grid lines with dynamic accent color */}
         <div className="absolute inset-0 opacity-30" style={{
           backgroundImage: `repeating-linear-gradient(
             45deg,
-            hsl(var(--accent-hsl) / 0.3),
-            hsl(var(--accent-hsl) / 0.3) 1px,
-            transparent 2px,
+            hsl(var(--accent-hsl) / 0.2),
+            hsl(var(--accent-hsl) / 0.2) 1px,
+            transparent 1px,
             transparent 60px
           ),
           repeating-linear-gradient(
             -45deg,
-            hsl(var(--accent-hsl) / 0.3),
-            hsl(var(--accent-hsl) / 0.3) 1px,
-            transparent 2px,
+            hsl(var(--accent-hsl) / 0.2),
+            hsl(var(--accent-hsl) / 0.2) 1px,
+            transparent 1px,
             transparent 60px
           )`
         }}></div>
@@ -229,13 +236,15 @@ export default function HomePage() {
         ref={todContainerRef} 
         className="tod-scroll-container absolute inset-0 z-10 scrollbar-hide"
         style={{
-          WebkitOverflowScrolling: 'touch', 
+          WebkitOverflowScrolling: 'touch', // For smoother scrolling on iOS
+          // scrollSnapType: 'x mandatory', // Removed for smoother scrolling
         }}
       >
         {sectionComponents.map((SectionComponentInstance, index) => (
           <div 
             key={SectionComponentInstance.key || `tod-section-${index}`} 
             className="tod-section"
+            // style={{ scrollSnapAlign: 'start' }} // Removed for smoother scrolling
           >
             {SectionComponentInstance}
           </div>
