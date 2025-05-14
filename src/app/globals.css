@@ -240,8 +240,14 @@
     repeating-linear-gradient(90deg, hsl(var(--muted-foreground-hsl) / 0.1) 0px 1px, transparent 1px 20px);
 }
 
+/* Default for Cyphers theme or when no specific theme class is on a higher parent */
 .bg-pad-backing {
-  background-color: hsla(var(--background-hsl), 0.3) !important; /* Original intended color */
+  background-color: hsla(210, 60%, 8%, 0.3) !important; /* Cyphers --background-hsl with 0.3 alpha */
+}
+
+/* For Shadows theme */
+.theme-shadows .bg-pad-backing {
+  background-color: hsla(0, 60%, 8%, 0.3) !important; /* Shadows --background-hsl with 0.3 alpha */
 }
 
 
