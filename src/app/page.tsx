@@ -234,7 +234,6 @@ export default function HomePage() {
         className="tod-scroll-container absolute inset-0 z-10 scrollbar-hide"
         style={{
           // width: `${sectionComponents.length * 100}vw`, // This is now handled by the flex items directly
-          scrollSnapType: 'x mandatory', // Enforce snapping
           WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
         }}
       >
@@ -242,7 +241,6 @@ export default function HomePage() {
           <div 
             key={SectionComponentInstance.key || `tod-section-${index}`} 
             className="tod-section" // tod-section class defines width: 100vw
-            style={{ scrollSnapAlign: 'start' }} // Ensure each section snaps
           >
             {SectionComponentInstance}
           </div>
