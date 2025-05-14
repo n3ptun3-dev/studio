@@ -24,7 +24,6 @@ const AgentDossierView = () => {
     const newFaction = faction === 'Cyphers' ? 'Shadows' : 'Cyphers';
     setAppFaction(newFaction);
     // ThemeUpdater will handle setTheme based on faction context change
-    // setTheme(newFaction === 'Cyphers' ? 'cyphers' : 'shadows'); 
     addMessage({type: 'system', text: `Faction allegiance protocols updated to: ${newFaction}. Coordinating with HQ.`});
   };
 
@@ -288,14 +287,14 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
       <div 
         ref={padRef}
         className={cn(
-          "absolute bottom-0 left-0 right-0 backdrop-blur-sm transition-all duration-300 ease-out mx-auto w-full max-w-2xl",
+          "absolute bottom-0 left-0 right-0 transition-all duration-300 ease-out mx-auto w-full max-w-2xl", // Removed backdrop-blur-sm
           "border-t rounded-t-lg", 
           padGlossClass, 
           isPadUp ? "h-[75%]" : "h-[100px]", 
         )}
         style={{
-          backgroundColor: 'hsla(var(--background-hsl), 0.3)',
-          borderColor: 'hsla(var(--background-hsl), 0.5)', // Lighter shade of background for subtle border
+          backgroundColor: 'hsla(var(--background-hsl), 0.3)', // Matches vault hexagon fill
+          borderColor: 'hsla(var(--background-hsl), 0.5)', 
           transform: isPadUp ? 'translateY(0)' : `translateY(calc(100% - 100px - env(safe-area-inset-bottom, 0px)))`,
         }}
         onTouchStart={(e) => handlePadInteractionStart(e.touches[0].clientY)}
@@ -344,6 +343,3 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
     </div>
   );
 }
-
-
-    
