@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { HolographicButton } from '@/components/game/shared/HolographicPanel'; // HolographicPanel removed as PAD has custom styling now
+import { HolographicButton } from '@/components/game/shared/HolographicPanel';
 import { Progress } from "@/components/ui/progress";
 import { Fingerprint, Settings, BookOpen, Info, Power } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -18,7 +18,7 @@ const XP_LEVELS = [0, 100, 200, 400, 800, 1600, 3200, 6400, 12800]; // XP needed
 
 const AgentDossierView = () => {
   const { playerSpyName, playerPiName, faction, playerStats, setFaction: setAppFaction, addMessage } = useAppContext();
-  const { setTheme } = useTheme(); 
+  // const { setTheme } = useTheme(); // setTheme from useTheme is not used here, ThemeUpdater handles it
 
   const handleFactionChange = () => {
     const newFaction = faction === 'Cyphers' ? 'Shadows' : 'Cyphers';
@@ -100,11 +100,9 @@ const IntelFilesView = () => {
 
   const handleCategorySelect = (category: (typeof categories[0]) | null) => {
     if (category) {
-       // Animate out current view, animate in new view
-      setSelectedCategory(category.id); // This would trigger animation
-      setContentTitle(category.title); // Update title for the content view
-      // For now, directly open TOD Window for simplicity as animations are complex
-       openTODWindow(category.title, 
+      setSelectedCategory(category.id); 
+      setContentTitle(category.title); 
+      openTODWindow(category.title,
         <div className="font-rajdhani">
           <h4 className="text-lg font-orbitron mb-2 holographic-text">{category.heading}</h4>
           <p className="text-muted-foreground whitespace-pre-line">{category.content}</p>
@@ -116,8 +114,6 @@ const IntelFilesView = () => {
     }
   };
 
-  // This structure is simplified. A real animated slide would involve CSS transitions
-  // and possibly state to manage which view (list or content) is active.
   return (
     <ScrollArea className="h-full p-3">
       <div className="flex items-center mb-4">
@@ -131,7 +127,7 @@ const IntelFilesView = () => {
         <ul className="space-y-1 font-rajdhani">
           {categories.map(cat => (
             <li key={cat.id}>
-              <HolographicButton 
+              <HolographicButton
                 className="w-full justify-start text-left !bg-transparent hover:!bg-primary/10 !py-1.5"
                 onClick={() => handleCategorySelect(cat)}
               >
@@ -141,8 +137,6 @@ const IntelFilesView = () => {
           ))}
         </ul>
       ) : (
-        // Content for selectedCategory would be rendered here if not using TODWindow for display
-        // For now, content is shown in TODWindow
         <p className="text-muted-foreground font-rajdhani">Details for {contentTitle} are displayed in a TOD Window.</p>
       )}
     </ScrollArea>
@@ -172,36 +166,26 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
 
   const padRef = useRef<HTMLDivElement>(null);
   const dragStartY = useRef<number | null>(null);
-  const padTopPosition = useRef<number>(0); // Store target Y positions for PAD
+  // const padTopPosition = useRef<number>(0); // Store target Y positions for PAD - Not currently used
 
   useEffect(() => {
-    // Calculate PAD positions based on viewport height
-    // This is a simplified calculation.
-    // Target for 'down' state (button panel visible)
-    // Target for 'up' state (PAD fully visible)
-    // For now, we use CSS transform for positioning.
-    // A more complex drag would update this transform directly.
-  }, []);
-
-
-  useEffect(() => {
-    const cycleDuration = 4 * 60 * 60; 
-    const openDuration = 1 * 60 * 60;   
+    const cycleDuration = 4 * 60 * 60;
+    const openDuration = 1 * 60 * 60;
 
     const updateTimer = () => {
-      const now = Math.floor(Date.now() / 1000); 
+      const now = Math.floor(Date.now() / 1000);
       const cycleProgress = now % cycleDuration;
 
-      if (cycleProgress < openDuration) { 
+      if (cycleProgress < openDuration) {
         setIsTransferWindowOpen(true);
         setTransferTimer(openDuration - cycleProgress);
-      } else { 
+      } else {
         setIsTransferWindowOpen(false);
         setTransferTimer(cycleDuration - cycleProgress);
       }
     };
-    updateTimer(); 
-    const interval = setInterval(updateTimer, 1000); 
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -216,29 +200,24 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
   const handlePadInteractionStart = (clientY: number) => {
     if (padRef.current) {
       dragStartY.current = clientY;
-      padRef.current.style.transition = 'none'; // Disable transition during drag
+      padRef.current.style.transition = 'none'; 
     }
   };
   
   const handlePadInteractionMove = (clientY: number) => {
     if (dragStartY.current === null || !padRef.current) return;
-    const deltaY = clientY - dragStartY.current;
-    // This is where complex drag logic would go. For now, we use a simple toggle.
-    // Example: If a significant swipe is detected, toggle isPadUp
-    // For simplicity, direct interaction with PAD position via dragging is not fully implemented here
-    // We rely on the power button for now.
+    // const deltaY = clientY - dragStartY.current;
+    // Drag interaction logic not fully implemented, relying on power button
   };
 
   const handlePadInteractionEnd = () => {
     if (padRef.current) {
-      padRef.current.style.transition = 'transform 0.3s ease-out, height 0.3s ease-out'; // Re-enable
-      // Snap logic would go here if implementing full drag
+      padRef.current.style.transition = 'transform 0.3s ease-out, height 0.3s ease-out';
     }
     dragStartY.current = null;
   };
 
-
-  const padGlossClass = "pad-gloss-effect"; 
+  const padGlossClass = "pad-gloss-effect";
 
   const renderPadScreen = () => {
     switch(padScreenView) {
@@ -284,16 +263,17 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
       </div>
 
       {/* The PAD */}
-      <div 
+      <div
         ref={padRef}
         className={cn(
-          "absolute bottom-0 left-0 right-0 transition-all duration-300 ease-out mx-auto w-full max-w-2xl", // Removed backdrop-blur-sm
-          "border-t rounded-t-lg", 
-          padGlossClass, 
-          isPadUp ? "h-[75%]" : "h-[100px]", 
+          "absolute bottom-0 left-0 right-0 transition-all duration-300 ease-out mx-auto w-full max-w-2xl",
+          "border-t rounded-t-lg",
+          padGlossClass, // "pad-gloss-effect"
+          "bg-[hsla(var(--background-hsl),0.3)]", // Apply background using Tailwind arbitrary value
+          isPadUp ? "h-[75%]" : "h-[100px]",
         )}
         style={{
-          backgroundColor: 'hsla(var(--background-hsl), 0.3)', // Matches vault hexagon fill
+          // backgroundColor is now handled by Tailwind class above
           borderColor: 'hsla(var(--background-hsl), 0.5)', 
           transform: isPadUp ? 'translateY(0)' : `translateY(calc(100% - 100px - env(safe-area-inset-bottom, 0px)))`,
         }}
@@ -303,7 +283,7 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
         onMouseDown={(e) => handlePadInteractionStart(e.clientY)}
         onMouseMove={(e) => handlePadInteractionMove(e.clientY)}
         onMouseUp={handlePadInteractionEnd}
-        onMouseLeave={handlePadInteractionEnd} 
+        onMouseLeave={handlePadInteractionEnd}
       >
         {/* PAD Button Panel */}
         <div className="h-[60px] flex items-center justify-between px-4 border-b" style={{ borderColor: 'hsla(var(--background-hsl),0.4)'}}>
