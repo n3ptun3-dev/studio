@@ -177,7 +177,7 @@
     background-repeat: no-repeat;
     background-size: cover;
     background-attachment: fixed;
-    overflow-x: hidden; /* This might prevent horizontal scrolling for the TOD */
+    /* overflow-x: hidden; Removed to allow TOD horizontal scroll */
     overflow-y: auto;
   }
 
@@ -241,8 +241,7 @@
 }
 
 .bg-pad-backing {
-  /* Test with a very obvious color */
-  background-color: rgba(255, 0, 0, 0.5) !important; /* Bright red, 50% transparent */
+  background-color: hsla(var(--background-hsl), 0.3) !important; /* Original intended color */
 }
 
 
@@ -275,8 +274,8 @@
 .tod-scroll-container {
   display: flex;
   height: 100vh;
-  /* overflow-y: hidden; Ensure this doesn't conflict */
   overflow-x: auto; /* Ensure horizontal scrolling is enabled */
+  overflow-y: hidden; /* Prevent vertical scroll on the container itself */
 }
 
 .tod-section {
@@ -302,5 +301,7 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+    
 
     
