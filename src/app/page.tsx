@@ -191,8 +191,7 @@ export default function HomePage() {
 
   if (onboardingStep !== 'tod') {
     return (
-      // Removed overflow-hidden from this main to allow natural scroll on onboarding
-      <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
+      <main className="relative flex flex-col items-center justify-start min-h-screen bg-background text-foreground pt-8 pb-8 overflow-y-auto">
         <ParallaxBackground />
         {renderOnboarding()}
         {showAuthPrompt && <AuthPromptModal onClose={() => setShowAuthPrompt(false)} />}
@@ -212,7 +211,7 @@ export default function HomePage() {
           width: `${sectionComponents.length * 100 * 0.5 + 100}vw`, 
         }}
       >
-        <div className="absolute inset-0 opacity-20" style={{
+        <div className="absolute inset-0 opacity-30" style={{
           backgroundImage: `repeating-linear-gradient(
             45deg,
             hsl(var(--accent-hsl) / 0.2),
@@ -256,6 +255,3 @@ export default function HomePage() {
     </main>
   );
 }
-
-
-    

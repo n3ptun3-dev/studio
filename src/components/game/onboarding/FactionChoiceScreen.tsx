@@ -19,7 +19,7 @@ const factionDetails = {
     defaultTagline: "Information is Power. Decode the Network.",
     confirmTagline: "Align with The Cyphers",
     theme: "cyphers" as Faction | 'neutral',
-    icon: <Code className="w-12 h-12 mb-2 text-blue-400 icon-glow" />,
+    icon: <Code className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 mb-2 text-blue-400 icon-glow" />,
     colorClass: "border-blue-500 hover:border-blue-400",
     selectedColorClass: "ring-2 ring-blue-400 shadow-blue-500/50",
     primaryColorClass: "text-blue-400",
@@ -28,7 +28,7 @@ const factionDetails = {
     defaultTagline: "Control the Flow. Infiltrate and Disrupt.",
     confirmTagline: "Align with The Shadows",
     theme: "shadows" as Faction | 'neutral',
-    icon: <ShieldQuestion className="w-12 h-12 mb-2 text-red-400 icon-glow" />,
+    icon: <ShieldQuestion className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 mb-2 text-red-400 icon-glow" />,
     colorClass: "border-red-500 hover:border-red-400",
     selectedColorClass: "ring-2 ring-red-400 shadow-red-500/50",
     primaryColorClass: "text-red-400",
@@ -56,7 +56,6 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
 
     if (selectedFaction === factionName) {
       setAppContextFaction(factionName);
-      // TODO: Open Codename Input TODWindow here - Placeholder for now
       console.log(`Faction ${factionName} confirmed. Opening Codename Input...`);
       openTODWindow("Agent Codename Assignment", <div>Placeholder for Codename Input UI</div>);
       // Note: setOnboardingStep('fingerprint') or 'tod' will be handled by the AppContext after codename
@@ -76,10 +75,10 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
 
   return (
     <div className="w-full p-4 md:p-6 flex justify-center">
-      <HolographicPanel className="w-full max-w-2xl p-4 md:p-6 my-8">
-        <h1 className="text-3xl md:text-4xl font-orbitron mb-6 text-center holographic-text">Select Your Allegiance</h1>
+      <HolographicPanel className="w-full max-w-2xl p-4 md:p-6 my-4">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-orbitron mb-4 sm:mb-6 text-center holographic-text">Select Your Allegiance</h1>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
           {(['Cyphers', 'Shadows'] as const).map((factionName) => {
             const details = factionDetails[factionName];
             const isSelected = selectedFaction === factionName;
@@ -89,17 +88,17 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
               <div
                 key={factionName}
                 className={cn(
-                  "p-4 rounded-lg border-2 transition-all cursor-pointer flex flex-col items-center text-center holographic-panel bg-opacity-50 hover:shadow-accent/30",
+                  "p-3 sm:p-4 rounded-lg border-2 transition-all cursor-pointer flex flex-col items-center text-center holographic-panel bg-opacity-50 hover:shadow-accent/30",
                   isSelected ? details.selectedColorClass : details.colorClass,
                   !isSelected && "border-opacity-50"
                 )}
                 onClick={() => handleFactionSelect(factionName)}
               >
                 {details.icon}
-                <h2 className={cn("text-xl md:text-2xl font-orbitron mb-1", details.primaryColorClass)}>
+                <h2 className={cn("text-base sm:text-lg md:text-xl font-orbitron mb-1", details.primaryColorClass)}>
                   The {factionName}
                 </h2>
-                <p className={cn("text-xs md:text-sm min-h-[2.5em]", isSelected ? "text-accent font-semibold" : "text-muted-foreground")}>{tagline}</p>
+                <p className={cn("text-[10px] xxs:text-xs sm:text-sm min-h-[2.5em] leading-tight", isSelected ? "text-accent font-semibold" : "text-muted-foreground")}>{tagline}</p>
               </div>
             );
           })}
@@ -107,10 +106,10 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
 
         <Button
           variant="ghost"
-          className="w-full md:w-3/4 mx-auto text-muted-foreground hover:text-foreground flex items-center justify-center gap-2 py-3"
+          className="w-full md:w-3/4 mx-auto text-muted-foreground hover:text-foreground flex items-center justify-center gap-2 py-2 sm:py-3"
           onClick={handleProceedAsObserver}
         >
-          <Eye className="w-5 h-5" /> Proceed as Observer
+          <Eye className="w-4 h-4 sm:w-5 sm:h-5" /> Proceed as Observer
         </Button>
       </HolographicPanel>
     </div>
