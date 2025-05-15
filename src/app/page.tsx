@@ -18,9 +18,6 @@ import { generateWelcomeMessage, type WelcomeMessageInput } from '@/ai/flows/wel
 import { cn } from '@/lib/utils';
 
 
-// Desired actual order: Agent, ControlCenter, Scanner, EquipmentLocker, Vault
-// For looping, sections will be: [Vault (clone), Agent, ControlCenter, Scanner, EquipmentLocker, Vault, Agent (clone)]
-
 export default function HomePage() {
   const {
     onboardingStep,
@@ -54,12 +51,10 @@ export default function HomePage() {
       setOnboardingStep('fingerprint');
     }
     if (onboardingStep === 'tod' && !playBootAnimation) {
-      // Delay slightly to ensure component is rendered before animation starts
       setTimeout(() => setPlayBootAnimation(true), 100);
     }
   }, [isAuthenticated, onboardingStep, setOnboardingStep, playBootAnimation]);
 
-  // Welcome message generation logic
    useEffect(() => {
     if (onboardingStep === 'tod' && isAuthenticated && isMounted && !isAppLoading) {
       setIsLoading(true);
@@ -114,17 +109,17 @@ export default function HomePage() {
 
       setParallaxOffset(currentScrollLeft);
 
-      const numActualSections = sectionComponents.length - 2; 
-      const scrollPosActualAgent = clientWidth; 
-      const scrollPosActualVault = (sectionComponents.length - 2) * clientWidth; 
+      const numActualSections = sectionComponents.length - 2;
+      const scrollPosActualVault = (numActualSections -1) * clientWidth; 
+      const scrollPosActualAgent = clientWidth;
 
 
       const maxPossibleScrollLeft = (sectionComponents.length - 1) * clientWidth;
 
-      if (currentScrollLeft <= 5) { 
+      if (currentScrollLeft <= 5) {
         todContainerRef.current.scrollLeft = scrollPosActualVault;
       }
-      else if (currentScrollLeft >= maxPossibleScrollLeft - 5) { 
+      else if (currentScrollLeft >= maxPossibleScrollLeft - 5) {
         todContainerRef.current.scrollLeft = scrollPosActualAgent;
       }
     }
@@ -137,23 +132,21 @@ export default function HomePage() {
       const setInitialScroll = () => {
         if (container.clientWidth > 0 && !initialScrollSetRef.current) {
           const sectionWidth = container.clientWidth;
-          const initialScrollPosition = sectionWidth; 
+          const initialScrollPosition = sectionWidth;
           container.scrollLeft = initialScrollPosition;
           setParallaxOffset(initialScrollPosition);
 
-          if (Math.abs(container.scrollLeft - initialScrollPosition) < 5) { 
+          if (Math.abs(container.scrollLeft - initialScrollPosition) < 5) {
             initialScrollSetRef.current = true;
           } else {
              requestAnimationFrame(setInitialScroll);
           }
+        } else if (container.clientWidth === 0) {
+            requestAnimationFrame(setInitialScroll);
         }
       };
+      setInitialScroll();
 
-      if (container.clientWidth === 0) {
-        requestAnimationFrame(setInitialScroll);
-      } else {
-        setInitialScroll();
-      }
 
       container.addEventListener('scroll', handleScroll, { passive: true });
       return () => {
@@ -188,8 +181,11 @@ export default function HomePage() {
   };
 
   if (onboardingStep !== 'tod') {
+    // This main container is for onboarding steps.
+    // It's a flex column, centers its content, fills the screen height, and has overall padding.
+    // Individual onboarding screens (like WelcomeScreen) will use flex-grow to fill the space within this padded area.
     return (
-      <main className="relative flex flex-col items-center justify-start min-h-screen bg-background text-foreground p-4 sm:p-6 overflow-y-auto">
+      <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6">
         <ParallaxBackground parallaxOffset={0} />
         {renderOnboarding()}
         {showAuthPrompt && <AuthPromptModal onClose={() => setShowAuthPrompt(false)} />}
@@ -197,15 +193,16 @@ export default function HomePage() {
     );
   }
 
+  // This is the main view for the TOD itself
   return (
-    <main className="relative h-screen w-screen overflow-hidden"> 
+    <main className="relative h-screen w-screen overflow-hidden">
       <ParallaxBackground parallaxOffset={parallaxOffset} />
 
       <div
         className="parallax-layer z-[5]"
         style={{
           transform: `translateX(-${parallaxOffset * 0.5}px)`,
-          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`, // Ensure it's wide enough
+          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`,
         }}
       >
         <div className="absolute inset-0 opacity-20" style={{
