@@ -34,10 +34,11 @@ export function WelcomeScreen() {
     <div className="w-full p-4 md:p-6 flex justify-center">
       <HolographicPanel className="w-full max-w-2xl p-4 md:p-6 flex flex-col">
         <h1 className="text-3xl md:text-4xl font-orbitron mb-4 text-center holographic-text">Welcome Agent</h1>
-
-        <ScrollArea className="flex-grow h-64 md:h-80 mb-6 p-1 border border-primary/30 rounded-md">
+        
+        <h2 className="text-lg font-semibold holographic-text text-primary mb-2">Mission Briefing:</h2>
+        
+        <ScrollArea className="flex-grow h-60 md:h-72 mb-6 p-1 border border-primary/30 rounded-md">
           <div className="p-3 font-rajdhani text-sm md:text-base space-y-2 text-muted-foreground">
-            <h2 className="text-lg font-semibold holographic-text text-primary">Mission Briefing:</h2>
             <ul className="list-disc list-inside space-y-1">
               <li>The Pi Network is now the backbone of a decentralized digital identity system globally.</li>
               <li>Within this system, two clandestine factions have formed: The Cyphers and The Shadows. You must join one of these factions.</li>
