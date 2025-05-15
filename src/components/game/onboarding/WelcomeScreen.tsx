@@ -19,7 +19,7 @@ export function WelcomeScreen() {
 
   if (!showContent) {
     // This HolographicPanel is for the "Establishing Secure Connection..." state.
-    // It will be centered by its parent 'main' in page.tsx (which is items-center justify-center for this initial loading state).
+    // Its parent in page.tsx uses items-center justify-center for this initial loading state.
     return (
       <HolographicPanel className="w-full max-w-2xl p-4 md:p-6 flex flex-col items-center justify-center">
         <div className="flex flex-col items-center text-center">
@@ -31,10 +31,18 @@ export function WelcomeScreen() {
   }
 
   // This HolographicPanel is the main content of the WelcomeScreen.
-  // It's the root element returned. Its parent ('main' in page.tsx) has 'items-stretch',
-  // so this panel (with 'flex-grow') should stretch to fill available vertical space.
+  // It's the root element returned. Its parent ('main' in page.tsx) has 'items-center',
+  // so this panel (with 'max-w-2xl') will be centered.
+  // 'flex flex-col overflow-hidden' and 'max-h-[calc(100vh-var(--main-padding-y))]' (approx) helps constrain its height.
+  // The variable --main-padding-y would conceptually be 4rem (pt-8 + pb-8 from main).
+  // A simpler approach is max-h-[calc(100vh-4rem)] if its direct parent in page.tsx handles the outer page padding.
+  // Since page.tsx <main> has pt-8 pb-8, this panel can try to take full height of that padded area.
   return (
-    <HolographicPanel className="w-full max-w-2xl p-4 md:p-6 flex flex-col flex-grow overflow-hidden">
+    <HolographicPanel 
+      className="w-full max-w-2xl p-4 md:p-6 flex flex-col overflow-hidden my-4"
+      // This style aims to make the panel fit within the viewport, accounting for main's padding and its own margin
+      style={{ maxHeight: 'calc(100vh - (2 * 1rem) - (2 * 2rem))' }} // my-4 (2rem total) + main's pt/pb-8 (4rem total) = 6rem. Adjust as needed.
+    >
       <h1 className="text-3xl md:text-4xl font-orbitron mb-4 text-center holographic-text flex-shrink-0">
         Welcome Agent
       </h1>

@@ -114,17 +114,25 @@ export default function HomePage() {
 
       setParallaxOffset(currentScrollLeft);
 
-      const numActualSections = sectionComponents.length - 2;
+      const numActualSections = sectionComponents.length - 2; // Agent, ControlCenter, Scanner, EquipmentLocker, Vault
 
-      const scrollPosActualAgent = clientWidth;
-      const scrollPosActualVault = numActualSections * clientWidth;
+      // const scrollPosActualAgent = clientWidth; // Agent is the first actual section
+      // const scrollPosActualVault = numActualSections * clientWidth; // Vault is the last actual section
+      
+      // Corrected: The first element in sectionComponents is a clone.
+      // So, Agent (actual) is at index 1, Vault (actual) is at index `numActualSections`.
+      const scrollPosActualAgent = clientWidth; // Index 1 * clientWidth
+      const scrollPosActualVault = (sectionComponents.length - 2) * clientWidth; // Last actual section is at index numActualSections.
+
 
       const maxPossibleScrollLeft = (sectionComponents.length - 1) * clientWidth;
 
-      if (currentScrollLeft <= 5) {
+      // Jump to the actual Vault section if scrolling left past the cloned Vault
+      if (currentScrollLeft <= 5) { // Using a small threshold
         todContainerRef.current.scrollLeft = scrollPosActualVault;
       }
-      else if (currentScrollLeft >= maxPossibleScrollLeft - 5) {
+      // Jump to the actual Agent section if scrolling right past the cloned Agent
+      else if (currentScrollLeft >= maxPossibleScrollLeft - 5) { // Using a small threshold
         todContainerRef.current.scrollLeft = scrollPosActualAgent;
       }
     }
@@ -137,19 +145,22 @@ export default function HomePage() {
       const setInitialScroll = () => {
         if (container.clientWidth > 0 && !initialScrollSetRef.current) {
           const sectionWidth = container.clientWidth;
-          const initialScrollPosition = sectionWidth;
+          const initialScrollPosition = sectionWidth; // Start at the first "actual" section (AgentSection)
           container.scrollLeft = initialScrollPosition;
           setParallaxOffset(initialScrollPosition);
 
-          if (Math.abs(container.scrollLeft - initialScrollPosition) < 5) {
+          if (Math.abs(container.scrollLeft - initialScrollPosition) < 5) { // Check if scroll was successful
             initialScrollSetRef.current = true;
           } else {
+             // If scrollLeft didn't update immediately (common in some browsers/setups), retry.
              requestAnimationFrame(setInitialScroll);
           }
         }
       };
 
       if (container.clientWidth === 0) {
+        // If clientWidth is 0, the element might not be fully rendered/laid out.
+        // use a short timeout or rAF to retry.
         requestAnimationFrame(setInitialScroll);
       } else {
         setInitialScroll();
@@ -170,7 +181,7 @@ export default function HomePage() {
     // items-center and justify-center will center the "INITIALIZING TOD..." message.
     return (
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
-        <ParallaxBackground parallaxOffset={parallaxOffset}/>
+        <ParallaxBackground />
         <div className="animate-pulse text-2xl font-orbitron holographic-text">INITIALIZING TOD...</div>
       </main>
     );
@@ -191,13 +202,13 @@ export default function HomePage() {
 
   if (onboardingStep !== 'tod') {
     // This 'main' is for all subsequent onboarding steps.
-    // items-stretch: to make direct children stretch vertically.
+    // items-center: centers the content (like WelcomeScreen which has max-w)
     // justify-start: align children to the top.
-    // min-h-screen with pt/pb: provides a viewport-based height.
-    // overflow-y-auto: allows this main container to scroll.
+    // min-h-screen with pt/pb: provides a viewport-based height and padding.
+    // overflow-y-auto: allows this main container to scroll if its content overflows.
     return (
-      <main className="relative flex flex-col items-stretch justify-start min-h-screen bg-background text-foreground pt-8 pb-8 overflow-y-auto">
-        <ParallaxBackground parallaxOffset={parallaxOffset} />
+      <main className="relative flex flex-col items-center justify-start min-h-screen bg-background text-foreground pt-8 pb-8 overflow-y-auto">
+        <ParallaxBackground />
         {renderOnboarding()}
         {showAuthPrompt && <AuthPromptModal onClose={() => setShowAuthPrompt(false)} />}
       </main>
@@ -206,14 +217,13 @@ export default function HomePage() {
 
   // This is the main view for the TOD itself
   return (
-    <main className="relative h-screen w-screen overflow-hidden">
-      <ParallaxBackground parallaxOffset={parallaxOffset} />
+    <main className="relative h-screen w-screen overflow-hidden"> 
+      <ParallaxBackground />
 
       <div
         className="parallax-layer z-[5]"
         style={{
           transform: `translateX(-${parallaxOffset * 0.5}px)`,
-          // Adjusted width calculation for the parallax grid layer
           width: `${sectionComponents.length * 100 * 0.5 + 100}vw`,
         }}
       >
