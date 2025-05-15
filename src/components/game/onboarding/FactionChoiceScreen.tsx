@@ -45,13 +45,15 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
   const [selectedFaction, setSelectedFaction] = useState<Faction | null>(null);
 
   useEffect(() => {
+    // Ensure theme is neutral if no faction is selected initially
+    // or if selection is cleared (though current logic doesn't clear selection, good for future)
     if (!selectedFaction && currentTheme !== 'neutral') {
       setTheme('neutral');
     }
   }, [selectedFaction, currentTheme, setTheme]);
 
   const handleFactionSelect = (factionName: Faction) => {
-    if (factionName === 'Observer') return;
+    if (factionName === 'Observer') return; // Observer doesn't get selected in the same way
 
     setSelectedFaction(factionName);
     setTheme(factionName === 'Cyphers' ? 'cyphers' : 'shadows');
@@ -67,14 +69,15 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
   };
 
   const handleProceedAsObserver = () => {
-    setSelectedFaction('Observer');
+    setSelectedFaction('Observer'); // Visually indicate, though it doesn't get a theme
     setAppContextFaction('Observer');
-    setTheme('neutral');
+    setTheme('neutral'); // Ensure observer proceeds with neutral theme
     setOnboardingStep('tod');
   };
 
   return (
     <HolographicPanel
+      key={currentTheme} // Add key here to force re-render on theme change
       className={cn(
         "w-full max-w-2xl p-4 md:p-6 flex flex-col flex-grow h-0 overflow-hidden"
         // The panel's border color will change based on the theme set by handleFactionSelect
