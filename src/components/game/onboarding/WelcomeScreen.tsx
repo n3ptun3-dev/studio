@@ -13,14 +13,15 @@ export function WelcomeScreen() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowContent(true);
-    }, 500);
+    }, 500); // Keep a short delay for the "syncing" effect
     return () => clearTimeout(timer);
   }, []);
 
   if (!showContent) {
     return (
-      <div className="w-full p-4 md:p-6 flex justify-center">
-        <HolographicPanel className="w-full max-w-2xl p-4 md:p-6 flex flex-col items-center justify-center h-full">
+      // This div will grow to fill available vertical space and center its child
+      <div className="w-full p-4 md:p-6 flex flex-grow items-center justify-center">
+        <HolographicPanel className="w-full max-w-2xl p-4 md:p-6 flex flex-col items-center justify-center"> {/* Removed h-full */}
           <div className="flex flex-col items-center text-center">
             <Zap className="w-24 h-24 text-primary animate-pulse icon-glow" />
             <p className="mt-4 text-xl font-orbitron holographic-text">Establishing Secure Connection...</p>
@@ -35,7 +36,7 @@ export function WelcomeScreen() {
       <HolographicPanel className="w-full max-w-2xl p-4 md:p-6 flex flex-col">
         <h1 className="text-3xl md:text-4xl font-orbitron mb-4 text-center holographic-text">Welcome Agent</h1>
         
-        <h2 className="text-lg font-semibold holographic-text text-primary mb-2">Mission Briefing:</h2>
+        <h2 className="text-lg font-semibold holographic-text text-primary mb-2 sticky top-0 bg-card/80 backdrop-blur-sm py-2 z-10">Mission Briefing:</h2>
         
         <ScrollArea className="flex-grow h-60 md:h-72 mb-6 p-1 border border-primary/30 rounded-md">
           <div className="p-3 font-rajdhani text-sm md:text-base space-y-2 text-muted-foreground">
