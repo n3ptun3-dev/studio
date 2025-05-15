@@ -18,8 +18,8 @@ export function WelcomeScreen() {
   }, []);
 
   if (!showContent) {
-    // This part is for the "Establishing Secure Connection..."
-    // It's a direct child of 'main' in page.tsx which is items-center justify-center
+    // This HolographicPanel is for the "Establishing Secure Connection..."
+    // Its parent 'main' in page.tsx is flex, items-center, justify-center, so this panel will be centered.
     return (
         <HolographicPanel className="w-full max-w-md p-4 md:p-6 flex flex-col items-center justify-center">
           <div className="flex flex-col items-center text-center">
@@ -30,15 +30,12 @@ export function WelcomeScreen() {
     );
   }
 
-  // This HolographicPanel is the main content of the WelcomeScreen
-  // It needs to take available height from its parent in page.tsx (main for onboarding)
-  // 'main' is: flex flex-col items-center justify-center min-h-screen p-4 sm:p-6
-  // So, HolographicPanel as a child of 'main' and with 'flex-grow h-0' should fill the available space within 'main's padding.
+  // This HolographicPanel is the main content of the WelcomeScreen.
+  // It uses flex-grow and h-0 to take available space from its parent 'main' in page.tsx (within main's padding).
+  // overflow-hidden is key for ScrollArea to work.
   return (
     <HolographicPanel
       className="w-full max-w-2xl p-4 md:p-6 flex flex-col flex-grow h-0 overflow-hidden"
-      // h-0 with flex-grow is key for the panel to take available space from its flex parent.
-      // overflow-hidden is key for ScrollArea to work.
     >
       <h1 className="text-3xl md:text-4xl font-orbitron mb-4 text-center holographic-text flex-shrink-0">
         Welcome Agent
@@ -53,12 +50,7 @@ export function WelcomeScreen() {
         <div className="p-3 font-rajdhani text-sm md:text-base space-y-2 text-muted-foreground">
           <ul className="list-disc list-inside space-y-1">
             <li>The Pi Network is now the backbone of a decentralized digital identity system globally.</li>
-            <li>Within this system, two clandestine factions have formed: The Cyphers and The Shadows. You must join one of these factions.</li>
-            <li>These factions are in conflict, but their actions are part of a larger war against a common enemy: NullChain.</li>
-            <li>Your primary objective is to steal ELINT (electronic intelligence) from rival spies while protecting your own and to transfer ELINT to your faction's overall pool (HQ).</li>
-            <li>The faction with the most ELINT at the end of a game cycle wins and could potentially earn a Pi payout based on Pi ad network revenue.</li>
-            <li>The Pi Network is now the backbone of a decentralized digital identity system globally.</li>
-            <li>Within this system, two clandestine factions have formed: The Cyphers and The Shadows. You must join one of these factions.</li>
+            <li>Within this system, two clandestine factions have formed: <span className="font-semibold text-foreground">The Cyphers</span> and <span className="font-semibold text-foreground">The Shadows</span>. You must join one of these factions.</li>
             <li>These factions are in conflict, but their actions are part of a larger war against a common enemy: NullChain.</li>
             <li>Your primary objective is to steal ELINT (electronic intelligence) from rival spies while protecting your own and to transfer ELINT to your faction's overall pool (HQ).</li>
             <li>The faction with the most ELINT at the end of a game cycle wins and could potentially earn a Pi payout based on Pi ad network revenue.</li>
