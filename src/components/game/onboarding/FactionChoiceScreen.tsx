@@ -19,7 +19,7 @@ const factionDetails = {
     defaultTagline: "Information is Power. Decode the Network.",
     theme: "cyphers" as Faction | 'neutral',
     icon: <Code className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 mb-2 text-blue-400 icon-glow" />,
-    borderColorClass: "border-blue-500",
+    borderColorClass: "border-blue-500", // Persistent border color
     selectedRingClass: "ring-2 ring-blue-400 shadow-blue-500/50",
     primaryColorClass: "text-blue-400",
     selectedBgClass: "bg-blue-700/30", // Faint blue background when selected
@@ -28,7 +28,7 @@ const factionDetails = {
     defaultTagline: "Control the Flow. Infiltrate and Disrupt.",
     theme: "shadows" as Faction | 'neutral',
     icon: <ShieldQuestion className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 mb-2 text-red-400 icon-glow" />,
-    borderColorClass: "border-red-500",
+    borderColorClass: "border-red-500", // Persistent border color
     selectedRingClass: "ring-2 ring-red-400 shadow-red-500/50",
     primaryColorClass: "text-red-400",
     selectedBgClass: "bg-red-700/30", // Faint red background when selected
@@ -45,15 +45,13 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
   const [selectedFaction, setSelectedFaction] = useState<Faction | null>(null);
 
   useEffect(() => {
-    // Set initial theme to neutral or if no faction is selected, revert to neutral
     if (!selectedFaction && currentTheme !== 'neutral') {
       setTheme('neutral');
     }
   }, [selectedFaction, currentTheme, setTheme]);
 
-
   const handleFactionSelect = (factionName: Faction) => {
-    if (factionName === 'Observer') return; // Observer is handled separately
+    if (factionName === 'Observer') return;
 
     setSelectedFaction(factionName);
     setTheme(factionName === 'Cyphers' ? 'cyphers' : 'shadows');
@@ -69,17 +67,18 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
   };
 
   const handleProceedAsObserver = () => {
-    setSelectedFaction('Observer'); // Visually indicate observer choice if needed
+    setSelectedFaction('Observer');
     setAppContextFaction('Observer');
-    setTheme('neutral'); // Observer uses neutral theme
+    setTheme('neutral');
     setOnboardingStep('tod');
   };
 
   return (
     <HolographicPanel
       className={cn(
-        "w-full max-w-2xl p-4 md:p-6 flex flex-col flex-grow h-0 overflow-hidden",
+        "w-full max-w-2xl p-4 md:p-6 flex flex-col flex-grow h-0 overflow-hidden"
         // The panel's border color will change based on the theme set by handleFactionSelect
+        // via CSS variables used in the .holographic-panel definition
       )}
     >
       <h1 className="text-2xl sm:text-3xl md:text-4xl font-orbitron mb-4 sm:mb-6 text-center holographic-text flex-shrink-0 py-2">
@@ -95,10 +94,10 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
             <div
               key={factionName}
               className={cn(
-                "p-3 sm:p-4 rounded-lg border-2 transition-all cursor-pointer flex flex-col items-center text-center holographic-panel bg-background/70 hover:shadow-accent/30 h-full",
+                "p-3 sm:p-4 rounded-lg border-2 transition-all cursor-pointer flex flex-col items-center text-center holographic-panel h-full",
                 details.borderColorClass, // Always apply team-specific border color
                 isSelected && details.selectedRingClass,
-                isSelected && details.selectedBgClass
+                isSelected && details.selectedBgClass // Apply faint background on selection
               )}
               onClick={() => handleFactionSelect(factionName)}
             >
@@ -110,15 +109,20 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
                 {details.defaultTagline}
               </p>
               {isSelected && (
-                <HolographicButton
-                  className="mt-auto w-full py-2 text-sm sm:text-base"
-                  onClick={(e) => {
-                    e.stopPropagation(); // Prevent tile's onClick from re-firing
-                    handleConfirmFaction(factionName);
-                  }}
-                >
-                  Confirm Allegiance
-                </HolographicButton>
+                <>
+                  <p className="text-sm text-center my-2 holographic-text">
+                    Align with The {factionName}
+                  </p>
+                  <HolographicButton
+                    className="mt-auto w-full py-2 text-sm sm:text-base"
+                    onClick={(e) => {
+                      e.stopPropagation(); 
+                      handleConfirmFaction(factionName);
+                    }}
+                  >
+                    Confirm
+                  </HolographicButton>
+                </>
               )}
             </div>
           );
