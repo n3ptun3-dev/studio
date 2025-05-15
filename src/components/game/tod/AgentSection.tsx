@@ -18,11 +18,12 @@ const XP_LEVELS = [0, 100, 200, 400, 800, 1600, 3200, 6400, 12800]; // XP needed
 
 const AgentDossierView = () => {
   const { playerSpyName, playerPiName, faction, playerStats, setFaction: setAppFaction, addMessage } = useAppContext();
-  const { setTheme } = useTheme(); // Directly use the hook from ThemeContext
+  const { setTheme } = useTheme(); 
 
   const handleFactionChange = () => {
     const newFaction = faction === 'Cyphers' ? 'Shadows' : 'Cyphers';
     setAppFaction(newFaction); 
+    // setTheme will be handled by ThemeUpdater via AppContext faction change
     addMessage({type: 'system', text: `Faction allegiance protocols updated to: ${newFaction}. Coordinating with HQ.`});
   };
 
@@ -101,7 +102,9 @@ const IntelFilesView = () => {
     if (category) {
       setSelectedCategory(category.id);
       setContentTitle(category.title);
-      openTODWindow(category.title,
+      // Animate slide out current list, slide in content (or use TODWindow for content)
+      // For now, just using TODWindow as per spec
+      openTODWindow(category.title, 
         <div className="font-rajdhani">
           <h4 className="text-lg font-orbitron mb-2 holographic-text">{category.heading}</h4>
           <p className="text-muted-foreground whitespace-pre-line">{category.content}</p>
@@ -110,18 +113,20 @@ const IntelFilesView = () => {
     } else {
       setSelectedCategory(null);
       setContentTitle("Intel Files");
+      // Animate slide out content, slide in list
     }
   };
 
   return (
     <ScrollArea className="h-full p-3">
       <div className="flex items-center mb-4">
-        {selectedCategory && (
+        {selectedCategory && ( // This logic might change if content is always in TODWindow
           <HolographicButton onClick={() => handleCategorySelect(null)} className="mr-2 text-xs !py-1 !px-2">Back</HolographicButton>
         )}
         <h3 className="text-xl font-orbitron holographic-text">{contentTitle}</h3>
       </div>
       
+      {/* If content is shown in TODWindow, this part might just be the list always */}
       {!selectedCategory ? (
         <ul className="space-y-1 font-rajdhani">
           {categories.map(cat => (
@@ -136,6 +141,7 @@ const IntelFilesView = () => {
           ))}
         </ul>
       ) : (
+        // This part might be removed if details are always in a TOD Window
         <p className="text-muted-foreground font-rajdhani">Details for {contentTitle} are displayed in a TOD Window.</p>
       )}
     </ScrollArea>
@@ -168,53 +174,59 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
   const dragStartY = useRef<number | null>(null);
 
   useEffect(() => {
-    const cycleDuration = 4 * 60 * 60; 
-    const openDuration = 1 * 60 * 60; 
+    const cycleDuration = 4 * 60 * 60; // 4 hours in seconds
+    const openDuration = 1 * 60 * 60; // 1 hour in seconds
 
     const updateTimer = () => {
-      const now = Math.floor(Date.now() / 1000); 
+      const now = Math.floor(Date.now() / 1000); // current time in seconds
       const cycleProgress = now % cycleDuration;
 
       if (cycleProgress < openDuration) {
+        // Window is open
         setIsTransferWindowOpen(true);
         setTransferTimer(openDuration - cycleProgress);
       } else {
+        // Window is closed
         setIsTransferWindowOpen(false);
         setTransferTimer(cycleDuration - cycleProgress);
       }
     };
-    updateTimer(); 
-    const interval = setInterval(updateTimer, 1000); 
-    return () => clearInterval(interval);
+    updateTimer(); // Initial call
+    const interval = setInterval(updateTimer, 1000); // Update every second
+    return () => clearInterval(interval); // Cleanup on unmount
   }, []);
 
   const currentLevelXp = XP_LEVELS[playerStats.level] || 0;
-  const nextLevelXpTarget = XP_LEVELS[playerStats.level + 1] || (currentLevelXp + (XP_LEVELS[1] - XP_LEVELS[0])); 
+  const nextLevelXpTarget = XP_LEVELS[playerStats.level + 1] || (currentLevelXp + (XP_LEVELS[1] - XP_LEVELS[0])); // Handle max level
   const xpForCurrentLevel = playerStats.xp - currentLevelXp;
   const xpToNextLevelSpan = nextLevelXpTarget - currentLevelXp;
   const xpProgress = xpToNextLevelSpan > 0 ? Math.max(0, Math.min(100, (xpForCurrentLevel / xpToNextLevelSpan) * 100)) : 100;
 
   const handlePowerClick = () => setIsPadUp(!isPadUp);
   
+  // Simplified drag handlers for now, focusing on click interaction
   const handlePadInteractionStart = (clientY: number) => {
     if (padRef.current) {
       dragStartY.current = clientY;
-      padRef.current.style.transition = 'none'; 
+      padRef.current.style.transition = 'none'; // Disable transition during drag
     }
   };
   
   const handlePadInteractionMove = (clientY: number) => {
     if (dragStartY.current === null || !padRef.current) return;
+    // Drag logic can be implemented here if fully free dragging is desired.
+    // For now, we are primarily relying on the power button click.
   };
 
   const handlePadInteractionEnd = () => {
     if (padRef.current) {
-      padRef.current.style.transition = 'transform 0.3s ease-out, height 0.3s ease-out';
+      padRef.current.style.transition = 'transform 0.3s ease-out, height 0.3s ease-out'; // Re-enable transition
+      // Snap logic can be added here if desired after dragging
     }
     dragStartY.current = null;
   };
 
-  const padGlossClass = "pad-gloss-effect";
+  const padGlossClass = "pad-gloss-effect"; // Ensure this class is defined in globals.css
 
   const renderPadScreen = () => {
     switch(padScreenView) {
@@ -269,9 +281,9 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
         ref={padRef}
         className={cn(
           "absolute bottom-0 left-0 right-0 transition-all duration-300 ease-out mx-auto w-full max-w-2xl rounded-t-lg",
-          "bg-pad-backing backdrop-blur-sm", 
+          "bg-pad-backing backdrop-blur-sm border-2 border-yellow-500", // Added temporary debug border
           padGlossClass,
-          isPadUp ? "h-[calc(100%_-_70px)]" : "h-[100px]", 
+          isPadUp ? "h-[calc(100%_-_60px)]" : "h-[100px]", 
         )}
         onTouchStart={(e) => handlePadInteractionStart(e.touches[0].clientY)}
         onTouchMove={(e) => handlePadInteractionMove(e.touches[0].clientY)}
@@ -279,9 +291,9 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
         onMouseDown={(e) => handlePadInteractionStart(e.clientY)}
         onMouseMove={(e) => handlePadInteractionMove(e.clientY)}
         onMouseUp={handlePadInteractionEnd}
-        onMouseLeave={handlePadInteractionEnd}
+        onMouseLeave={handlePadInteractionEnd} 
       >
-        <div className="h-[60px] flex items-center justify-between px-4 border-b" style={{ borderColor: 'hsla(var(--background-hsl),0.4)'}}>
+        <div className="h-[60px] flex items-center justify-between px-4 border-b" style={{ borderColor: 'hsla(var(--background-hsl),0.4)'}}> {/* Subtle top border for button panel */}
           {isPadUp ? (
             <div className="flex-grow flex justify-center gap-4">
               <HolographicButton onClick={() => setPadScreenView('dossier')} className={cn("!p-1.5", padScreenView === 'dossier' && "bg-primary/20")}>
@@ -307,8 +319,8 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
 
         {isPadUp && (
            <div className={cn(
-             "h-[calc(100%-60px)] border rounded-md m-2 overflow-hidden pad-screen-grid",
-             "bg-accent/10 border-primary/20" 
+             "h-[calc(100%-60px)] border rounded-md m-2 overflow-hidden pad-screen-grid", // Added border to screen area for definition
+             "bg-accent/10 border-primary/20" // Off-white translucent background with grid
             )}>
              {renderPadScreen()}
            </div>
