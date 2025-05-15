@@ -18,11 +18,11 @@ const XP_LEVELS = [0, 100, 200, 400, 800, 1600, 3200, 6400, 12800]; // XP needed
 
 const AgentDossierView = () => {
   const { playerSpyName, playerPiName, faction, playerStats, setFaction: setAppFaction, addMessage } = useAppContext();
-  // const { setTheme } = useTheme(); // setTheme from ThemeContext will trigger ThemeUpdater in RootLayout
+  const { setTheme } = useTheme(); // Directly use the hook from ThemeContext
 
   const handleFactionChange = () => {
     const newFaction = faction === 'Cyphers' ? 'Shadows' : 'Cyphers';
-    setAppFaction(newFaction); // This will update context, and ThemeUpdater will change theme via AppContext
+    setAppFaction(newFaction); 
     addMessage({type: 'system', text: `Faction allegiance protocols updated to: ${newFaction}. Coordinating with HQ.`});
   };
 
@@ -101,7 +101,6 @@ const IntelFilesView = () => {
     if (category) {
       setSelectedCategory(category.id);
       setContentTitle(category.title);
-      // Animation: slide old content left, new content in from right. (Handled by TODWindow)
       openTODWindow(category.title,
         <div className="font-rajdhani">
           <h4 className="text-lg font-orbitron mb-2 holographic-text">{category.heading}</h4>
@@ -111,8 +110,6 @@ const IntelFilesView = () => {
     } else {
       setSelectedCategory(null);
       setContentTitle("Intel Files");
-      // If closing a category, we might want to close the TODWindow or show the category list again.
-      // For now, opening another window will replace current. Explicit back might need closeTODWindow() then re-open with list.
     }
   };
 
@@ -139,8 +136,6 @@ const IntelFilesView = () => {
           ))}
         </ul>
       ) : (
-        // Content is now shown in TODWindow, so this part might not be needed here
-        // or could show a message like "Details for {contentTitle} are open."
         <p className="text-muted-foreground font-rajdhani">Details for {contentTitle} are displayed in a TOD Window.</p>
       )}
     </ScrollArea>
@@ -151,7 +146,6 @@ const IntelFilesView = () => {
 const SettingsView = () => (
   <ScrollArea className="h-full p-3 font-rajdhani">
     <h3 className="text-xl font-orbitron mb-4 holographic-text">Settings</h3>
-    {/* Placeholder content for settings */}
     <ul className="space-y-2 text-sm">
       <li><HolographicButton className="w-full justify-start text-left !bg-transparent hover:!bg-primary/10 !py-1.5">Notifications (Placeholder)</HolographicButton></li>
       <li><HolographicButton className="w-full justify-start text-left !bg-transparent hover:!bg-primary/10 !py-1.5">Sound (Placeholder)</HolographicButton></li>
@@ -164,7 +158,7 @@ const SettingsView = () => (
 type PadScreenView = 'dossier' | 'intel' | 'settings';
 
 export function AgentSection({ parallaxOffset }: SectionProps) {
-  const { playerSpyName, faction, playerStats, openTODWindow } = useAppContext();
+  const { playerSpyName, faction, playerStats } = useAppContext();
   const [isPadUp, setIsPadUp] = useState(false);
   const [padScreenView, setPadScreenView] = useState<PadScreenView>('dossier');
   const [transferTimer, setTransferTimer] = useState(0);
@@ -174,8 +168,8 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
   const dragStartY = useRef<number | null>(null);
 
   useEffect(() => {
-    const cycleDuration = 4 * 60 * 60; // 4 hours in seconds
-    const openDuration = 1 * 60 * 60; // 1 hour in seconds
+    const cycleDuration = 4 * 60 * 60; 
+    const openDuration = 1 * 60 * 60; 
 
     const updateTimer = () => {
       const now = Math.floor(Date.now() / 1000); 
@@ -211,24 +205,11 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
   
   const handlePadInteractionMove = (clientY: number) => {
     if (dragStartY.current === null || !padRef.current) return;
-    // Basic drag logic - Placeholder for now
-    // const deltaY = clientY - dragStartY.current;
-    // let newTranslateY = parseFloat(padRef.current.style.transform.replace('translateY(', '').replace('px)', '')) || 0;
-    // newTranslateY += deltaY;
-    // padRef.current.style.transform = `translateY(${newTranslateY}px)`;
-    // dragStartY.current = clientY; 
   };
 
   const handlePadInteractionEnd = () => {
-    // Snap logic based on current position - Placeholder
     if (padRef.current) {
       padRef.current.style.transition = 'transform 0.3s ease-out, height 0.3s ease-out';
-      // Example: if dragged more than halfway, snap to up/down
-      // const currentTransformY = parseFloat(padRef.current.style.transform.replace('translateY(', '').replace('px)', '')) || 0;
-      // const threshold = padRef.current.clientHeight / 2;
-      // if (isPadUp && currentTransformY > threshold / 2) setIsPadUp(false);
-      // if (!isPadUp && Math.abs(currentTransformY) > threshold / 2) setIsPadUp(true);
-      // else { /* snap back */ }
     }
     dragStartY.current = null;
   };
@@ -252,7 +233,7 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
       </div>
       
       {/* Agent Info Area (Banner + Stats) */}
-      <div className="flex-grow flex flex-col items-center text-center pt-4 md:pt-8 mb-auto"> {/* mb-auto pushes PAD controls down */}
+      <div className="flex-grow flex flex-col items-center text-center pt-4 md:pt-8 mb-auto">
         <h1 className="text-3xl md:text-4xl font-orbitron holographic-text">{playerSpyName || "Agent"}</h1>
         <p className={`text-lg font-semibold ${faction === 'Cyphers' ? 'text-blue-400' : faction === 'Shadows' ? 'text-red-400' : 'text-gray-400'}`}>{faction}</p>
         
@@ -288,13 +269,10 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
         ref={padRef}
         className={cn(
           "absolute bottom-0 left-0 right-0 transition-all duration-300 ease-out mx-auto w-full max-w-2xl rounded-t-lg",
-          "border-t bg-pad-backing backdrop-blur-sm", 
-          padGlossClass, 
-          isPadUp ? "h-[calc(100%_-_90px)]" : "h-[100px]", 
+          "bg-pad-backing backdrop-blur-sm", 
+          padGlossClass,
+          isPadUp ? "h-[calc(100%_-_70px)]" : "h-[100px]", 
         )}
-        style={{
-          borderColor: 'hsla(var(--background-hsl), 0.5)', // Subtle top border for PAD
-        }}
         onTouchStart={(e) => handlePadInteractionStart(e.touches[0].clientY)}
         onTouchMove={(e) => handlePadInteractionMove(e.touches[0].clientY)}
         onTouchEnd={handlePadInteractionEnd}
@@ -330,7 +308,7 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
         {isPadUp && (
            <div className={cn(
              "h-[calc(100%-60px)] border rounded-md m-2 overflow-hidden pad-screen-grid",
-             "bg-accent/10 border-primary/20" // Screen area styling
+             "bg-accent/10 border-primary/20" 
             )}>
              {renderPadScreen()}
            </div>
@@ -340,3 +318,4 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
   );
 }
 
+    
