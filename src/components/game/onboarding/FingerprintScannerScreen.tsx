@@ -66,14 +66,14 @@ export function FingerprintScannerScreen() {
       <HolographicPanel className="text-center p-8">
         <Fingerprint className="w-24 h-24 mx-auto text-green-400 mb-4 icon-glow" />
         <h2 className="text-3xl font-orbitron holographic-text text-green-400">Access Granted</h2>
-        <p className="text-lg text-muted-foreground mt-2">Initializing Tactical Overlay Device...</p>
+        <p className="text-lg text-muted-foreground mt-2">Initializing Spi Vs Spi TOD...</p>
       </HolographicPanel>
     );
   }
 
   return (
     <HolographicPanel className="text-center p-8">
-      <h2 className="text-2xl font-orbitron mb-6 holographic-text">Biometric Authentication</h2>
+      <h2 className="text-2xl font-orbitron mb-6 holographic-text">Spi Vs Spi: Biometric Authentication</h2>
       <p className="text-muted-foreground mb-8">Press and Hold to Authenticate.</p>
       
       <div 
@@ -125,5 +125,3 @@ export function FingerprintScannerScreen() {
     </HolographicPanel>
   );
 }
-
-    
