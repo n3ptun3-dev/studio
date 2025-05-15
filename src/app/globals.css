@@ -201,7 +201,7 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-exo2 overflow-hidden; /* Exo 2 as default body font */
+    @apply bg-background text-foreground font-exo2; /* REMOVED overflow-hidden */
     background-repeat: no-repeat;
     background-size: cover;
     background-attachment: fixed;
@@ -382,6 +382,8 @@
 .animate-slide-up-from-bottom {
   animation: slide-up-from-bottom 1s ease-out forwards;
 }
+    
+
     
 
     
