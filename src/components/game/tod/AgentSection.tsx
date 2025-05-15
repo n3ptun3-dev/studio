@@ -228,17 +228,22 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
 
   return (
     <div className="relative flex flex-col p-4 md:p-6 h-full overflow-hidden">
+      {/* Background fingerprint */}
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center -z-10 opacity-50">
         <Fingerprint className="w-48 h-48 md:w-64 md:h-64 text-primary/10" />
       </div>
+      
+      {/* Agent Info Area (Banner + Stats) */}
       <div className="flex-grow flex flex-col items-center text-center pt-4 md:pt-8 mb-auto">
         <h1 className="text-3xl md:text-4xl font-orbitron holographic-text">{playerSpyName || "Agent"}</h1>
         <p className={`text-lg font-semibold ${faction === 'Cyphers' ? 'text-blue-400' : faction === 'Shadows' ? 'text-red-400' : 'text-gray-400'}`}>{faction}</p>
+        
         <div className="mt-2 w-full max-w-md">
           <p className="text-sm text-muted-foreground">Agent Rank: {playerStats.level}</p>
           <Progress value={xpProgress} className="w-full h-2 mt-1 bg-primary/20 [&>div]:bg-primary" />
           <p className="text-xs text-muted-foreground">{playerStats.xp} / {nextLevelXpTarget === Infinity ? 'MAX' : nextLevelXpTarget} XP</p>
         </div>
+
         <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-3 text-sm w-full max-w-md font-rajdhani">
           <div>
             <p className="text-muted-foreground">ELINT Reserves</p>
@@ -249,6 +254,7 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
             <p className="font-digital7 text-xl holographic-text">{playerStats.elintTransferred}</p>
           </div>
         </div>
+        
         <div className="mt-3">
           <p className={`text-sm font-semibold font-rajdhani ${isTransferWindowOpen ? 'text-green-400 animate-pulse' : 'text-yellow-400'}`}>
             {isTransferWindowOpen ? 'Transfer Window Ends:' : 'Next Transfer Window:'}
@@ -259,16 +265,17 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
         </div>
       </div>
 
+      {/* PAD */}
       <div
         ref={padRef}
         className={cn(
           "absolute bottom-0 left-0 right-0 transition-all duration-300 ease-out mx-auto w-full max-w-2xl",
-          "border-t rounded-t-lg bg-pad-backing backdrop-blur-sm", 
+          "border-t bg-pad-backing backdrop-blur-sm", 
           padGlossClass, 
-          isPadUp ? "h-[calc(100%_-_150px)]" : "h-[100px]", // Adjusted height when PAD is up
+          isPadUp ? "h-[calc(100%_-_120px)]" : "h-[100px]", // Adjusted: Banner area 120px
         )}
         style={{
-          borderColor: 'hsla(var(--background-hsl), 0.5)',
+          borderColor: 'hsla(var(--background-hsl), 0.5)', // Subtle top border for PAD
           transform: isPadUp ? 'translateY(0)' : `translateY(calc(100% - 100px - env(safe-area-inset-bottom, 0px)))`,
         }}
         onTouchStart={(e) => handlePadInteractionStart(e.touches[0].clientY)}
@@ -306,7 +313,7 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
         {isPadUp && (
            <div className={cn(
              "h-[calc(100%-60px)] border rounded-md m-2 overflow-hidden pad-screen-grid",
-             "bg-accent/10 border-primary/20" 
+             "bg-accent/10 border-primary/20" // Screen area styling
             )}>
              {renderPadScreen()}
            </div>
@@ -315,4 +322,3 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
     </div>
   );
 }
-
