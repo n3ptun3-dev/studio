@@ -29,18 +29,8 @@ export const ITEM_LEVEL_AESTHETIC_SCHEMES = {
   "level-8-magenta": { name: "Level 8 (Magenta)", themeClass: "theme-level-8-magenta" },
 };
 
-export const XP_THRESHOLDS: Record<number, number> = {
-  0: 0,    // XP at level 0
-  1: 100,  // XP to reach level 1
-  2: 200,  // XP to reach level 2 (total, not incremental from L1)
-  3: 400,
-  4: 800,
-  5: 1600,
-  6: 3200,
-  7: 6400,
-  8: 12800,
-  // Add more if needed
-};
+export const XP_THRESHOLDS = [0, 100, 200, 400, 800, 1600, 3200, 6400, 12800]; // XP needed for next level (index is level, value is XP for that level)
+
 
 export const FACTION_THEMES = {
   Cyphers: "cyphers", // Corresponds to default :root or .theme-cyphers
