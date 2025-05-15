@@ -4,6 +4,9 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    @apply overflow-hidden;
+  }
   :root {
     /* Default Theme: Cyphers Blue */
     --theme-name: "cyphers";
@@ -173,12 +176,10 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-exo2; /* Exo 2 as default body font */
+    @apply bg-background text-foreground font-exo2 overflow-hidden; /* Exo 2 as default body font */
     background-repeat: no-repeat;
     background-size: cover;
     background-attachment: fixed;
-    /* overflow-x: hidden; Removed to allow TOD horizontal scroll */
-    overflow-y: auto;
   }
 
   h1, h2, h3, h4, h5, h6 {
