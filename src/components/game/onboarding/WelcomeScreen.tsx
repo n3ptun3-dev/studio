@@ -31,8 +31,12 @@ export function WelcomeScreen() {
   }
 
   return (
-    <div className="w-full p-4 md:p-6 flex justify-center">
-      <HolographicPanel className="w-full max-w-2xl p-4 md:p-6 flex flex-col">
+    // This outer div will take outer padding and try to grow within its flex parent from page.tsx
+    // It also centers the HolographicPanel.
+    <div className="w-full p-4 md:p-6 flex flex-col flex-grow items-center justify-center">
+      {/* HolographicPanel will take the height given by its parent (due to h-full)
+          and then distribute that height among its children via its own flex-col. */}
+      <HolographicPanel className="w-full max-w-2xl p-4 md:p-6 flex flex-col h-full overflow-hidden"> {/* Added h-full and overflow-hidden */}
         <h1 className="text-3xl md:text-4xl font-orbitron mb-4 text-center holographic-text flex-shrink-0">
           Welcome Agent
         </h1>
@@ -41,6 +45,8 @@ export function WelcomeScreen() {
           Mission Briefing:
         </h2>
         
+        {/* ScrollArea with flex-grow and min-h-0 will take the remaining space
+            within the HolographicPanel, and its content will scroll internally. */}
         <ScrollArea className="flex-grow min-h-0 mb-6 p-1 border border-primary/30 rounded-md">
           <div className="p-3 font-rajdhani text-sm md:text-base space-y-2 text-muted-foreground">
             <ul className="list-disc list-inside space-y-1">
@@ -63,3 +69,5 @@ export function WelcomeScreen() {
     </div>
   );
 }
+
+    
