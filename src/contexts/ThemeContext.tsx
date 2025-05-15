@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 export type Theme = 
-  | 'neutral' // Added neutral theme
+  | 'neutral'
   | 'cyphers' 
   | 'shadows' 
   | 'level-1-grey'
@@ -41,14 +41,11 @@ export const availableThemesList: Theme[] = [
 ];
 
 
-export function ThemeProvider({ children, attribute = "class", defaultTheme = "neutral", enableSystem = false, disableTransitionOnChange = false }: { 
+export function ThemeProvider({ children, defaultTheme = "neutral" }: { 
     children: ReactNode, 
-    attribute?: string, // Keep ShadCN compatibility
     defaultTheme?: Theme, 
-    enableSystem?: boolean, 
-    disableTransitionOnChange?: boolean 
 }) {
-  const [theme, setThemeState] = useState<Theme>(() => {
+  const [theme, setThemeInternal] = useState<Theme>(() => {
     if (typeof window !== 'undefined') {
       const storedTheme = localStorage.getItem('tod-theme') as Theme | null;
       if (storedTheme && availableThemesList.includes(storedTheme)) {
@@ -58,37 +55,31 @@ export function ThemeProvider({ children, attribute = "class", defaultTheme = "n
     return defaultTheme;
   });
 
+  // Effect to apply the theme to the documentElement and localStorage
   useEffect(() => {
-    const storedTheme = localStorage.getItem('tod-theme') as Theme | null;
-    if (storedTheme && availableThemesList.includes(storedTheme)) {
-      setThemeState(storedTheme);
-    } else {
-      setThemeState(defaultTheme); // Ensure default if nothing valid in storage
-    }
-  }, [defaultTheme]);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tod-theme', theme);
 
+      // Remove all potentially existing theme classes
+      availableThemesList.forEach(tName => {
+        document.documentElement.classList.remove(`theme-${tName}`);
+      });
+      
+      // Add the current theme class
+      // The :root selector in CSS handles the 'neutral' case by default,
+      // so we only add 'theme-neutral' if it's explicitly set and not the implicit default,
+      // or if we want to ensure its variables take precedence.
+      // For simplicity and robustness, always add the class for the current theme.
+      document.documentElement.classList.add(`theme-${theme}`);
+    }
+  }, [theme]); // This effect runs whenever the 'theme' state changes.
+
+  // Callback for components to change the theme. It's stable.
   const setTheme = useCallback((newTheme: Theme) => {
     if (availableThemesList.includes(newTheme)) {
-      setThemeState(newTheme);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('tod-theme', newTheme);
-      }
-      
-      document.documentElement.classList.remove(...availableThemesList.map(t => `theme-${t}`));
-      if (newTheme !== 'neutral' || (newTheme === 'neutral' && defaultTheme !== 'neutral')) { // Apply theme-neutral if it's not the implicit root default
-         document.documentElement.classList.add(`theme-${newTheme}`);
-      }
-      // Ensure root doesn't have other theme classes if neutral is selected and neutral IS the :root default
-      // This logic might need refinement based on how :root vs .theme-neutral is handled in globals.css
-      // For now, explicit class addition/removal is safer.
+      setThemeInternal(newTheme); // Update the React state, which triggers the useEffect above
     }
-  }, [defaultTheme]);
-
-  useEffect(() => {
-    // Initial theme application and on theme state change
-    setTheme(theme);
-  }, [theme, setTheme]);
-
+  }, []); // Empty dependency array ensures this callback is stable.
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, availableThemes: availableThemesList }}>
@@ -104,7 +95,3 @@ export function useTheme() {
   }
   return context;
 }
-
-    
-
-    
