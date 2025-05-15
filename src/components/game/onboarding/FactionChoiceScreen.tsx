@@ -72,14 +72,15 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
     setOnboardingStep('tod');
   };
 
-  // The HolographicPanel is now the root, similar to WelcomeScreen.
-  // It will be centered by the `main` element in page.tsx which has p-4 sm:p-6.
-  // Its own padding (p-4 md:p-6) is for its internal content.
   return (
-    <HolographicPanel className="w-full max-w-2xl p-4 md:p-6">
-      <h1 className="text-2xl sm:text-3xl md:text-4xl font-orbitron mb-4 sm:mb-6 text-center holographic-text">Select Your Allegiance</h1>
+    <HolographicPanel
+      className="w-full max-w-2xl p-4 md:p-6 flex flex-col flex-grow h-0 overflow-hidden"
+    >
+      <h1 className="text-2xl sm:text-3xl md:text-4xl font-orbitron mb-4 sm:mb-6 text-center holographic-text flex-shrink-0">
+        Select Your Allegiance
+      </h1>
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 flex-grow min-h-0 mb-4 sm:mb-6">
         {(['Cyphers', 'Shadows'] as const).map((factionName) => {
           const details = factionDetails[factionName];
           const isSelected = selectedFaction === factionName;
@@ -89,17 +90,17 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
             <div
               key={factionName}
               className={cn(
-                "p-3 sm:p-4 rounded-lg border-2 transition-all cursor-pointer flex flex-col items-center text-center holographic-panel bg-opacity-50 hover:shadow-accent/30",
+                "p-3 sm:p-4 rounded-lg border-2 transition-all cursor-pointer flex flex-col items-center text-center holographic-panel bg-opacity-50 hover:shadow-accent/30 h-full",
                 isSelected ? details.selectedColorClass : details.colorClass,
                 !isSelected && "border-opacity-50"
               )}
               onClick={() => handleFactionSelect(factionName)}
             >
               {details.icon}
-              <h2 className={cn("text-base sm:text-lg md:text-xl font-orbitron mb-1", details.primaryColorClass)}>
+              <h2 className={cn("text-lg sm:text-xl md:text-2xl font-orbitron mb-1", details.primaryColorClass)}>
                 The {factionName}
               </h2>
-              <p className={cn("text-[10px] xxs:text-xs sm:text-sm min-h-[2.5em] leading-tight", isSelected ? "text-accent font-semibold" : "text-muted-foreground")}>{tagline}</p>
+              <p className={cn("text-xs sm:text-sm md:text-base leading-tight", isSelected ? "text-accent font-semibold" : "text-muted-foreground")}>{tagline}</p>
             </div>
           );
         })}
@@ -107,7 +108,7 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
 
       <Button
         variant="ghost"
-        className="w-full md:w-3/4 mx-auto text-muted-foreground hover:text-foreground flex items-center justify-center gap-2 py-2 sm:py-3"
+        className="w-full md:w-3/4 mx-auto text-muted-foreground hover:text-foreground flex items-center justify-center gap-2 py-2 sm:py-3 mt-auto flex-shrink-0"
         onClick={handleProceedAsObserver}
       >
         <Eye className="w-4 h-4 sm:w-5 sm:h-5" /> Proceed as Observer
@@ -115,3 +116,4 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
     </HolographicPanel>
   );
 }
+
