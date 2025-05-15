@@ -36,19 +36,14 @@ const factionDetails = {
 };
 
 export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenProps) {
-  const { 
-    setFaction: setAppContextFaction, 
-    setOnboardingStep, 
-    openTODWindow, // For codename input later
-    // isPiBrowser, 
-    // setIsAuthenticated, 
-    // setPlayerSpyName, 
-    // setPlayerPiName 
+  const {
+    setFaction: setAppContextFaction,
+    setOnboardingStep,
+    openTODWindow,
   } = useAppContext();
   const { theme: currentTheme, setTheme } = useTheme();
   const [selectedFaction, setSelectedFaction] = useState<Faction | null>(null);
 
-  // Ensure theme reverts to neutral if no faction is selected or navigating away
   useEffect(() => {
     if (!selectedFaction && currentTheme !== 'neutral') {
       setTheme('neutral');
@@ -57,17 +52,15 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
 
 
   const handleFactionSelect = (factionName: Faction) => {
-    if (factionName === 'Observer') return; // Should not happen with tile clicks
+    if (factionName === 'Observer') return;
 
     if (selectedFaction === factionName) {
-      // This is confirmation click
       setAppContextFaction(factionName);
-      // TODO: Open Codename Input TODWindow here
-      // For now, proceed to fingerprint scanner
-      console.log(`Faction ${factionName} confirmed. TODO: Open Codename Input Window.`);
-      setOnboardingStep('fingerprint'); 
+      // TODO: Open Codename Input TODWindow here - Placeholder for now
+      console.log(`Faction ${factionName} confirmed. Opening Codename Input...`);
+      openTODWindow("Agent Codename Assignment", <div>Placeholder for Codename Input UI</div>);
+      // Note: setOnboardingStep('fingerprint') or 'tod' will be handled by the AppContext after codename
     } else {
-      // This is the first click or switching selection
       setSelectedFaction(factionName);
       setTheme(factionName === 'Cyphers' ? 'cyphers' : 'shadows');
     }
@@ -75,52 +68,51 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
 
   const handleProceedAsObserver = () => {
     setSelectedFaction('Observer');
-    setAppContextFaction('Observer'); 
-    setTheme('neutral'); // Observers use neutral theme
-    setOnboardingStep('tod'); // Observers skip fingerprint & codename
+    setAppContextFaction('Observer');
+    setTheme('neutral');
+    setOnboardingStep('tod');
   };
-  
+
 
   return (
-    <HolographicPanel className="w-full max-w-2xl mx-auto p-4 md:p-6 my-8"> {/* Added my-8 for some spacing if needed */}
-      <h1 className="text-3xl md:text-4xl font-orbitron mb-6 text-center holographic-text">Select Your Allegiance</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
-        {(['Cyphers', 'Shadows'] as const).map((factionName) => {
-          const details = factionDetails[factionName];
-          const isSelected = selectedFaction === factionName;
-          const tagline = isSelected ? details.confirmTagline : details.defaultTagline;
+    <div className="w-full p-4 md:p-6 flex justify-center">
+      <HolographicPanel className="w-full max-w-2xl p-4 md:p-6 my-8">
+        <h1 className="text-3xl md:text-4xl font-orbitron mb-6 text-center holographic-text">Select Your Allegiance</h1>
 
-          return (
-            <div
-              key={factionName}
-              className={cn(
-                "p-4 rounded-lg border-2 transition-all cursor-pointer flex flex-col items-center text-center holographic-panel bg-opacity-50 hover:shadow-accent/30",
-                isSelected ? details.selectedColorClass : details.colorClass,
-                !isSelected && "border-opacity-50" 
-              )}
-              onClick={() => handleFactionSelect(factionName)}
-            >
-              {details.icon}
-              <h2 className={cn("text-xl md:text-2xl font-orbitron mb-1", details.primaryColorClass)}>
-                The {factionName}
-              </h2>
-              <p className={cn("text-xs md:text-sm min-h-[2.5em]", isSelected ? "text-accent font-semibold" : "text-muted-foreground")}>{tagline}</p>
-            </div>
-          );
-        })}
-      </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
+          {(['Cyphers', 'Shadows'] as const).map((factionName) => {
+            const details = factionDetails[factionName];
+            const isSelected = selectedFaction === factionName;
+            const tagline = isSelected ? details.confirmTagline : details.defaultTagline;
 
-      <Button 
-        variant="ghost" 
-        className="w-full md:w-3/4 mx-auto text-muted-foreground hover:text-foreground flex items-center justify-center gap-2 py-3"
-        onClick={handleProceedAsObserver}
-      >
-        <Eye className="w-5 h-5" /> Proceed as Observer
-      </Button>
-    </HolographicPanel>
+            return (
+              <div
+                key={factionName}
+                className={cn(
+                  "p-4 rounded-lg border-2 transition-all cursor-pointer flex flex-col items-center text-center holographic-panel bg-opacity-50 hover:shadow-accent/30",
+                  isSelected ? details.selectedColorClass : details.colorClass,
+                  !isSelected && "border-opacity-50"
+                )}
+                onClick={() => handleFactionSelect(factionName)}
+              >
+                {details.icon}
+                <h2 className={cn("text-xl md:text-2xl font-orbitron mb-1", details.primaryColorClass)}>
+                  The {factionName}
+                </h2>
+                <p className={cn("text-xs md:text-sm min-h-[2.5em]", isSelected ? "text-accent font-semibold" : "text-muted-foreground")}>{tagline}</p>
+              </div>
+            );
+          })}
+        </div>
+
+        <Button
+          variant="ghost"
+          className="w-full md:w-3/4 mx-auto text-muted-foreground hover:text-foreground flex items-center justify-center gap-2 py-3"
+          onClick={handleProceedAsObserver}
+        >
+          <Eye className="w-5 h-5" /> Proceed as Observer
+        </Button>
+      </HolographicPanel>
+    </div>
   );
 }
-
-
-    
