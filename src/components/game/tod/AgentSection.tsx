@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { HolographicButton } from '@/components/game/shared/HolographicPanel';
 import { Progress } from "@/components/ui/progress";
@@ -18,12 +18,11 @@ const XP_LEVELS = [0, 100, 200, 400, 800, 1600, 3200, 6400, 12800]; // XP needed
 
 const AgentDossierView = () => {
   const { playerSpyName, playerPiName, faction, playerStats, setFaction: setAppFaction, addMessage } = useAppContext();
-  // const { setTheme } = useTheme(); // setTheme from useTheme is handled by ThemeUpdater
+  // ThemeUpdater will handle setTheme based on faction context change from useTheme in ThemeContext
 
   const handleFactionChange = () => {
     const newFaction = faction === 'Cyphers' ? 'Shadows' : 'Cyphers';
     setAppFaction(newFaction);
-    // ThemeUpdater will handle setTheme based on faction context change
     addMessage({type: 'system', text: `Faction allegiance protocols updated to: ${newFaction}. Coordinating with HQ.`});
   };
 
@@ -102,6 +101,7 @@ const IntelFilesView = () => {
     if (category) {
       setSelectedCategory(category.id);
       setContentTitle(category.title);
+      // Animate slide out category list, slide in content (placeholder for now)
       openTODWindow(category.title,
         <div className="font-rajdhani">
           <h4 className="text-lg font-orbitron mb-2 holographic-text">{category.heading}</h4>
@@ -111,6 +111,7 @@ const IntelFilesView = () => {
     } else {
       setSelectedCategory(null);
       setContentTitle("Intel Files");
+      // Animate slide out content, slide in category list (placeholder)
     }
   };
 
@@ -229,7 +230,7 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
     // Add logic here to snap to top/bottom based on current position if desired
   };
 
-  const padGlossClass = "pad-gloss-effect"; // Placeholder for gloss effect styling
+  const padGlossClass = "pad-gloss-effect"; 
 
   const renderPadScreen = () => {
     switch(padScreenView) {
@@ -279,12 +280,11 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
         ref={padRef}
         className={cn(
           "absolute bottom-0 left-0 right-0 transition-all duration-300 ease-out mx-auto w-full max-w-2xl",
-          "border-t rounded-t-lg bg-pad-backing", // Added .bg-pad-backing
-          // padGlossClass, // Temporarily removed to ensure background applies
+          "border-t rounded-t-lg bg-pad-backing backdrop-blur-sm", 
+          padGlossClass, 
           isPadUp ? "h-[75%]" : "h-[100px]",
         )}
         style={{
-          // backgroundColor removed, handled by .bg-pad-backing
           borderColor: 'hsla(var(--background-hsl), 0.5)',
           transform: isPadUp ? 'translateY(0)' : `translateY(calc(100% - 100px - env(safe-area-inset-bottom, 0px)))`,
         }}
@@ -334,3 +334,5 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
     </div>
   );
 }
+
+    

@@ -307,3 +307,36 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+.pad-gloss-effect {
+  position: relative; /* Needed for absolute positioning of pseudo-element */
+  overflow: hidden; /* Keep the gloss within the PAD bounds */
+}
+
+.pad-gloss-effect::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -150%; /* Start off-screen to the left */
+  width: 50%; /* Width of the gloss highlight */
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    hsla(0, 0%, 100%, 0) 0%,       /* Transparent start */
+    hsla(0, 0%, 100%, 0.05) 50%,  /* Faint white highlight in the middle */
+    hsla(0, 0%, 100%, 0) 100%     /* Transparent end */
+  );
+  transform: skewX(-25deg); /* Angled highlight */
+  animation: gloss-sweep 10s linear infinite;
+  pointer-events: none; /* So it doesn't interfere with clicks */
+}
+
+@keyframes gloss-sweep {
+  0% {
+    left: -150%;
+  }
+  100% {
+    left: 150%; /* Sweep across to the right */
+  }
+}
+    
