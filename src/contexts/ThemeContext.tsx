@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 export type Theme = 
+  | 'neutral' // Added neutral theme
   | 'cyphers' 
   | 'shadows' 
   | 'level-1-grey'
@@ -12,7 +13,7 @@ export type Theme =
   | 'level-3-yellow'
   | 'level-4-orange'
   | 'level-5-purple'
-  | 'level-6-red' // Note: "Team Red" is for faction, this is L6 item color
+  | 'level-6-red' 
   | 'level-7-cyan'
   | 'level-8-magenta'
   | 'deep-ocean-dive'
@@ -33,49 +34,58 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const availableThemesList: Theme[] = [
-  'cyphers', 'shadows', 'level-1-grey', 'level-2-green', 'level-3-yellow', 
+  'neutral', 'cyphers', 'shadows', 'level-1-grey', 'level-2-green', 'level-3-yellow', 
   'level-4-orange', 'level-5-purple', 'level-6-red', 'level-7-cyan', 
   'level-8-magenta', 'deep-ocean-dive', 'electric-surge', 'shadowed-amethyst', 
   'molten-core', 'emerald-glitch', 'celestial-silver', 'dusk-mauve', 'solar-flare'
 ];
 
 
-export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('cyphers'); // Default to Cyphers
+export function ThemeProvider({ children, attribute = "class", defaultTheme = "neutral", enableSystem = false, disableTransitionOnChange = false }: { 
+    children: ReactNode, 
+    attribute?: string, // Keep ShadCN compatibility
+    defaultTheme?: Theme, 
+    enableSystem?: boolean, 
+    disableTransitionOnChange?: boolean 
+}) {
+  const [theme, setThemeState] = useState<Theme>(() => {
+    if (typeof window !== 'undefined') {
+      const storedTheme = localStorage.getItem('tod-theme') as Theme | null;
+      if (storedTheme && availableThemesList.includes(storedTheme)) {
+        return storedTheme;
+      }
+    }
+    return defaultTheme;
+  });
 
   useEffect(() => {
     const storedTheme = localStorage.getItem('tod-theme') as Theme | null;
     if (storedTheme && availableThemesList.includes(storedTheme)) {
       setThemeState(storedTheme);
+    } else {
+      setThemeState(defaultTheme); // Ensure default if nothing valid in storage
     }
-  }, []);
+  }, [defaultTheme]);
 
   const setTheme = useCallback((newTheme: Theme) => {
     if (availableThemesList.includes(newTheme)) {
       setThemeState(newTheme);
-      localStorage.setItem('tod-theme', newTheme);
-      
-      // Remove all theme-prefixed classes
-      availableThemesList.forEach(t => {
-        if (t !== newTheme) document.documentElement.classList.remove(`theme-${t}`);
-      });
-      // Add the new theme class
-      document.documentElement.classList.add(`theme-${newTheme}`);
-       // Special handling for default 'cyphers' theme as it might not have a prefix if it's the :root default
-      if (newTheme === 'cyphers') {
-         availableThemesList.forEach(t => {
-          if (t !== 'cyphers') document.documentElement.classList.remove(`theme-${t}`);
-        });
-      } else {
-        document.documentElement.classList.remove('theme-cyphers'); // ensure default is removed
-        document.documentElement.classList.add(`theme-${newTheme}`);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('tod-theme', newTheme);
       }
-
+      
+      document.documentElement.classList.remove(...availableThemesList.map(t => `theme-${t}`));
+      if (newTheme !== 'neutral' || (newTheme === 'neutral' && defaultTheme !== 'neutral')) { // Apply theme-neutral if it's not the implicit root default
+         document.documentElement.classList.add(`theme-${newTheme}`);
+      }
+      // Ensure root doesn't have other theme classes if neutral is selected and neutral IS the :root default
+      // This logic might need refinement based on how :root vs .theme-neutral is handled in globals.css
+      // For now, explicit class addition/removal is safer.
     }
-  }, []);
+  }, [defaultTheme]);
 
   useEffect(() => {
-    // Initial theme application
+    // Initial theme application and on theme state change
     setTheme(theme);
   }, [theme, setTheme]);
 
@@ -94,5 +104,7 @@ export function useTheme() {
   }
   return context;
 }
+
+    
 
     

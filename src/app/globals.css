@@ -4,52 +4,50 @@
 @tailwind utilities;
 
 @layer base {
-  html {
-    @apply overflow-hidden;
-  }
-  :root {
-    /* Default Theme: Cyphers Blue */
-    --theme-name: "cyphers";
-    --background-hsl: 210 60% 8%; /* Darker blue for depth */
-    --foreground-hsl: 200 100% 90%; /* Light blue/white text */
+  /* REMOVED: html { @apply overflow-hidden; } */
 
-    --primary-hsl: 204 100% 50%; /* Electric Blue #0077CC */
-    --primary-foreground-hsl: 0 0% 100%; /* White */
+  :root, .theme-neutral { /* Default is Neutral Theme now */
+    --theme-name: "neutral";
+    --background-hsl: 220 15% 8%; /* Dark cool grey */
+    --foreground-hsl: 220 10% 75%; /* Lighter grey */
 
-    --secondary-hsl: 195 53% 79%; /* Light Blue #ADD8E6 */
-    --secondary-foreground-hsl: 210 60% 15%; /* Darker Blue for text on light blue */
+    --primary-hsl: 180 50% 45%; /* Muted Teal */
+    --primary-foreground-hsl: 220 10% 95%; /* Off-white */
 
-    --accent-hsl: 0 0% 100%; /* Glowing White */
-    --accent-foreground-hsl: 204 100% 50%; /* Electric Blue for text on white */
+    --secondary-hsl: 220 10% 20%; /* Darker Grey */
+    --secondary-foreground-hsl: 220 10% 60%;
 
-    --muted-hsl: 210 40% 25%;
-    --muted-foreground-hsl: 200 80% 70%;
+    --accent-hsl: 180 40% 60%; /* Lighter Muted Teal */
+    --accent-foreground-hsl: 220 15% 15%;
 
-    --card-hsl: 210 50% 12%;
-    --card-foreground-hsl: 200 100% 90%;
+    --muted-hsl: 220 10% 15%;
+    --muted-foreground-hsl: 220 10% 50%;
 
-    --popover-hsl: 210 50% 10%;
-    --popover-foreground-hsl: 200 100% 90%;
+    --card-hsl: 220 12% 10%;
+    --card-foreground-hsl: 220 10% 80%;
 
-    --border-hsl: 204 100% 60%; /* Brighter blue for glowing borders */
-    --input-hsl: 210 40% 30%;
-    --ring-hsl: 204 100% 50%;
+    --popover-hsl: 220 15% 7%;
+    --popover-foreground-hsl: 220 10% 85%;
 
-    --destructive-hsl: 0 72% 51%; /* Red for destructive actions */
+    --border-hsl: 180 30% 35%; /* Muted Teal border */
+    --input-hsl: 220 10% 25%;
+    --ring-hsl: 180 50% 50%; /* Muted Teal ring */
+
+    --destructive-hsl: 0 60% 50%;
     --destructive-foreground-hsl: 0 0% 100%;
 
     --radius: 0.5rem;
 
-    /* Holographic specific - these might be derived or direct */
+    /* Holographic specific - neutral defaults */
     --hologram-glow-color-hsl: var(--primary-hsl);
     --hologram-base-text-color-hsl: var(--foreground-hsl);
     --hologram-wireframe-color-hsl: var(--primary-hsl);
-    --hologram-panel-bg-hsl: var(--background-hsl); /* Matched to --background-hsl */
+    --hologram-panel-bg-hsl: var(--background-hsl);
     --hologram-panel-border-hsl: var(--primary-hsl);
     --hologram-button-bg-hsl: var(--primary-hsl);
     --hologram-button-text-hsl: var(--primary-foreground-hsl);
-
-    /* Item Level Colors HSL */
+    
+    /* Item Level Colors HSL (remain globally available) */
     --level-1-color-hsl: 0 100% 50%; /* Red */
     --level-2-color-hsl: 30 100% 50%; /* Orange */
     --level-3-color-hsl: 50 100% 50%; /* Yellow */
@@ -66,6 +64,34 @@
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
+  }
+
+  .theme-cyphers {
+    --theme-name: "cyphers";
+    --background-hsl: 210 60% 8%;
+    --foreground-hsl: 200 100% 90%;
+
+    --primary-hsl: 204 100% 50%; /* Electric Blue #0077CC */
+    --primary-foreground-hsl: 0 0% 100%;
+
+    --secondary-hsl: 195 53% 79%; /* Light Blue #ADD8E6 */
+    --secondary-foreground-hsl: 210 60% 15%;
+
+    --accent-hsl: 0 0% 100%;
+    --accent-foreground-hsl: 204 100% 50%;
+
+    --muted-hsl: 210 40% 25%;
+    --muted-foreground-hsl: 200 80% 70%;
+
+    --card-hsl: 210 50% 12%;
+    --card-foreground-hsl: 200 100% 90%;
+
+    --popover-hsl: 210 50% 10%;
+    --popover-foreground-hsl: 200 100% 90%;
+
+    --border-hsl: 204 100% 60%;
+    --input-hsl: 210 40% 30%;
+    --ring-hsl: 204 100% 50%;
   }
 
   .theme-shadows {
@@ -96,11 +122,11 @@
     --ring-hsl: 0 100% 40%;
   }
 
-  /* Example Aesthetic Scheme: Level 2 Green */
+  /* Aesthetic Schemes (remain as defined) */
   .theme-level-2-green {
     --theme-name: "level-2-green";
-    --primary-hsl: 145 100% 33%; /* #00AA00 */
-    --secondary-hsl: 120 73% 75%; /* #90EE90 */
+    --primary-hsl: 145 100% 33%;
+    --secondary-hsl: 120 73% 75%;
     --accent-hsl: 0 0% 100%;
     --accent-foreground-hsl: 145 100% 33%;
     --background-hsl: 145 60% 8%;
@@ -109,14 +135,13 @@
     --ring-hsl: 145 100% 33%;
   }
 
-  /* Example Aesthetic Scheme: Level 3 Yellow */
   .theme-level-3-yellow {
     --theme-name: "level-3-yellow";
-    --primary-hsl: 54 100% 50%; /* #FFD700 */
-    --primary-foreground-hsl: 0 0% 0%; /* Black for contrast */
-    --secondary-hsl: 56 100% 90%; /* #FFFACD */
+    --primary-hsl: 54 100% 50%;
+    --primary-foreground-hsl: 0 0% 0%;
+    --secondary-hsl: 56 100% 90%;
     --secondary-foreground-hsl: 54 60% 15%;
-    --accent-hsl: 0 0% 0%; /* Black for contrast */
+    --accent-hsl: 0 0% 0%;
     --accent-foreground-hsl: 54 100% 50%;
     --background-hsl: 54 60% 8%;
     --foreground-hsl: 54 100% 10%;
@@ -125,7 +150,7 @@
   }
 
   /* Apply HSL variables to ShadCN CSS variables */
-  :root, .theme-shadows, .theme-level-2-green, .theme-level-3-yellow {
+  :root, .theme-neutral, .theme-cyphers, .theme-shadows, .theme-level-2-green, .theme-level-3-yellow {
     --background: hsl(var(--background-hsl));
     --foreground: hsl(var(--foreground-hsl));
     --card: hsl(var(--card-hsl));
@@ -241,8 +266,9 @@
     repeating-linear-gradient(90deg, hsl(var(--muted-foreground-hsl) / 0.1) 0px 1px, transparent 1px 20px);
 }
 
-/* Default for Cyphers theme or when no specific theme class is on a higher parent */
-.bg-pad-backing {
+/* Default for Neutral/Cyphers theme or when no specific theme class is on a higher parent */
+.theme-neutral .bg-pad-backing,
+.theme-cyphers .bg-pad-backing {
   background-color: hsla(210, 60%, 8%, 0.7) !important; /* Cyphers --background-hsl with 0.7 alpha */
 }
 
@@ -340,4 +366,22 @@
     left: 150%; /* Sweep across to the right */
   }
 }
+
+/* Keyframes for TOD boot-up */
+@keyframes slide-up-from-bottom {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up-from-bottom {
+  animation: slide-up-from-bottom 1s ease-out forwards;
+}
+    
+
     
