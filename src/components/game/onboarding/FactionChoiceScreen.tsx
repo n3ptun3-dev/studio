@@ -76,7 +76,7 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
     <HolographicPanel
       className="w-full max-w-2xl p-4 md:p-6 flex flex-col flex-grow h-0 overflow-hidden"
     >
-      <h1 className="text-2xl sm:text-3xl md:text-4xl font-orbitron mb-4 sm:mb-6 text-center holographic-text flex-shrink-0">
+      <h1 className="text-2xl sm:text-3xl md:text-4xl font-orbitron mb-4 sm:mb-6 text-center holographic-text flex-shrink-0 py-2">
         Select Your Allegiance
       </h1>
 
@@ -116,4 +116,3 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
     </HolographicPanel>
   );
 }
-
