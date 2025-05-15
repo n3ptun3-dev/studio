@@ -22,10 +22,10 @@ import { cn } from '@/lib/utils';
 // For looping, sections will be: [Vault (clone), Agent, ControlCenter, Scanner, EquipmentLocker, Vault, Agent (clone)]
 
 export default function HomePage() {
-  const { 
-    onboardingStep, 
-    setOnboardingStep, 
-    isAuthenticated, 
+  const {
+    onboardingStep,
+    setOnboardingStep,
+    isAuthenticated,
     faction,
     playerSpyName,
     playerStats,
@@ -37,7 +37,7 @@ export default function HomePage() {
     todWindowContent,
     closeTODWindow,
    } = useAppContext();
-  
+
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const todContainerRef = useRef<HTMLDivElement>(null);
   const [parallaxOffset, setParallaxOffset] = useState(0);
@@ -55,16 +55,16 @@ export default function HomePage() {
     }
     if (onboardingStep === 'tod' && !playBootAnimation) {
       // Delay slightly to ensure component is rendered before animation starts
-      setTimeout(() => setPlayBootAnimation(true), 100); 
+      setTimeout(() => setPlayBootAnimation(true), 100);
     }
   }, [isAuthenticated, onboardingStep, setOnboardingStep, playBootAnimation]);
 
   // Welcome message generation logic
    useEffect(() => {
-    if (onboardingStep === 'tod' && isAuthenticated && isMounted && !isAppLoading) { 
+    if (onboardingStep === 'tod' && isAuthenticated && isMounted && !isAppLoading) {
       setIsLoading(true);
-      const isNewUser = !playerStats.xp && !playerStats.elintReserves; 
-      
+      const isNewUser = !playerStats.xp && !playerStats.elintReserves;
+
       if (isNewUser) {
         addMessage({
           text: "Welcome, Agent. HQ guidance protocol initiated. Familiarize yourself with the Tactical Overlay Device. Your first objective: explore your Agent PAD.",
@@ -77,8 +77,8 @@ export default function HomePage() {
           playerName: playerSpyName || "Agent",
           faction: faction,
           elintReserves: playerStats.elintReserves,
-          networkActivity: "Medium", 
-          vaultDefenses: "Holding", 
+          networkActivity: "Medium",
+          vaultDefenses: "Holding",
         };
         generateWelcomeMessage(welcomeInput)
           .then(response => {
@@ -95,54 +95,54 @@ export default function HomePage() {
 
 
   const sectionComponents = React.useMemo(() => [
-    <VaultSection key="vault-clone-start" parallaxOffset={parallaxOffset} />, 
-    <AgentSection key="agent-actual" parallaxOffset={parallaxOffset} />, 
+    <VaultSection key="vault-clone-start" parallaxOffset={parallaxOffset} />,
+    <AgentSection key="agent-actual" parallaxOffset={parallaxOffset} />,
     <ControlCenterSection key="control-center-actual" parallaxOffset={parallaxOffset} />,
     <ScannerSection key="scanner-actual" parallaxOffset={parallaxOffset} />,
     <EquipmentLockerSection key="equipment-locker-actual" parallaxOffset={parallaxOffset} />,
-    <VaultSection key="vault-actual" parallaxOffset={parallaxOffset} />, 
-    <AgentSection key="agent-clone-end" parallaxOffset={parallaxOffset} />, 
+    <VaultSection key="vault-actual" parallaxOffset={parallaxOffset} />,
+    <AgentSection key="agent-clone-end" parallaxOffset={parallaxOffset} />,
   ], [parallaxOffset]);
 
 
   const handleScroll = useCallback(() => {
     if (todContainerRef.current) {
       const currentScrollLeft = todContainerRef.current.scrollLeft;
-      const clientWidth = todContainerRef.current.clientWidth; 
-      
+      const clientWidth = todContainerRef.current.clientWidth;
+
       if (clientWidth === 0) return;
 
       setParallaxOffset(currentScrollLeft);
 
-      const numActualSections = sectionComponents.length - 2; 
-      
-      const scrollPosActualAgent = clientWidth; 
-      const scrollPosActualVault = numActualSections * clientWidth; 
-      
+      const numActualSections = sectionComponents.length - 2;
+
+      const scrollPosActualAgent = clientWidth;
+      const scrollPosActualVault = numActualSections * clientWidth;
+
       const maxPossibleScrollLeft = (sectionComponents.length - 1) * clientWidth;
 
-      if (currentScrollLeft <= 5) { 
+      if (currentScrollLeft <= 5) {
         todContainerRef.current.scrollLeft = scrollPosActualVault;
-      } 
-      else if (currentScrollLeft >= maxPossibleScrollLeft - 5) { 
+      }
+      else if (currentScrollLeft >= maxPossibleScrollLeft - 5) {
         todContainerRef.current.scrollLeft = scrollPosActualAgent;
       }
     }
-  }, [sectionComponents.length]); 
+  }, [sectionComponents.length]);
 
   useEffect(() => {
     const container = todContainerRef.current;
     if (onboardingStep === 'tod' && !isAppLoading && isMounted && container) {
-      
+
       const setInitialScroll = () => {
         if (container.clientWidth > 0 && !initialScrollSetRef.current) {
           const sectionWidth = container.clientWidth;
-          const initialScrollPosition = sectionWidth; 
+          const initialScrollPosition = sectionWidth;
           container.scrollLeft = initialScrollPosition;
-          setParallaxOffset(initialScrollPosition); 
-          
-          if (Math.abs(container.scrollLeft - initialScrollPosition) < 5) { 
-            initialScrollSetRef.current = true; 
+          setParallaxOffset(initialScrollPosition);
+
+          if (Math.abs(container.scrollLeft - initialScrollPosition) < 5) {
+            initialScrollSetRef.current = true;
           } else {
              requestAnimationFrame(setInitialScroll);
           }
@@ -154,10 +154,10 @@ export default function HomePage() {
       } else {
         setInitialScroll();
       }
-      
+
       container.addEventListener('scroll', handleScroll, { passive: true });
       return () => {
-        if (container) { 
+        if (container) {
             container.removeEventListener('scroll', handleScroll);
         }
       };
@@ -165,15 +165,17 @@ export default function HomePage() {
   }, [onboardingStep, isAppLoading, isMounted, handleScroll]);
 
 
-  if (!isMounted || (isAppLoading && onboardingStep !== 'tod')) { 
+  if (!isMounted || (isAppLoading && onboardingStep !== 'tod')) {
+    // This 'main' is for the initial "INITIALIZING TOD..." or the very first app loading state.
+    // items-center and justify-center will center the "INITIALIZING TOD..." message.
     return (
-      <div className="flex items-center justify-center h-screen bg-background">
+      <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
         <ParallaxBackground parallaxOffset={parallaxOffset}/>
         <div className="animate-pulse text-2xl font-orbitron holographic-text">INITIALIZING TOD...</div>
-      </div>
+      </main>
     );
   }
-  
+
   const renderOnboarding = () => {
     switch (onboardingStep) {
       case 'welcome':
@@ -188,6 +190,11 @@ export default function HomePage() {
   };
 
   if (onboardingStep !== 'tod') {
+    // This 'main' is for all subsequent onboarding steps.
+    // items-stretch: to make direct children stretch vertically.
+    // justify-start: align children to the top.
+    // min-h-screen with pt/pb: provides a viewport-based height.
+    // overflow-y-auto: allows this main container to scroll.
     return (
       <main className="relative flex flex-col items-stretch justify-start min-h-screen bg-background text-foreground pt-8 pb-8 overflow-y-auto">
         <ParallaxBackground parallaxOffset={parallaxOffset} />
@@ -196,19 +203,21 @@ export default function HomePage() {
       </main>
     );
   }
-  
+
+  // This is the main view for the TOD itself
   return (
-    <main className="relative h-screen w-screen overflow-hidden"> 
+    <main className="relative h-screen w-screen overflow-hidden">
       <ParallaxBackground parallaxOffset={parallaxOffset} />
-      
-      <div 
-        className="parallax-layer z-[5]" 
-        style={{ 
+
+      <div
+        className="parallax-layer z-[5]"
+        style={{
           transform: `translateX(-${parallaxOffset * 0.5}px)`,
-          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`, 
+          // Adjusted width calculation for the parallax grid layer
+          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`,
         }}
       >
-        <div className="absolute inset-0 opacity-30" style={{
+        <div className="absolute inset-0 opacity-20" style={{
           backgroundImage: `repeating-linear-gradient(
             45deg,
             hsl(var(--accent-hsl) / 0.2),
@@ -226,26 +235,26 @@ export default function HomePage() {
         }}></div>
       </div>
 
-      <div 
-        ref={todContainerRef} 
+      <div
+        ref={todContainerRef}
         className={cn(
             "tod-scroll-container absolute inset-0 z-10 scrollbar-hide",
-            playBootAnimation && "animate-slide-up-from-bottom" 
+            playBootAnimation && "animate-slide-up-from-bottom"
         )}
         style={{
-          WebkitOverflowScrolling: 'touch', 
+          WebkitOverflowScrolling: 'touch',
         }}
       >
         {sectionComponents.map((SectionComponentInstance, index) => (
-          <div 
-            key={SectionComponentInstance.key || `tod-section-${index}`} 
+          <div
+            key={SectionComponentInstance.key || `tod-section-${index}`}
             className="tod-section"
           >
             {SectionComponentInstance}
           </div>
         ))}
       </div>
-      
+
       <TODWindow isOpen={isTODWindowOpen} onClose={closeTODWindow} title={todWindowTitle}>
         {todWindowContent}
       </TODWindow>
