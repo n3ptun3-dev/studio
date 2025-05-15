@@ -96,8 +96,8 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
         </div>
       </div>
 
-      {/* Node Display Area - This IS a HolographicPanel for layering effect */}
-      <HolographicPanel className="flex-grow relative overflow-hidden">
+      {/* Node Display Area - This IS a HolographicPanel for layering effect, with reduced padding */}
+      <HolographicPanel className="flex-grow relative overflow-hidden p-1"> {/* MODIFIED: padding reduced */}
         {/* Stylized Network Map Background */}
         <div className="absolute inset-0 opacity-20" style={{
             backgroundImage: `
