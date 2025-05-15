@@ -74,44 +74,42 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
 
 
   return (
-    <div className="w-full p-4 md:p-6 flex justify-center">
-      <HolographicPanel className="w-full max-w-2xl p-4 md:p-6 my-4">
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-orbitron mb-4 sm:mb-6 text-center holographic-text">Select Your Allegiance</h1>
+    <HolographicPanel className="w-full max-w-2xl p-4 md:p-6">
+      <h1 className="text-2xl sm:text-3xl md:text-4xl font-orbitron mb-4 sm:mb-6 text-center holographic-text">Select Your Allegiance</h1>
 
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
-          {(['Cyphers', 'Shadows'] as const).map((factionName) => {
-            const details = factionDetails[factionName];
-            const isSelected = selectedFaction === factionName;
-            const tagline = isSelected ? details.confirmTagline : details.defaultTagline;
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
+        {(['Cyphers', 'Shadows'] as const).map((factionName) => {
+          const details = factionDetails[factionName];
+          const isSelected = selectedFaction === factionName;
+          const tagline = isSelected ? details.confirmTagline : details.defaultTagline;
 
-            return (
-              <div
-                key={factionName}
-                className={cn(
-                  "p-3 sm:p-4 rounded-lg border-2 transition-all cursor-pointer flex flex-col items-center text-center holographic-panel bg-opacity-50 hover:shadow-accent/30",
-                  isSelected ? details.selectedColorClass : details.colorClass,
-                  !isSelected && "border-opacity-50"
-                )}
-                onClick={() => handleFactionSelect(factionName)}
-              >
-                {details.icon}
-                <h2 className={cn("text-base sm:text-lg md:text-xl font-orbitron mb-1", details.primaryColorClass)}>
-                  The {factionName}
-                </h2>
-                <p className={cn("text-[10px] xxs:text-xs sm:text-sm min-h-[2.5em] leading-tight", isSelected ? "text-accent font-semibold" : "text-muted-foreground")}>{tagline}</p>
-              </div>
-            );
-          })}
-        </div>
+          return (
+            <div
+              key={factionName}
+              className={cn(
+                "p-3 sm:p-4 rounded-lg border-2 transition-all cursor-pointer flex flex-col items-center text-center holographic-panel bg-opacity-50 hover:shadow-accent/30",
+                isSelected ? details.selectedColorClass : details.colorClass,
+                !isSelected && "border-opacity-50"
+              )}
+              onClick={() => handleFactionSelect(factionName)}
+            >
+              {details.icon}
+              <h2 className={cn("text-base sm:text-lg md:text-xl font-orbitron mb-1", details.primaryColorClass)}>
+                The {factionName}
+              </h2>
+              <p className={cn("text-[10px] xxs:text-xs sm:text-sm min-h-[2.5em] leading-tight", isSelected ? "text-accent font-semibold" : "text-muted-foreground")}>{tagline}</p>
+            </div>
+          );
+        })}
+      </div>
 
-        <Button
-          variant="ghost"
-          className="w-full md:w-3/4 mx-auto text-muted-foreground hover:text-foreground flex items-center justify-center gap-2 py-2 sm:py-3"
-          onClick={handleProceedAsObserver}
-        >
-          <Eye className="w-4 h-4 sm:w-5 sm:h-5" /> Proceed as Observer
-        </Button>
-      </HolographicPanel>
-    </div>
+      <Button
+        variant="ghost"
+        className="w-full md:w-3/4 mx-auto text-muted-foreground hover:text-foreground flex items-center justify-center gap-2 py-2 sm:py-3"
+        onClick={handleProceedAsObserver}
+      >
+        <Eye className="w-4 h-4 sm:w-5 sm:h-5" /> Proceed as Observer
+      </Button>
+    </HolographicPanel>
   );
 }
