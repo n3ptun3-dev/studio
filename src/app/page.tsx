@@ -94,8 +94,6 @@ export default function HomePage() {
   }, [onboardingStep, isAuthenticated, playerSpyName, faction, playerStats, addMessage, setIsLoading, isMounted, isAppLoading]);
 
 
-  // Order: Agent, ControlCenter, Scanner, EquipmentLocker, Vault
-  // Clones: Vault(prev), Agent(actual), CC(actual), Scanner(actual), EL(actual), Vault(actual), Agent(next)
   const sectionComponents = React.useMemo(() => [
     <VaultSection key="vault-clone-start" parallaxOffset={parallaxOffset} />, 
     <AgentSection key="agent-actual" parallaxOffset={parallaxOffset} />, 
@@ -159,7 +157,7 @@ export default function HomePage() {
       
       container.addEventListener('scroll', handleScroll, { passive: true });
       return () => {
-        if (container) { // Check if container still exists
+        if (container) { 
             container.removeEventListener('scroll', handleScroll);
         }
       };
@@ -170,7 +168,7 @@ export default function HomePage() {
   if (!isMounted || (isAppLoading && onboardingStep !== 'tod')) { 
     return (
       <div className="flex items-center justify-center h-screen bg-background">
-        <ParallaxBackground />
+        <ParallaxBackground parallaxOffset={parallaxOffset}/>
         <div className="animate-pulse text-2xl font-orbitron holographic-text">INITIALIZING TOD...</div>
       </div>
     );
@@ -191,8 +189,8 @@ export default function HomePage() {
 
   if (onboardingStep !== 'tod') {
     return (
-      <main className="relative flex flex-col items-center justify-start min-h-screen bg-background text-foreground pt-8 pb-8 overflow-y-auto">
-        <ParallaxBackground />
+      <main className="relative flex flex-col items-stretch justify-start min-h-screen bg-background text-foreground pt-8 pb-8 overflow-y-auto">
+        <ParallaxBackground parallaxOffset={parallaxOffset} />
         {renderOnboarding()}
         {showAuthPrompt && <AuthPromptModal onClose={() => setShowAuthPrompt(false)} />}
       </main>
@@ -200,9 +198,8 @@ export default function HomePage() {
   }
   
   return (
-    // This main container for the TOD can keep overflow-hidden
     <main className="relative h-screen w-screen overflow-hidden"> 
-      <ParallaxBackground />
+      <ParallaxBackground parallaxOffset={parallaxOffset} />
       
       <div 
         className="parallax-layer z-[5]" 
@@ -233,7 +230,7 @@ export default function HomePage() {
         ref={todContainerRef} 
         className={cn(
             "tod-scroll-container absolute inset-0 z-10 scrollbar-hide",
-            playBootAnimation && "animate-slide-up-from-bottom" // Apply boot animation
+            playBootAnimation && "animate-slide-up-from-bottom" 
         )}
         style={{
           WebkitOverflowScrolling: 'touch', 

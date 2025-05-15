@@ -19,7 +19,9 @@ export function WelcomeScreen() {
 
   if (!showContent) {
     return (
-      <div className="w-full p-4 md:p-6 flex flex-grow items-center justify-center">
+      // This wrapper will be stretched by 'main' in page.tsx (due to items-stretch)
+      // and will center its content (HolographicPanel).
+      <div className="w-full p-4 md:p-6 flex flex-col items-center justify-center flex-grow">
         <HolographicPanel className="w-full max-w-2xl p-4 md:p-6 flex flex-col items-center justify-center">
           <div className="flex flex-col items-center text-center">
             <Zap className="w-24 h-24 text-primary animate-pulse icon-glow" />
@@ -31,12 +33,10 @@ export function WelcomeScreen() {
   }
 
   return (
-    // This outer div will take outer padding and try to grow within its flex parent from page.tsx
-    // It also centers the HolographicPanel.
-    <div className="w-full p-4 md:p-6 flex flex-col flex-grow items-center justify-center">
-      {/* HolographicPanel will take the height given by its parent (due to h-full)
-          and then distribute that height among its children via its own flex-col. */}
-      <HolographicPanel className="w-full max-w-2xl p-4 md:p-6 flex flex-col h-full overflow-hidden"> {/* Added h-full and overflow-hidden */}
+    // This root div of WelcomeScreen content will be stretched by its parent in page.tsx
+    <div className="w-full p-4 md:p-6 flex flex-col items-center">
+      {/* HolographicPanel uses flex-grow to take available height from its parent div */}
+      <HolographicPanel className="w-full max-w-2xl p-4 md:p-6 flex flex-col flex-grow overflow-hidden">
         <h1 className="text-3xl md:text-4xl font-orbitron mb-4 text-center holographic-text flex-shrink-0">
           Welcome Agent
         </h1>
@@ -45,8 +45,7 @@ export function WelcomeScreen() {
           Mission Briefing:
         </h2>
         
-        {/* ScrollArea with flex-grow and min-h-0 will take the remaining space
-            within the HolographicPanel, and its content will scroll internally. */}
+        {/* ScrollArea uses flex-grow and min-h-0 to take space between titles and button */}
         <ScrollArea className="flex-grow min-h-0 mb-6 p-1 border border-primary/30 rounded-md">
           <div className="p-3 font-rajdhani text-sm md:text-base space-y-2 text-muted-foreground">
             <ul className="list-disc list-inside space-y-1">
@@ -69,5 +68,3 @@ export function WelcomeScreen() {
     </div>
   );
 }
-
-    
