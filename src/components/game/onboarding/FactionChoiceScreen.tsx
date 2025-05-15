@@ -72,7 +72,9 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
     setOnboardingStep('tod');
   };
 
-
+  // The HolographicPanel is now the root, similar to WelcomeScreen.
+  // It will be centered by the `main` element in page.tsx which has p-4 sm:p-6.
+  // Its own padding (p-4 md:p-6) is for its internal content.
   return (
     <HolographicPanel className="w-full max-w-2xl p-4 md:p-6">
       <h1 className="text-2xl sm:text-3xl md:text-4xl font-orbitron mb-4 sm:mb-6 text-center holographic-text">Select Your Allegiance</h1>
