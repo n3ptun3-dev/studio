@@ -41,8 +41,8 @@ interface AppContextType {
   playerStats: PlayerStats;
   updatePlayerStats: (newStats: Partial<PlayerStats>) => void;
   addXp: (amount: number) => void;
-  dailyTeamCode: Record<Faction, string>; // Changed to object
-  isLoading: boolean; 
+  dailyTeamCode: Record<Faction, string>; 
+  isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
   messages: GameMessage[];
   addMessage: (message: Omit<GameMessage, 'id' | 'timestamp'>) => void;
@@ -58,18 +58,18 @@ interface AppContextType {
 export interface GameMessage {
   id: string;
   text: string;
-  type: 'system' | 'hq' | 'notification' | 'error' | 'lore' | 'alert'; // Added 'alert'
+  type: 'system' | 'hq' | 'notification' | 'error' | 'lore' | 'alert'; 
   timestamp: Date;
   isPinned?: boolean;
-  sender?: string; // For player messages
+  sender?: string; 
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const NATO_ALPHABET = [
-  "Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel", 
-  "India", "Juliett", "Kilo", "Lima", "Mike", "November", "Oscar", "Papa", 
-  "Quebec", "Romeo", "Sierra", "Tango", "Uniform", "Victor", "Whiskey", 
+  "Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel",
+  "India", "Juliett", "Kilo", "Lima", "Mike", "November", "Oscar", "Papa",
+  "Quebec", "Romeo", "Sierra", "Tango", "Uniform", "Victor", "Whiskey",
   "X-ray", "Yankee", "Zulu"
 ];
 
@@ -79,14 +79,13 @@ function generateFactionTeamCode(seedDate: Date, faction: Faction): string {
   const oneDay = 1000 * 60 * 60 * 24;
   const dayOfYear = Math.floor(diff / oneDay);
 
-  // Incorporate faction into the seed for word selection
   const factionSeedOffset = faction === 'Cyphers' ? 1000 : faction === 'Shadows' ? 2000 : 3000;
 
   const getRandomWord = (baseSeed: number, index: number) => {
     const combinedSeed = baseSeed + index * 100 + factionSeedOffset;
     return NATO_ALPHABET[combinedSeed % NATO_ALPHABET.length];
   };
-  
+
   return `${getRandomWord(dayOfYear, 1)}-${getRandomWord(dayOfYear, 2)}-${getRandomWord(dayOfYear, 3)}`;
 }
 
@@ -110,7 +109,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isLoading, _setIsLoading] = useState(true);
   const [messages, setMessages] = useState<GameMessage[]>([]);
 
-  // TOD Window State
   const [isTODWindowOpen, setIsTODWindowOpen] = useState(false);
   const [todWindowTitle, setTODWindowTitle] = useState('');
   const [todWindowContent, setTODWindowContent] = useState<ReactNode | null>(null);
@@ -119,16 +117,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
 
   useEffect(() => {
-    const inPiBrowser = navigator.userAgent.includes("PiBrowser"); 
+    const inPiBrowser = navigator.userAgent.includes("PiBrowser");
     setIsPiBrowser(inPiBrowser);
-    
+
     const today = new Date();
     setDailyTeamCode({
       Cyphers: generateFactionTeamCode(today, 'Cyphers'),
       Shadows: generateFactionTeamCode(today, 'Shadows'),
-      Observer: generateFactionTeamCode(today, 'Observer'), // Or a generic one
+      Observer: generateFactionTeamCode(today, 'Observer'),
     });
-    _setIsLoading(false); 
+    _setIsLoading(false);
     return () => {
       if (todWindowCooldownTimer.current) clearTimeout(todWindowCooldownTimer.current);
     };
@@ -165,13 +163,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const addMessage = useCallback((message: Omit<GameMessage, 'id' | 'timestamp'>) => {
     const newMessage: GameMessage = {
       ...message,
-      id: Date.now().toString() + Math.random().toString(), 
+      id: Date.now().toString() + Math.random().toString(),
       timestamp: new Date(),
     };
     setMessages(prev => {
       const newMessagesList = [newMessage, ...prev.filter(m => !m.isPinned)];
-      const pinnedMessages = prev.filter(m => m.isPinned); // Keep existing pinned
-      return [...pinnedMessages, ...newMessagesList.slice(0, 50 - pinnedMessages.length)]; 
+      const pinnedMessages = prev.filter(m => m.isPinned);
+      return [...pinnedMessages, ...newMessagesList.slice(0, 50 - pinnedMessages.length)];
     });
   }, []);
 
@@ -185,22 +183,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setTODWindowTitle(title);
     setTODWindowContent(content);
     setIsTODWindowOpen(true);
-    setCanOpenTODWindow(false); // Prevent immediate re-open
+    setCanOpenTODWindow(false); 
   }, [canOpenTODWindow]);
 
   const closeTODWindow = useCallback(() => {
     setIsTODWindowOpen(false);
-    // Set a cooldown before another window can be opened
+    setTODWindowContent(null); // Clear content when closing
     if (todWindowCooldownTimer.current) clearTimeout(todWindowCooldownTimer.current);
     todWindowCooldownTimer.current = setTimeout(() => {
       setCanOpenTODWindow(true);
-    }, 200); // 200ms cooldown
+    }, 200); 
   }, []);
 
 
   return (
-    <AppContext.Provider value={{ 
-      faction, setFaction, 
+    <AppContext.Provider value={{
+      faction, setFaction,
       isAuthenticated, setIsAuthenticated,
       playerSpyName, setPlayerSpyName,
       playerPiName, setPlayerPiName,
@@ -224,4 +222,3 @@ export function useAppContext() {
   }
   return context;
 }
-
