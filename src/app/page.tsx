@@ -29,7 +29,7 @@ export default function HomePage() {
     addMessage,
     setIsLoading,
     isLoading: isAppLoading,
-    isTODWindowOpen, 
+    isTODWindowOpen,
     todWindowTitle,
     todWindowContent,
     closeTODWindow,
@@ -53,11 +53,13 @@ export default function HomePage() {
       setOnboardingStep('fingerprint');
     }
     if (onboardingStep === 'tod' && !playBootAnimation) {
+      // Delay boot animation slightly to allow other elements to mount if needed
       setTimeout(() => setPlayBootAnimation(true), 100); 
     }
   }, [isAuthenticated, onboardingStep, setOnboardingStep, playBootAnimation]);
 
    useEffect(() => {
+    // IMPORTANT: Only run welcome message logic if onboarding is complete and TOD is active
     if (onboardingStep === 'tod' && isAuthenticated && isMounted && !isAppLoading) {
       setIsLoading(true);
       const isNewUser = !playerStats.xp && !playerStats.elintReserves; 
@@ -91,7 +93,6 @@ export default function HomePage() {
   }, [onboardingStep, isAuthenticated, playerSpyName, faction, playerStats, addMessage, setIsLoading, isMounted, isAppLoading]);
 
 
-  // Order: Vault (clone start), Agent, Control Center, Scanner, Equipment, Vault (actual), Agent (clone end)
   const sectionComponents = React.useMemo(() => [
     <VaultSection key="vault-clone-start" parallaxOffset={parallaxOffset} />,
     <AgentSection key="agent-actual" parallaxOffset={parallaxOffset} />,
@@ -190,10 +191,15 @@ export default function HomePage() {
         <ParallaxBackground parallaxOffset={0} />
         {renderOnboarding()}
         {showAuthPrompt && <AuthPromptModal onClose={() => setShowAuthPrompt(false)} />}
+        {/* TODWindow is rendered below but will only be visible if isTODWindowOpen is true */}
+         <TODWindow isOpen={isTODWindowOpen} onClose={closeTODWindow} title={todWindowTitle}>
+          {todWindowContent}
+        </TODWindow>
       </main>
     );
   }
-
+  
+  // This is the main view for the TOD itself
   return (
     <main className="relative h-screen w-screen overflow-hidden"> 
       <ParallaxBackground parallaxOffset={parallaxOffset} />
@@ -202,7 +208,7 @@ export default function HomePage() {
         className="parallax-layer z-[5]" 
         style={{
           transform: `translateX(-${parallaxOffset * 0.5}px)`, 
-          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`,
+          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`, // Adjusted width for parallax
         }}
       >
         <div className="absolute inset-0 opacity-20" style={{ 
@@ -251,4 +257,6 @@ export default function HomePage() {
     </main>
   );
 }
+    
+
     

@@ -22,7 +22,7 @@ const factionDetails = {
     borderColorClass: "border-blue-500",
     selectedRingClass: "ring-2 ring-blue-400 shadow-blue-500/50",
     primaryColorClass: "text-blue-400",
-    selectedBgClass: "bg-sky-500", // Test: Opaque bright blue for selection
+    selectedBgClass: "bg-blue-600/40", // More subtle than opaque, but visible
     defaultTagline: "Information is Power. Decode the Network.",
 
   },
@@ -32,7 +32,7 @@ const factionDetails = {
     borderColorClass: "border-red-500",
     selectedRingClass: "ring-2 ring-red-400 shadow-red-500/50",
     primaryColorClass: "text-red-400",
-    selectedBgClass: "bg-rose-500", // Test: Opaque bright red for selection
+    selectedBgClass: "bg-red-600/40", // More subtle than opaque, but visible
     defaultTagline: "Control the Flow. Infiltrate and Disrupt.",
   }
 };
@@ -42,16 +42,15 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
     setFaction: setAppContextFaction,
     setOnboardingStep,
     openTODWindow,
-    isTODWindowOpen, // For debugging
+    isTODWindowOpen: isContextTODWindowOpen, 
   } = useAppContext();
   const { theme: currentTheme, setTheme } = useTheme();
   const [selectedFaction, setSelectedFaction] = useState<Faction | null>(null);
-  const [showThisScreen, setShowThisScreen] = useState(true); // For diagnostic step
+
+  console.log('FactionChoiceScreen rendering. Selected Faction:', selectedFaction, "isTODWindowOpen (from context):", isContextTODWindowOpen);
 
   useEffect(() => {
-    // If no faction selected, ensure theme is neutral
-    // If a faction IS selected, ensure theme matches it
-    if (selectedFaction) {
+    if (selectedFaction && selectedFaction !== 'Observer') {
       setTheme(selectedFaction === 'Cyphers' ? 'cyphers' : 'shadows');
     } else if (currentTheme !== 'neutral') {
       setTheme('neutral');
@@ -61,8 +60,15 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
 
   const handleFactionSelect = (factionName: Faction) => {
     if (factionName === 'Observer') return;
-    setSelectedFaction(prev => prev === factionName ? null : factionName); // Toggle selection
-    // Theme change is handled by useEffect above
+    setSelectedFaction(prev => {
+      const newSelection = prev === factionName ? null : factionName;
+      if (newSelection) {
+        setTheme(newSelection === 'Cyphers' ? 'cyphers' : 'shadows');
+      } else {
+        setTheme('neutral'); 
+      }
+      return newSelection;
+    });
   };
 
   const handleConfirmFaction = (factionName: Faction | null) => {
@@ -70,57 +76,52 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
     if (!factionName || factionName === 'Observer') return;
 
     setAppContextFaction(factionName);
-    console.log(`Faction ${factionName} confirmed. Opening Codename Input...`);
+    console.log(`Faction ${factionName} confirmed. Setting onboarding step and opening Codename Input...`);
+    
+    // Critical change: Set onboarding step first to trigger HomePage re-render similar to Observer flow
+    // This will unmount FactionChoiceScreen. The CodenameInput window should appear on the next screen (Fingerprint or its loading state).
+    // However, CodenameInput should appear *before* Fingerprint.
+    // So, we open TODWindow, then CodenameInput will handle setting step to 'fingerprint'.
+    
+    // The AppContext's isTODWindowOpen will be true. 
+    // When HomePage re-renders for the 'fingerprint' step, it should pick up this state.
     openTODWindow("Agent Codename Assignment", <CodenameInput />);
-    // setShowThisScreen(false); // Diagnostic: hide this screen to see if TODWindow appears
+    // Let CodenameInput handle the transition to 'fingerprint'
+    // For instance, after codename is submitted, CodenameInput component will call setOnboardingStep('fingerprint');
   };
 
   const handleProceedAsObserver = () => {
     setSelectedFaction('Observer');
     setAppContextFaction('Observer');
     setTheme('neutral');
-    setOnboardingStep('tod');
+    setOnboardingStep('tod'); 
   };
-
-  console.log('FactionChoiceScreen rendering. Selected Faction:', selectedFaction, "isTODWindowOpen (from context):", isTODWindowOpen);
-
-
-  // Diagnostic: If showThisScreen is false, render nothing to unblock TODWindow
-  // if (!showThisScreen) {
-  //   return null;
-  // }
 
   return (
     <HolographicPanel
-      // key={currentTheme} // Temporarily remove to see if it helps with TODWindow visibility
       className="w-full max-w-2xl p-4 md:p-6 flex flex-col flex-grow h-0 overflow-hidden"
     >
       <h1 className="text-2xl sm:text-3xl md:text-4xl font-orbitron mb-4 sm:mb-6 py-2 text-center holographic-text flex-shrink-0">
         Select Your Allegiance
       </h1>
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 flex-grow min-h-0 mb-4 sm:mb-6">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 flex-grow min-h-0 mb-4 sm:mb-6 items-start">
         {(['Cyphers', 'Shadows'] as const).map((factionName) => {
           const details = factionDetails[factionName];
           const isSelected = selectedFaction === factionName;
           
-          let tileBgClass = 'bg-gray-700'; // Default for testing
-          if (factionName === 'Cyphers') {
-            tileBgClass = isSelected ? details.selectedBgClass : 'bg-gray-700';
-          } else if (factionName === 'Shadows') {
-            tileBgClass = isSelected ? details.selectedBgClass : 'bg-gray-700';
-          }
-          console.log('Rendering tile for', factionName, 'isSelected:', isSelected, 'Applied BG Class:', tileBgClass);
-
+          const tileBgClass = isSelected ? details.selectedBgClass : ""; 
+          // console.log('Rendering tile for', factionName, 'isSelected:', isSelected, 'Applied BG Class:', tileBgClass);
 
           return (
             <div
               key={factionName}
               className={cn(
+                "holographic-panel", 
                 "rounded-lg border-2 transition-all cursor-pointer flex flex-col items-center text-center h-full",
-                "p-3 sm:p-4", // Direct padding
+                "p-3 sm:p-4", 
                 details.borderColorClass,
-                tileBgClass, // Apply the determined background class
+                tileBgClass, 
                 isSelected && details.selectedRingClass
               )}
               onClick={() => handleFactionSelect(factionName)}
@@ -140,7 +141,7 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
                   <HolographicButton
                     className="mt-auto w-full py-2 text-sm sm:text-base"
                     onClick={(e) => {
-                      e.stopPropagation();
+                      e.stopPropagation(); 
                       console.log('Confirm button for', factionName, 'CLICKED');
                       handleConfirmFaction(factionName);
                     }}
@@ -164,3 +165,5 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
     </HolographicPanel>
   );
 }
+
+    
