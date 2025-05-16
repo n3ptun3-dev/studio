@@ -41,7 +41,7 @@ interface AppContextType {
   playerStats: PlayerStats;
   updatePlayerStats: (newStats: Partial<PlayerStats>) => void;
   addXp: (amount: number) => void;
-  dailyTeamCode: Record<Faction, string>; 
+  dailyTeamCode: Record<Faction, string>;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
   messages: GameMessage[];
@@ -58,10 +58,10 @@ interface AppContextType {
 export interface GameMessage {
   id: string;
   text: string;
-  type: 'system' | 'hq' | 'notification' | 'error' | 'lore' | 'alert'; 
+  type: 'system' | 'hq' | 'notification' | 'error' | 'lore' | 'alert';
   timestamp: Date;
   isPinned?: boolean;
-  sender?: string; 
+  sender?: string;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -112,9 +112,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isTODWindowOpen, setIsTODWindowOpen] = useState(false);
   const [todWindowTitle, setTODWindowTitle] = useState('');
   const [todWindowContent, setTODWindowContent] = useState<ReactNode | null>(null);
-  const [canOpenTODWindow, setCanOpenTODWindow] = useState(true);
-  const todWindowCooldownTimer = useRef<NodeJS.Timeout | null>(null);
-
 
   useEffect(() => {
     const inPiBrowser = navigator.userAgent.includes("PiBrowser");
@@ -127,9 +124,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       Observer: generateFactionTeamCode(today, 'Observer'),
     });
     _setIsLoading(false);
-    return () => {
-      if (todWindowCooldownTimer.current) clearTimeout(todWindowCooldownTimer.current);
-    };
   }, []);
 
   const setFaction = useCallback((newFaction: Faction) => {
@@ -179,20 +173,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [addMessage]);
 
   const openTODWindow = useCallback((title: string, content: ReactNode) => {
-    if (!canOpenTODWindow) return;
     setTODWindowTitle(title);
     setTODWindowContent(content);
     setIsTODWindowOpen(true);
-    setCanOpenTODWindow(false); 
-  }, [canOpenTODWindow]);
+  }, []);
 
   const closeTODWindow = useCallback(() => {
     setIsTODWindowOpen(false);
     setTODWindowContent(null); // Clear content when closing
-    if (todWindowCooldownTimer.current) clearTimeout(todWindowCooldownTimer.current);
-    todWindowCooldownTimer.current = setTimeout(() => {
-      setCanOpenTODWindow(true);
-    }, 200); 
   }, []);
 
 
