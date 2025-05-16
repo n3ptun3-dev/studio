@@ -173,15 +173,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [addMessage]);
 
   const openTODWindow = useCallback((title: string, content: ReactNode) => {
+    console.log('[AppContext] openTODWindow called. Current isTODWindowOpen:', isTODWindowOpen); // Added to check current state
     setTODWindowTitle(title);
     setTODWindowContent(content);
+    console.log('[AppContext] Attempting to set isTODWindowOpen to true.');
     setIsTODWindowOpen(true);
-  }, []);
+    // Log *after* to see if the state change is queued (React state updates can be async)
+    // We'll check in HomePage render if this was effective.
+    console.log('[AppContext] After setIsTODWindowOpen(true) call.');
+  }, [setTODWindowTitle, setTODWindowContent, setIsTODWindowOpen, isTODWindowOpen]); // Added isTODWindowOpen to dep array
 
   const closeTODWindow = useCallback(() => {
     setIsTODWindowOpen(false);
-    setTODWindowContent(null); // Clear content when closing
-  }, []);
+    setTODWindowContent(null);
+  }, [setIsTODWindowOpen, setTODWindowContent]);
 
 
   return (

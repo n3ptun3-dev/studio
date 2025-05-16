@@ -29,11 +29,13 @@ export default function HomePage() {
     addMessage,
     setIsLoading,
     isLoading: isAppLoading,
-    isTODWindowOpen, // Crucial for rendering TODWindow
+    isTODWindowOpen, 
     todWindowTitle,
     todWindowContent,
     closeTODWindow,
    } = useAppContext();
+
+  console.log('HomePage rendering, isTODWindowOpen:', isTODWindowOpen); // DEBUG: Log isTODWindowOpen
 
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const todContainerRef = useRef<HTMLDivElement>(null);
@@ -48,24 +50,19 @@ export default function HomePage() {
 
   useEffect(() => {
     if (isAuthenticated && onboardingStep !== 'tod') {
-      // If already authenticated but not yet at TOD, fast-track to fingerprint
-      // This might happen if they authenticated and then reloaded the page
-      // or if faction choice leads directly to auth prompt in some flows.
       setOnboardingStep('fingerprint');
     }
-    // Trigger boot animation when TOD step is reached
     if (onboardingStep === 'tod' && !playBootAnimation) {
-      setTimeout(() => setPlayBootAnimation(true), 100); // Small delay for effect
+      setTimeout(() => setPlayBootAnimation(true), 100); 
     }
   }, [isAuthenticated, onboardingStep, setOnboardingStep, playBootAnimation]);
 
    useEffect(() => {
     if (onboardingStep === 'tod' && isAuthenticated && isMounted && !isAppLoading) {
       setIsLoading(true);
-      const isNewUser = !playerStats.xp && !playerStats.elintReserves; // Basic check for new user
+      const isNewUser = !playerStats.xp && !playerStats.elintReserves; 
 
       if (isNewUser) {
-        // Specific welcome for brand new agents reaching the TOD
         addMessage({
           text: "Welcome, Agent. HQ guidance protocol initiated. Familiarize yourself with the Tactical Overlay Device. Your first objective: explore your Agent PAD.",
           type: 'hq',
@@ -73,13 +70,12 @@ export default function HomePage() {
         });
         setIsLoading(false);
       } else {
-        // Welcome back message for returning agents
         const welcomeInput: WelcomeMessageInput = {
-          playerName: playerSpyName || "Agent", // Use spy name if available
+          playerName: playerSpyName || "Agent", 
           faction: faction,
           elintReserves: playerStats.elintReserves,
-          networkActivity: "Medium", // Placeholder, could be dynamic
-          vaultDefenses: "Holding",  // Placeholder, could be dynamic
+          networkActivity: "Medium", 
+          vaultDefenses: "Holding",  
         };
         generateWelcomeMessage(welcomeInput)
           .then(response => {
@@ -112,61 +108,42 @@ export default function HomePage() {
       const currentScrollLeft = todContainerRef.current.scrollLeft;
       const clientWidth = todContainerRef.current.clientWidth;
 
-      if (clientWidth === 0) return; // Avoid division by zero if not yet rendered
+      if (clientWidth === 0) return; 
 
-      setParallaxOffset(currentScrollLeft); // Update parallax offset based on scroll
+      setParallaxOffset(currentScrollLeft); 
 
-      // Infinite scroll logic:
-      // sectionComponents.length includes the 2 clones.
-      // numActualSections is the count of unique sections in the loop.
       const numActualSections = sectionComponents.length - 2; 
-      
-      // Scroll position of the *actual* VaultSection (which is second to last in the 'actual' sequence)
       const scrollPosActualVault = (numActualSections -1) * clientWidth; 
-      // Scroll position of the *actual* AgentSection (which is first in the 'actual' sequence)
       const scrollPosActualAgent = clientWidth;
-
-
-      // Maximum scrollable width considering all sections including clones
       const maxPossibleScrollLeft = (sectionComponents.length - 1) * clientWidth;
 
-      // If scrolled to the very beginning (at the left clone of Vault)
-      if (currentScrollLeft <= 5) { // Using a small threshold for precision
-        // Jump to the actual VaultSection
+      if (currentScrollLeft <= 5) { 
         todContainerRef.current.scrollLeft = scrollPosActualVault;
       }
-      // If scrolled to the very end (at the right clone of Agent)
-      else if (currentScrollLeft >= maxPossibleScrollLeft - 5) { // Small threshold
-        // Jump to the actual AgentSection
+      else if (currentScrollLeft >= maxPossibleScrollLeft - 5) { 
         todContainerRef.current.scrollLeft = scrollPosActualAgent;
       }
     }
-  }, [sectionComponents.length]); // parallaxOffset removed as it's a side-effect, not a determinant of scroll logic
+  }, [sectionComponents.length]);
 
   useEffect(() => {
     const container = todContainerRef.current;
     if (onboardingStep === 'tod' && !isAppLoading && isMounted && container) {
 
-      // Set initial scroll position to the first "actual" section (AgentSection)
       const setInitialScroll = () => {
         if (container.clientWidth > 0 && !initialScrollSetRef.current) {
           const sectionWidth = container.clientWidth;
-          // The first "actual" section is at index 1 (after the start clone)
-          const initialScrollPosition = sectionWidth; // Scrolls one section width to the right
+          const initialScrollPosition = sectionWidth; 
           container.scrollLeft = initialScrollPosition;
-          setParallaxOffset(initialScrollPosition); // Set initial parallax
+          setParallaxOffset(initialScrollPosition); 
 
-          // Check if scrollLeft was actually set (sometimes needs a frame)
-          // and if it's close enough to the target (browser precision)
           if (Math.abs(container.scrollLeft - initialScrollPosition) < 5) {
-            initialScrollSetRef.current = true; // Mark as set
+            initialScrollSetRef.current = true; 
             console.log("Initial scroll set to:", initialScrollPosition);
           } else {
-            // If not set correctly, retry on next frame
              requestAnimationFrame(setInitialScroll);
           }
         } else if (container.clientWidth === 0) {
-            // If clientWidth is 0, container is not yet laid out, retry.
             requestAnimationFrame(setInitialScroll);
         }
       };
@@ -175,7 +152,6 @@ export default function HomePage() {
         setInitialScroll();
       }
 
-      // Add scroll event listener
       container.addEventListener('scroll', handleScroll, { passive: true });
       return () => {
         if (container) {
@@ -183,14 +159,13 @@ export default function HomePage() {
         }
       };
     }
-  }, [onboardingStep, isAppLoading, isMounted, handleScroll]); // handleScroll is stable
+  }, [onboardingStep, isAppLoading, isMounted, handleScroll]); 
 
 
   if (!isMounted || (isAppLoading && onboardingStep !== 'tod')) {
-    // Show a loading screen for initial app load or if onboarding step is not TOD yet (and is loading)
     return (
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
-        <ParallaxBackground parallaxOffset={0} /> {/* No offset during loading */}
+        <ParallaxBackground parallaxOffset={0} /> 
         <div className="animate-pulse text-2xl font-orbitron holographic-text">INITIALIZING TOD...</div>
       </main>
     );
@@ -205,15 +180,11 @@ export default function HomePage() {
       case 'fingerprint':
         return <FingerprintScannerScreen />;
       default:
-        return null; // Or some default error/fallback UI
+        return null; 
     }
   };
 
-  // If onboarding is not complete, render the appropriate onboarding screen
   if (onboardingStep !== 'tod') {
-    // This main container is for onboarding steps.
-    // It's a flex column, centers its content, fills the screen height, and has overall padding.
-    // Individual onboarding screens (like WelcomeScreen) will use flex-grow to fill the space within this padded area.
     return (
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6">
         <ParallaxBackground parallaxOffset={0} />
@@ -223,24 +194,18 @@ export default function HomePage() {
     );
   }
 
-  // This is the main view for the TOD itself
   return (
-    <main className="relative h-screen w-screen overflow-hidden">
+    <main className="relative h-screen w-screen overflow-hidden"> 
       <ParallaxBackground parallaxOffset={parallaxOffset} />
 
-      {/* Parallax layer for grid effect - a bit slower than main scroll */}
       <div
-        className="parallax-layer z-[5]" // Ensure it's above ParallaxBackground but below TOD
+        className="parallax-layer z-[5]" 
         style={{
-          transform: `translateX(-${parallaxOffset * 0.5}px)`, // Slower scroll speed
-          // Width needs to be larger to accommodate the slower scroll without showing edges
-          // If sections are 100vw, and this scrolls at 0.5x, it effectively needs ~0.5x the total content width
-          // plus enough to cover the screen. Total content width = sectionComponents.length * 100vw
-          // So, this layer's width could be something like: (sectionComponents.length * 100 * 0.5) + 100vw
+          transform: `translateX(-${parallaxOffset * 0.5}px)`, 
           width: `${sectionComponents.length * 100 * 0.5 + 100}vw`,
         }}
       >
-        <div className="absolute inset-0 opacity-30" style={{ // Increased opacity slightly
+        <div className="absolute inset-0 opacity-20" style={{ 
           backgroundImage: `
             repeating-linear-gradient(
               45deg,
@@ -260,30 +225,26 @@ export default function HomePage() {
         }}></div>
       </div>
 
-      {/* TOD Scroll Container */}
       <div
         ref={todContainerRef}
         className={cn(
-            "tod-scroll-container absolute inset-0 z-10 scrollbar-hide", // scrollbar-hide is from globals.css
+            "tod-scroll-container absolute inset-0 z-10 scrollbar-hide",
             playBootAnimation && "animate-slide-up-from-bottom"
         )}
         style={{
-          // scrollSnapType: 'x mandatory', // Removed for smoother scrolling
-          WebkitOverflowScrolling: 'touch', // For smoother scrolling on iOS
+          WebkitOverflowScrolling: 'touch', 
         }}
       >
         {sectionComponents.map((SectionComponentInstance, index) => (
           <div
-            key={SectionComponentInstance.key || `tod-section-${index}`} // Use the key from the component instance
-            className="tod-section" // tod-section: flex-shrink-0 w-screen h-full relative
-            // style={{ scrollSnapAlign: 'start' }} // Removed for smoother scrolling
+            key={SectionComponentInstance.key || `tod-section-${index}`} 
+            className="tod-section"
           >
             {SectionComponentInstance}
           </div>
         ))}
       </div>
 
-      {/* TODWindow: Rendered on top of everything if isTODWindowOpen is true */}
       <TODWindow isOpen={isTODWindowOpen} onClose={closeTODWindow} title={todWindowTitle}>
         {todWindowContent}
       </TODWindow>
