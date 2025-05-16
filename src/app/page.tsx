@@ -38,6 +38,8 @@ export default function HomePage() {
   const { theme: currentTheme } = useTheme(); // Consume theme context
 
   console.log('HomePage rendering, isTODWindowOpen:', isTODWindowOpen); // DEBUG: Log isTODWindowOpen
+  console.log('HomePage rendering. Current Theme for TODWindow key:', currentTheme); // CRITICAL LOG
+
 
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const todContainerRef = useRef<HTMLDivElement>(null);
@@ -206,7 +208,6 @@ export default function HomePage() {
     );
   }
   
-  console.log('HomePage rendering. Current Theme for TODWindow key:', currentTheme);
   // This is the main view for the TOD itself
   return (
     <main className="relative h-screen w-screen"> 
