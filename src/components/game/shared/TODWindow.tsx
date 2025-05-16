@@ -27,13 +27,13 @@ export function TODWindow({ isOpen, onClose, title, children, size = 'default' }
     <div
       className={cn(
         "fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm",
-        isOpen ? "animate-slide-in-right-tod" : "animate-slide-out-right-tod" // Animations re-enabled
+        isOpen ? "animate-slide-in-right-tod" : "animate-slide-out-right-tod"
       )}
       onClick={onClose} 
     >
       <HolographicPanel
         className={cn(
-          "relative m-4 flex flex-col z-[10000]", // Reverted to HolographicPanel
+          "relative m-4 flex flex-col z-[10000]", 
           "w-[calc(100vw-80px)] max-w-[600px]", 
           "h-[calc(100vh-100px)] max-h-[600px]",
         )}
@@ -55,10 +55,11 @@ export function TODWindow({ isOpen, onClose, title, children, size = 'default' }
         </div>
         {/* END THEME TEST DIV */}
 
-        <div className="flex-grow min-h-0 h-[calc(100%-4rem)] overflow-y-auto scrollbar-hide"> {/* Ensure content area scrolls */}
+        <div className="flex-grow min-h-0 h-[calc(100%-4rem)] overflow-y-auto scrollbar-hide"> 
            {children}
         </div>
       </HolographicPanel>
     </div>
   );
 }
+

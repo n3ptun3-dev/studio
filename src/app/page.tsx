@@ -130,7 +130,7 @@ export default function HomePage() {
         todContainerRef.current.scrollLeft = scrollPosActualAgent;
       }
     }
-  }, [sectionComponents.length]); // Only depends on the number of sections
+  }, [sectionComponents.length]); 
 
   useEffect(() => {
     const container = todContainerRef.current;
@@ -145,15 +145,13 @@ export default function HomePage() {
           setParallaxOffset(initialScrollPosition); // Set initial parallax
 
           // Check if scrollLeft has been set, if not, retry.
-          // Sometimes clientWidth is available but scrollLeft assignment is not immediate.
-          if (Math.abs(container.scrollLeft - initialScrollPosition) < 5) { // Allow small deviation
-            initialScrollSetRef.current = true; // Mark as set
+          if (Math.abs(container.scrollLeft - initialScrollPosition) < 5) { 
+            initialScrollSetRef.current = true; 
             console.log("Initial scroll set to:", initialScrollPosition);
           } else {
-             requestAnimationFrame(setInitialScroll); // Retry on next frame
+             requestAnimationFrame(setInitialScroll); 
           }
         } else if (container.clientWidth === 0) {
-            // If clientWidth is 0, container is not yet laid out, retry.
             requestAnimationFrame(setInitialScroll);
         }
       };
@@ -175,7 +173,7 @@ export default function HomePage() {
   if (!isMounted || (isAppLoading && onboardingStep !== 'tod')) {
     return (
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
-        <ParallaxBackground parallaxOffset={0} /> {/* No offset during loading */}
+        <ParallaxBackground parallaxOffset={0} /> 
         <div className="animate-pulse text-2xl font-orbitron holographic-text">INITIALIZING TOD...</div>
       </main>
     );
@@ -190,7 +188,7 @@ export default function HomePage() {
       case 'fingerprint':
         return <FingerprintScannerScreen />;
       default:
-        return null; // Should not happen
+        return null; 
     }
   };
 
@@ -201,7 +199,6 @@ export default function HomePage() {
         <ParallaxBackground parallaxOffset={0} />
         {renderOnboarding()}
         {showAuthPrompt && <AuthPromptModal onClose={() => setShowAuthPrompt(false)} />}
-        {/* TODWindow is rendered below but will only be visible if isTODWindowOpen is true */}
          <TODWindow key={currentTheme + "-onboarding"} isOpen={isTODWindowOpen} onClose={closeTODWindow} title={todWindowTitle}>
           {todWindowContent}
         </TODWindow>
@@ -209,6 +206,7 @@ export default function HomePage() {
     );
   }
   
+  console.log('HomePage rendering. Current Theme for TODWindow key:', currentTheme);
   // This is the main view for the TOD itself
   return (
     <main className="relative h-screen w-screen"> 
@@ -216,10 +214,10 @@ export default function HomePage() {
 
       {/* Parallax Grid Layer */}
       <div
-        className="parallax-layer z-[5] opacity-30" // Increased base opacity slightly
+        className="parallax-layer z-[5] opacity-20" 
         style={{
           transform: `translateX(-${parallaxOffset * 0.5}px)`,
-          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`, // Adjusted width for parallax
+          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`, 
         }}
       >
         <div className="absolute inset-0" style={{ 
@@ -250,13 +248,13 @@ export default function HomePage() {
             playBootAnimation && "animate-slide-up-from-bottom"
         )}
         style={{
-          WebkitOverflowScrolling: 'touch', // For smoother scrolling on iOS
+          WebkitOverflowScrolling: 'touch', 
         }}
       >
         {sectionComponents.map((SectionComponentInstance, index) => (
           <div
-            key={SectionComponentInstance.key || `tod-section-${index}`} // Use component's key or generate one
-            className="tod-section" // Ensures each section takes full viewport width
+            key={SectionComponentInstance.key || `tod-section-${index}`} 
+            className="tod-section" 
           >
             {SectionComponentInstance}
           </div>
