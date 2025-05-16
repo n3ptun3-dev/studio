@@ -2,7 +2,7 @@
 "use client";
 
 import type { ReactNode } from 'react';
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
 export type Faction = 'Cyphers' | 'Shadows' | 'Observer';
 export type OnboardingStep = 'welcome' | 'factionChoice' | 'authPrompt' | 'fingerprint' | 'tod';
@@ -87,28 +87,28 @@ function generateFactionTeamCode(seedDate: Date, faction: Faction): string {
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [faction, _setFaction] = useState<Faction>('Observer');
-  const [isAuthenticated, _setIsAuthenticated] = useState(false);
-  const [playerSpyName, _setPlayerSpyName] = useState<string | null>(null);
-  const [playerPiName, _setPlayerPiName] = useState<string | null>(null);
-  const [onboardingStep, _setOnboardingStep] = useState<OnboardingStep>('welcome');
-  const [isPiBrowser, _setIsPiBrowser] = useState(false); // Renamed setter for consistency
-  const [playerStats, _setPlayerStats] = useState<PlayerStats>({
+  const [_faction, _setFaction] = useState<Faction>('Observer');
+  const [_isAuthenticated, _setIsAuthenticated] = useState(false);
+  const [_playerSpyName, _setPlayerSpyName] = useState<string | null>(null);
+  const [_playerPiName, _setPlayerPiName] = useState<string | null>(null);
+  const [_onboardingStep, _setOnboardingStep] = useState<OnboardingStep>('welcome');
+  const [_isPiBrowser, _setIsPiBrowser] = useState(false);
+  const [_playerStats, _setPlayerStats] = useState<PlayerStats>({
     xp: 0, level: 0, elintReserves: 0, elintTransferred: 0,
     successfulVaultInfiltrations: 0, successfulLockInfiltrations: 0,
     elintObtainedTotal: 0, elintObtainedCycle: 0, elintLostTotal: 0, elintLostCycle: 0,
     elintGeneratedTotal: 0, elintGeneratedCycle: 0, elintTransferredToHQCyle: 0,
     successfulInterferences: 0, elintSpentSpyShop: 0,
   });
-  const [dailyTeamCode, _setDailyTeamCode] = useState<Record<Faction, string>>({
+  const [_dailyTeamCode, _setDailyTeamCode] = useState<Record<Faction, string>>({
     Cyphers: '', Shadows: '', Observer: ''
   });
-  const [isLoading, _setIsLoading] = useState(true);
-  const [messages, _setMessages] = useState<GameMessage[]>([]);
+  const [_isLoading, _setIsLoading] = useState(true);
+  const [_messages, _setMessages] = useState<GameMessage[]>([]);
 
-  const [isTODWindowOpen, _setIsTODWindowOpen] = useState(false);
-  const [todWindowTitle, _setTODWindowTitle] = useState('');
-  const [todWindowContent, _setTODWindowContent] = useState<ReactNode | null>(null);
+  const [_isTODWindowOpen, _setIsTODWindowOpen] = useState(false);
+  const [_todWindowTitle, _setTODWindowTitle] = useState('');
+  const [_todWindowContent, _setTODWindowContent] = useState<ReactNode | null>(null);
 
   useEffect(() => {
     const inPiBrowser = navigator.userAgent.includes("PiBrowser");
@@ -120,10 +120,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       Shadows: generateFactionTeamCode(today, 'Shadows'),
       Observer: generateFactionTeamCode(today, 'Observer'),
     });
-    _setIsLoading(false);
-  }, [_setIsPiBrowser, _setDailyTeamCode, _setIsLoading]); // Added _setIsPiBrowser to deps
+    _setIsLoading(false); 
+  }, []); 
 
-  const setFaction = useCallback((newFaction: Faction) => _setFaction(newFaction), [_setFaction]);
+  const setFaction = useCallback((newFaction: Faction) => {
+    console.log('[AppContext] setFaction called with:', newFaction);
+    _setFaction(newFaction);
+  }, [_setFaction]);
+
+  useEffect(() => {
+    console.log('[AppContext] INTERNAL faction state changed to:', _faction);
+  }, [_faction]);
+
   const setIsAuthenticated = useCallback((auth: boolean) => _setIsAuthenticated(auth), [_setIsAuthenticated]);
   const setPlayerSpyName = useCallback((name: string | null) => _setPlayerSpyName(name), [_setPlayerSpyName]);
   const setPlayerPiName = useCallback((name: string | null) => _setPlayerPiName(name), [_setPlayerPiName]);
@@ -148,7 +156,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [_setPlayerStats]);
 
   const addXp = useCallback((amount: number) => {
-    // Use _setPlayerStats directly or ensure updatePlayerStats is correctly used
     _setPlayerStats(prevStats => ({ ...prevStats, xp: prevStats.xp + amount }));
     addMessage({ text: `+${amount} XP`, type: 'notification'});
   }, [_setPlayerStats, addMessage]);
@@ -163,30 +170,43 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const closeTODWindow = useCallback(() => {
     _setIsTODWindowOpen(false);
-    _setTODWindowContent(null);
+    _setTODWindowContent(null); 
   }, [_setIsTODWindowOpen, _setTODWindowContent]);
 
   useEffect(() => {
-    console.log('[AppContext] isTODWindowOpen changed to:', isTODWindowOpen);
-  }, [isTODWindowOpen]);
+    console.log('[AppContext] isTODWindowOpen state changed to:', _isTODWindowOpen);
+  }, [_isTODWindowOpen]);
 
+  const contextValue = useMemo(() => ({
+    faction: _faction, setFaction,
+    isAuthenticated: _isAuthenticated, setIsAuthenticated,
+    playerSpyName: _playerSpyName, setPlayerSpyName,
+    playerPiName: _playerPiName, setPlayerPiName,
+    onboardingStep: _onboardingStep, setOnboardingStep,
+    isPiBrowser: _isPiBrowser,
+    playerStats: _playerStats, updatePlayerStats, addXp,
+    dailyTeamCode: _dailyTeamCode,
+    isLoading: _isLoading, setIsLoading,
+    messages: _messages, addMessage,
+    isTODWindowOpen: _isTODWindowOpen, todWindowTitle: _todWindowTitle, todWindowContent: _todWindowContent,
+    openTODWindow, closeTODWindow
+  }), [
+    _faction, setFaction,
+    _isAuthenticated, setIsAuthenticated,
+    _playerSpyName, setPlayerSpyName,
+    _playerPiName, setPlayerPiName,
+    _onboardingStep, setOnboardingStep,
+    _isPiBrowser,
+    _playerStats, updatePlayerStats, addXp,
+    _dailyTeamCode,
+    _isLoading, setIsLoading,
+    _messages, addMessage,
+    _isTODWindowOpen, _todWindowTitle, _todWindowContent,
+    openTODWindow, closeTODWindow
+  ]);
 
   return (
-    <AppContext.Provider value={{
-      faction, setFaction,
-      isAuthenticated, setIsAuthenticated,
-      playerSpyName, setPlayerSpyName,
-      playerPiName, setPlayerPiName,
-      onboardingStep, setOnboardingStep,
-      isPiBrowser, // isPiBrowser state is used, not its setter
-      playerStats,
-      updatePlayerStats, // Now defined
-      addXp,
-      dailyTeamCode,
-      isLoading, setIsLoading,
-      messages, addMessage,
-      isTODWindowOpen, todWindowTitle, todWindowContent, openTODWindow, closeTODWindow
-    }}>
+    <AppContext.Provider value={contextValue}>
       {children}
     </AppContext.Provider>
   );
