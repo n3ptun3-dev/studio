@@ -1,71 +1,52 @@
 
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { HolographicPanel, HolographicButton } from './HolographicPanel';
+// import { HolographicPanel, HolographicButton } from './HolographicPanel'; // DEBUG: Temporarily removed
 
 interface TODWindowProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  size?: 'default' | 'large'; // Example sizes
+  size?: 'default' | 'large';
 }
 
 export function TODWindow({ isOpen, onClose, title, children, size = 'default' }: TODWindowProps) {
-  const [isRendered, setIsRendered] = useState(isOpen);
-
-  useEffect(() => {
-    if (isOpen) {
-      setIsRendered(true);
-    } else {
-      // Delay unmounting for animation
-      const timer = setTimeout(() => setIsRendered(false), 250); // Match animation duration
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen]);
-
-  if (!isRendered) {
+  if (!isOpen) {
     return null;
   }
 
-  const windowWidth = size === 'large' ? 'w-[calc(100vw-80px)] max-w-[1000px]' : 'w-[calc(100vw-80px)] max-w-[600px]';
-  const windowHeight = size === 'large' ? 'h-[calc(100vh-100px)] max-h-[800px]' : 'h-[calc(100vh-100px)] max-h-[600px]';
-
-
+  // DEBUG: Drastically simplified rendering
   return (
     <div
       className={cn(
-        "fixed inset-0 z-50 flex items-center justify-center bg-black/50 transition-opacity duration-200",
-        // isOpen ? "opacity-100" : "opacity-0 pointer-events-none" // DEBUG: Temporarily always visible
-        "opacity-100" 
+        "fixed inset-0 z-[9999] flex items-center justify-center bg-black/70"
       )}
-      onClick={onClose} // Optional: close on overlay click
+      onClick={onClose}
     >
-      <HolographicPanel
+      <div
         className={cn(
-          "relative flex flex-col m-4 p-0 overflow-hidden",
-          "fixed top-10 bottom-5 left-5 right-5", 
-          "max-w-[calc(100vw-40px)] max-h-[calc(100vh-60px)]", 
-          "transition-transform duration-200 ease-out",
-          // isOpen ? "animate-slide-in-right-tod" : "animate-slide-out-right-tod", // DEBUG: Temporarily remove animation
-          "bg-opacity-70 backdrop-blur-lg border-opacity-80",
-          "bg-pink-500 border-4 border-yellow-300" // DEBUG: Highly visible style
+          "relative m-4 p-4 overflow-auto scrollbar-hide z-[10000]",
+          "w-[calc(100vw-80px)] max-w-[600px]", // Default size
+          "h-[calc(100vh-100px)] max-h-[600px]", // Default size
+          "bg-purple-600 border-4 border-lime-400 text-white" // EXTREMELY visible debug style
         )}
-        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside window
+        onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-3 border-b border-primary/30">
-          <h2 className="text-xl font-orbitron holographic-text">{title}</h2>
-          <HolographicButton onClick={onClose} variant="ghost" size="icon" className="!p-1">
+        <div className="flex items-center justify-between pb-2 mb-2 border-b border-lime-300">
+          <h2 className="text-xl font-orbitron">{title}</h2>
+          <button onClick={onClose} className="p-1 text-lime-300 hover:text-white">
             <X className="w-5 h-5" />
-          </HolographicButton>
+          </button>
         </div>
-        <div className="flex-grow p-4 overflow-y-auto scrollbar-hide">
+        <div>
           {children}
         </div>
-      </HolographicPanel>
+      </div>
     </div>
   );
 }
+    
