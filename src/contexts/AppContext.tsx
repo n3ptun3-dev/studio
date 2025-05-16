@@ -2,7 +2,7 @@
 "use client";
 
 import type { ReactNode } from 'react';
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'; // Removed useRef as it's not used after cooldown removal
 
 export type Faction = 'Cyphers' | 'Shadows' | 'Observer';
 export type OnboardingStep = 'welcome' | 'factionChoice' | 'authPrompt' | 'fingerprint' | 'tod';
@@ -12,7 +12,6 @@ interface PlayerStats {
   level: number;
   elintReserves: number;
   elintTransferred: number;
-  // Add other stats as needed from Agent Dossier
   successfulVaultInfiltrations: number;
   successfulLockInfiltrations: number;
   elintObtainedTotal: number;
@@ -33,7 +32,7 @@ interface AppContextType {
   setIsAuthenticated: (auth: boolean) => void;
   playerSpyName: string | null;
   setPlayerSpyName: (name: string | null) => void;
-  playerPiName: string | null; // Pi Network username
+  playerPiName: string | null;
   setPlayerPiName: (name: string | null) => void;
   onboardingStep: OnboardingStep;
   setOnboardingStep: (step: OnboardingStep) => void;
@@ -46,8 +45,6 @@ interface AppContextType {
   setIsLoading: (loading: boolean) => void;
   messages: GameMessage[];
   addMessage: (message: Omit<GameMessage, 'id' | 'timestamp'>) => void;
-
-  // TOD Window State
   isTODWindowOpen: boolean;
   todWindowTitle: string;
   todWindowContent: ReactNode | null;
@@ -173,20 +170,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [addMessage]);
 
   const openTODWindow = useCallback((title: string, content: ReactNode) => {
-    console.log('[AppContext] openTODWindow called. Current isTODWindowOpen:', isTODWindowOpen); // Added to check current state
+    console.log('[AppContext] openTODWindow called.'); // Current isTODWindowOpen is not logged here anymore to avoid stale closures if it was in dep array
     setTODWindowTitle(title);
     setTODWindowContent(content);
-    console.log('[AppContext] Attempting to set isTODWindowOpen to true.');
+    console.log('[AppContext] Setting isTODWindowOpen to true.');
     setIsTODWindowOpen(true);
-    // Log *after* to see if the state change is queued (React state updates can be async)
-    // We'll check in HomePage render if this was effective.
-    console.log('[AppContext] After setIsTODWindowOpen(true) call.');
-  }, [setTODWindowTitle, setTODWindowContent, setIsTODWindowOpen, isTODWindowOpen]); // Added isTODWindowOpen to dep array
+  }, [setTODWindowTitle, setTODWindowContent, setIsTODWindowOpen]); // Corrected dependencies
 
   const closeTODWindow = useCallback(() => {
+    console.log('[AppContext] closeTODWindow called.');
     setIsTODWindowOpen(false);
     setTODWindowContent(null);
-  }, [setIsTODWindowOpen, setTODWindowContent]);
+  }, [setIsTODWindowOpen, setTODWindowContent]); // Corrected dependencies
 
 
   return (
@@ -215,3 +210,5 @@ export function useAppContext() {
   }
   return context;
 }
+
+    

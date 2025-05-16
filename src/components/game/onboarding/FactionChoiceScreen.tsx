@@ -9,7 +9,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Code, Eye, ShieldQuestion } from 'lucide-react';
-import { CodenameInput } from './CodenameInput';
+// import { CodenameInput } from './CodenameInput'; // Will be re-added later
 
 interface FactionChoiceScreenProps {
   setShowAuthPrompt: Dispatch<SetStateAction<boolean>>;
@@ -20,8 +20,8 @@ const factionDetails = {
     defaultTagline: "Information is Power. Decode the Network.",
     theme: "cyphers" as Faction | 'neutral',
     icon: <Code className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 mb-2 text-blue-400 icon-glow" />,
-    borderColorClass: "border-blue-500", // Persistent team border color
-    selectedRingClass: "ring-2 ring-blue-400 shadow-blue-500/50", // Ring effect
+    borderColorClass: "border-blue-500",
+    selectedRingClass: "ring-2 ring-blue-400 shadow-blue-500/50",
     primaryColorClass: "text-blue-400",
     selectedBgClass: "bg-sky-500", // Test: Opaque bright blue for selection
   },
@@ -29,8 +29,8 @@ const factionDetails = {
     defaultTagline: "Control the Flow. Infiltrate and Disrupt.",
     theme: "shadows" as Faction | 'neutral',
     icon: <ShieldQuestion className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 mb-2 text-red-400 icon-glow" />,
-    borderColorClass: "border-red-500", // Persistent team border color
-    selectedRingClass: "ring-2 ring-red-400 shadow-red-500/50", // Ring effect
+    borderColorClass: "border-red-500",
+    selectedRingClass: "ring-2 ring-red-400 shadow-red-500/50",
     primaryColorClass: "text-red-400",
     selectedBgClass: "bg-rose-500", // Test: Opaque bright red for selection
   }
@@ -52,7 +52,7 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
   }, [selectedFaction, currentTheme, setTheme]);
 
   const handleFactionSelect = (factionName: Faction) => {
-    if (factionName === 'Observer') return;
+    if (factionName === 'Observer') return; 
     setSelectedFaction(factionName);
     setTheme(factionName === 'Cyphers' ? 'cyphers' : 'shadows');
   };
@@ -63,15 +63,15 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
 
     setAppContextFaction(factionName);
     console.log(`Faction ${factionName} confirmed. Opening Codename Input...`);
-    // Temporarily pass simple JSX for debugging TODWindow rendering
-    openTODWindow("Agent Codename Assignment", <div className="p-4 text-white">TESTING TOD WINDOW CONTENT</div>);
+    // For this test, pass null to ensure TODWindow can render without complex children
+    openTODWindow("Agent Codename Assignment", null); 
   };
 
   const handleProceedAsObserver = () => {
-    setSelectedFaction('Observer');
+    setSelectedFaction('Observer'); 
     setAppContextFaction('Observer');
-    setTheme('neutral');
-    setOnboardingStep('tod');
+    setTheme('neutral'); 
+    setOnboardingStep('tod'); 
   };
 
   return (
@@ -87,22 +87,22 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
         {(['Cyphers', 'Shadows'] as const).map((factionName) => {
           const details = factionDetails[factionName];
           const isSelected = selectedFaction === factionName;
-          // console.log('Rendering tile for', factionName, 'isSelected:', isSelected, 'BG Class should be:', isSelected ? details.selectedBgClass : (factionName === 'Cyphers' ? 'bg-gray-700' : 'holographic-panel (default)'));
           
-          let tileBgClass = 'bg-gray-700'; // Default for unselected tiles
+          let tileBgClass = 'bg-gray-700'; 
           if (isSelected) {
             tileBgClass = details.selectedBgClass;
           }
+          // console.log('Rendering tile for', factionName, 'isSelected:', isSelected, 'BG Class should be:', tileBgClass);
 
           return (
             <div
               key={factionName}
               className={cn(
                 "rounded-lg border-2 transition-all cursor-pointer flex flex-col items-center text-center h-full",
-                "p-3 sm:p-4", // Base padding
-                details.borderColorClass,
-                tileBgClass, // Apply dynamic background
-                isSelected && details.selectedRingClass
+                "p-3 sm:p-4", 
+                details.borderColorClass, 
+                tileBgClass, 
+                isSelected && details.selectedRingClass 
               )}
               onClick={() => handleFactionSelect(factionName)}
             >
@@ -145,3 +145,5 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
     </HolographicPanel>
   );
 }
+
+    
