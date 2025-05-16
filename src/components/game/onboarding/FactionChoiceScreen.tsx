@@ -20,8 +20,8 @@ const factionDetails = {
     defaultTagline: "Information is Power. Decode the Network.",
     theme: "cyphers" as Faction | 'neutral',
     icon: <Code className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 mb-2 text-blue-400 icon-glow" />,
-    borderColorClass: "border-blue-500",
-    selectedRingClass: "ring-2 ring-blue-400 shadow-blue-500/50",
+    borderColorClass: "border-blue-500", // Persistent team border color
+    selectedRingClass: "ring-2 ring-blue-400 shadow-blue-500/50", // Ring effect
     primaryColorClass: "text-blue-400",
     selectedBgClass: "bg-sky-500", // Test: Opaque bright blue for selection
   },
@@ -29,8 +29,8 @@ const factionDetails = {
     defaultTagline: "Control the Flow. Infiltrate and Disrupt.",
     theme: "shadows" as Faction | 'neutral',
     icon: <ShieldQuestion className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 mb-2 text-red-400 icon-glow" />,
-    borderColorClass: "border-red-500",
-    selectedRingClass: "ring-2 ring-red-400 shadow-red-500/50",
+    borderColorClass: "border-red-500", // Persistent team border color
+    selectedRingClass: "ring-2 ring-red-400 shadow-red-500/50", // Ring effect
     primaryColorClass: "text-red-400",
     selectedBgClass: "bg-rose-500", // Test: Opaque bright red for selection
   }
@@ -46,14 +46,13 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
   const [selectedFaction, setSelectedFaction] = useState<Faction | null>(null);
 
   useEffect(() => {
-    // Ensure neutral theme is set if no faction is selected
     if (!selectedFaction && currentTheme !== 'neutral') {
         setTheme('neutral');
     }
   }, [selectedFaction, currentTheme, setTheme]);
 
   const handleFactionSelect = (factionName: Faction) => {
-    if (factionName === 'Observer') return; // Observers can't be "selected" in this way
+    if (factionName === 'Observer') return;
     setSelectedFaction(factionName);
     setTheme(factionName === 'Cyphers' ? 'cyphers' : 'shadows');
   };
@@ -64,19 +63,20 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
 
     setAppContextFaction(factionName);
     console.log(`Faction ${factionName} confirmed. Opening Codename Input...`);
-    openTODWindow("Agent Codename Assignment", <CodenameInput />);
+    // Temporarily pass simple JSX for debugging TODWindow rendering
+    openTODWindow("Agent Codename Assignment", <div className="p-4 text-white">TESTING TOD WINDOW CONTENT</div>);
   };
 
   const handleProceedAsObserver = () => {
-    setSelectedFaction('Observer'); // Visually indicate observer path if needed (though not strictly a "selection")
+    setSelectedFaction('Observer');
     setAppContextFaction('Observer');
-    setTheme('neutral'); // Observers use the neutral theme
-    setOnboardingStep('tod'); // Observers skip codename and fingerprint
+    setTheme('neutral');
+    setOnboardingStep('tod');
   };
 
   return (
     <HolographicPanel 
-      key={currentTheme} // Force re-render on theme change
+      key={currentTheme} 
       className="w-full max-w-2xl p-4 md:p-6 flex flex-col flex-grow h-0 overflow-hidden"
     >
       <h1 className="text-2xl sm:text-3xl md:text-4xl font-orbitron mb-4 sm:mb-6 text-center holographic-text flex-shrink-0 py-2">
@@ -87,19 +87,22 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
         {(['Cyphers', 'Shadows'] as const).map((factionName) => {
           const details = factionDetails[factionName];
           const isSelected = selectedFaction === factionName;
-          console.log('Rendering tile for', factionName, 'isSelected:', isSelected, 'BG Class should be:', isSelected ? details.selectedBgClass : (factionName === 'Cyphers' ? 'bg-gray-700' : 'holographic-panel (default)'));
+          // console.log('Rendering tile for', factionName, 'isSelected:', isSelected, 'BG Class should be:', isSelected ? details.selectedBgClass : (factionName === 'Cyphers' ? 'bg-gray-700' : 'holographic-panel (default)'));
+          
+          let tileBgClass = 'bg-gray-700'; // Default for unselected tiles
+          if (isSelected) {
+            tileBgClass = details.selectedBgClass;
+          }
 
           return (
             <div
               key={factionName}
               className={cn(
-                "rounded-lg border-2 transition-all cursor-pointer flex flex-col items-center text-center h-full p-3 sm:p-4",
-                details.borderColorClass, // Always show team border color
-                isSelected && details.selectedRingClass, // Ring effect on selection
-                // Background logic:
-                factionName === 'Cyphers' 
-                  ? (isSelected ? details.selectedBgClass : 'bg-gray-700') 
-                  : (isSelected ? details.selectedBgClass : 'bg-gray-700') // Shadows tile also gets bg-gray-700 for unselected state
+                "rounded-lg border-2 transition-all cursor-pointer flex flex-col items-center text-center h-full",
+                "p-3 sm:p-4", // Base padding
+                details.borderColorClass,
+                tileBgClass, // Apply dynamic background
+                isSelected && details.selectedRingClass
               )}
               onClick={() => handleFactionSelect(factionName)}
             >
