@@ -3,6 +3,7 @@
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
+import { useTheme } from '@/contexts/ThemeContext'; // Import useTheme
 import { WelcomeScreen } from '@/components/game/onboarding/WelcomeScreen';
 import { FactionChoiceScreen } from '@/components/game/onboarding/FactionChoiceScreen';
 import { AuthPromptModal } from '@/components/game/onboarding/AuthPromptModal';
@@ -34,6 +35,7 @@ export default function HomePage() {
     todWindowContent,
     closeTODWindow,
    } = useAppContext();
+  const { theme: currentTheme } = useTheme(); // Consume theme context
 
   console.log('HomePage rendering, isTODWindowOpen:', isTODWindowOpen); // DEBUG: Log isTODWindowOpen
 
@@ -49,12 +51,12 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated && onboardingStep !== 'tod') {
+    if (isAuthenticated && onboardingStep !== 'tod' && onboardingStep !== 'fingerprint') { // Ensure fingerprint is also a valid post-auth step
       setOnboardingStep('fingerprint');
     }
     if (onboardingStep === 'tod' && !playBootAnimation) {
       // Delay boot animation slightly to allow other elements to mount if needed
-      setTimeout(() => setPlayBootAnimation(true), 100); 
+      setTimeout(() => setPlayBootAnimation(true), 100);
     }
   }, [isAuthenticated, onboardingStep, setOnboardingStep, playBootAnimation]);
 
@@ -62,7 +64,7 @@ export default function HomePage() {
     // IMPORTANT: Only run welcome message logic if onboarding is complete and TOD is active
     if (onboardingStep === 'tod' && isAuthenticated && isMounted && !isAppLoading) {
       setIsLoading(true);
-      const isNewUser = !playerStats.xp && !playerStats.elintReserves; 
+      const isNewUser = !playerStats.xp && !playerStats.elintReserves;
 
       if (isNewUser) {
         addMessage({
@@ -73,11 +75,11 @@ export default function HomePage() {
         setIsLoading(false);
       } else {
         const welcomeInput: WelcomeMessageInput = {
-          playerName: playerSpyName || "Agent", 
+          playerName: playerSpyName || "Agent",
           faction: faction,
           elintReserves: playerStats.elintReserves,
-          networkActivity: "Medium", 
-          vaultDefenses: "Holding",  
+          networkActivity: "Medium",
+          vaultDefenses: "Holding",
         };
         generateWelcomeMessage(welcomeInput)
           .then(response => {
@@ -94,13 +96,13 @@ export default function HomePage() {
 
 
   const sectionComponents = React.useMemo(() => [
-    <VaultSection key="vault-clone-start" parallaxOffset={parallaxOffset} />,
+    <VaultSection key="vault-clone-start" parallaxOffset={parallaxOffset} />, // Clone for start
     <AgentSection key="agent-actual" parallaxOffset={parallaxOffset} />,
     <ControlCenterSection key="control-center-actual" parallaxOffset={parallaxOffset} />,
     <ScannerSection key="scanner-actual" parallaxOffset={parallaxOffset} />,
     <EquipmentLockerSection key="equipment-locker-actual" parallaxOffset={parallaxOffset} />,
-    <VaultSection key="vault-actual" parallaxOffset={parallaxOffset} />,
-    <AgentSection key="agent-clone-end" parallaxOffset={parallaxOffset} />,
+    <VaultSection key="vault-actual" parallaxOffset={parallaxOffset} />, // Actual last section
+    <AgentSection key="agent-clone-end" parallaxOffset={parallaxOffset} />,   // Clone for end
   ], [parallaxOffset]);
 
 
@@ -109,23 +111,26 @@ export default function HomePage() {
       const currentScrollLeft = todContainerRef.current.scrollLeft;
       const clientWidth = todContainerRef.current.clientWidth;
 
-      if (clientWidth === 0) return; 
+      if (clientWidth === 0) return;
 
-      setParallaxOffset(currentScrollLeft); 
+      setParallaxOffset(currentScrollLeft);
 
-      const numActualSections = sectionComponents.length - 2; 
-      const scrollPosActualVault = (numActualSections -1) * clientWidth; 
-      const scrollPosActualAgent = clientWidth;
+      const numActualSections = sectionComponents.length - 2; // Total sections minus the two clones
+      const scrollPosActualVault = (numActualSections -1) * clientWidth; // Index of VaultSection (actual)
+      const scrollPosActualAgent = clientWidth; // AgentSection (actual) is the second item (index 1)
       const maxPossibleScrollLeft = (sectionComponents.length - 1) * clientWidth;
 
-      if (currentScrollLeft <= 5) { 
+
+      // If scrolled to the very beginning (clone of Vault), jump to the actual VaultSection
+      if (currentScrollLeft <= 5) { // Using a small threshold
         todContainerRef.current.scrollLeft = scrollPosActualVault;
       }
-      else if (currentScrollLeft >= maxPossibleScrollLeft - 5) { 
+      // If scrolled to the very end (clone of Agent), jump to the actual AgentSection
+      else if (currentScrollLeft >= maxPossibleScrollLeft - 5) { // Using a small threshold
         todContainerRef.current.scrollLeft = scrollPosActualAgent;
       }
     }
-  }, [sectionComponents.length]);
+  }, [sectionComponents.length]); // Only depends on the number of sections
 
   useEffect(() => {
     const container = todContainerRef.current;
@@ -134,17 +139,21 @@ export default function HomePage() {
       const setInitialScroll = () => {
         if (container.clientWidth > 0 && !initialScrollSetRef.current) {
           const sectionWidth = container.clientWidth;
-          const initialScrollPosition = sectionWidth; 
+          // Start at the Agent Section (which is the second item, index 1, after the Vault clone)
+          const initialScrollPosition = sectionWidth;
           container.scrollLeft = initialScrollPosition;
-          setParallaxOffset(initialScrollPosition); 
+          setParallaxOffset(initialScrollPosition); // Set initial parallax
 
-          if (Math.abs(container.scrollLeft - initialScrollPosition) < 5) {
-            initialScrollSetRef.current = true; 
+          // Check if scrollLeft has been set, if not, retry.
+          // Sometimes clientWidth is available but scrollLeft assignment is not immediate.
+          if (Math.abs(container.scrollLeft - initialScrollPosition) < 5) { // Allow small deviation
+            initialScrollSetRef.current = true; // Mark as set
             console.log("Initial scroll set to:", initialScrollPosition);
           } else {
-             requestAnimationFrame(setInitialScroll);
+             requestAnimationFrame(setInitialScroll); // Retry on next frame
           }
         } else if (container.clientWidth === 0) {
+            // If clientWidth is 0, container is not yet laid out, retry.
             requestAnimationFrame(setInitialScroll);
         }
       };
@@ -160,13 +169,13 @@ export default function HomePage() {
         }
       };
     }
-  }, [onboardingStep, isAppLoading, isMounted, handleScroll]); 
+  }, [onboardingStep, isAppLoading, isMounted, handleScroll]);
 
 
   if (!isMounted || (isAppLoading && onboardingStep !== 'tod')) {
     return (
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
-        <ParallaxBackground parallaxOffset={0} /> 
+        <ParallaxBackground parallaxOffset={0} /> {/* No offset during loading */}
         <div className="animate-pulse text-2xl font-orbitron holographic-text">INITIALIZING TOD...</div>
       </main>
     );
@@ -181,10 +190,11 @@ export default function HomePage() {
       case 'fingerprint':
         return <FingerprintScannerScreen />;
       default:
-        return null; 
+        return null; // Should not happen
     }
   };
 
+  // Onboarding Steps
   if (onboardingStep !== 'tod') {
     return (
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6">
@@ -192,7 +202,7 @@ export default function HomePage() {
         {renderOnboarding()}
         {showAuthPrompt && <AuthPromptModal onClose={() => setShowAuthPrompt(false)} />}
         {/* TODWindow is rendered below but will only be visible if isTODWindowOpen is true */}
-         <TODWindow isOpen={isTODWindowOpen} onClose={closeTODWindow} title={todWindowTitle}>
+         <TODWindow key={currentTheme + "-onboarding"} isOpen={isTODWindowOpen} onClose={closeTODWindow} title={todWindowTitle}>
           {todWindowContent}
         </TODWindow>
       </main>
@@ -201,17 +211,18 @@ export default function HomePage() {
   
   // This is the main view for the TOD itself
   return (
-    <main className="relative h-screen w-screen overflow-hidden"> 
+    <main className="relative h-screen w-screen"> 
       <ParallaxBackground parallaxOffset={parallaxOffset} />
 
+      {/* Parallax Grid Layer */}
       <div
-        className="parallax-layer z-[5]" 
+        className="parallax-layer z-[5] opacity-30" // Increased base opacity slightly
         style={{
-          transform: `translateX(-${parallaxOffset * 0.5}px)`, 
+          transform: `translateX(-${parallaxOffset * 0.5}px)`,
           width: `${sectionComponents.length * 100 * 0.5 + 100}vw`, // Adjusted width for parallax
         }}
       >
-        <div className="absolute inset-0 opacity-20" style={{ 
+        <div className="absolute inset-0" style={{ 
           backgroundImage: `
             repeating-linear-gradient(
               45deg,
@@ -231,6 +242,7 @@ export default function HomePage() {
         }}></div>
       </div>
 
+      {/* TOD Scroll Container */}
       <div
         ref={todContainerRef}
         className={cn(
@@ -238,25 +250,24 @@ export default function HomePage() {
             playBootAnimation && "animate-slide-up-from-bottom"
         )}
         style={{
-          WebkitOverflowScrolling: 'touch', 
+          WebkitOverflowScrolling: 'touch', // For smoother scrolling on iOS
         }}
       >
         {sectionComponents.map((SectionComponentInstance, index) => (
           <div
-            key={SectionComponentInstance.key || `tod-section-${index}`} 
-            className="tod-section"
+            key={SectionComponentInstance.key || `tod-section-${index}`} // Use component's key or generate one
+            className="tod-section" // Ensures each section takes full viewport width
           >
             {SectionComponentInstance}
           </div>
         ))}
       </div>
 
-      <TODWindow isOpen={isTODWindowOpen} onClose={closeTODWindow} title={todWindowTitle}>
+      {/* Global TOD Window, re-keyed by theme to force style update */}
+      <TODWindow key={currentTheme + "-tod"} isOpen={isTODWindowOpen} onClose={closeTODWindow} title={todWindowTitle}>
         {todWindowContent}
       </TODWindow>
     </main>
   );
 }
-    
-
     
