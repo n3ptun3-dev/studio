@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 export type Theme = 
-  | 'terminal-green' // New default
+  | 'terminal-green'
   | 'neutral'
   | 'cyphers' 
   | 'shadows' 
@@ -42,44 +42,49 @@ export const availableThemesList: Theme[] = [
 ];
 
 
-export function ThemeProvider({ children, defaultTheme = "terminal-green" }: { 
+export function ThemeProvider({ children, defaultTheme = "terminal-green", attribute = "class" }: { 
     children: ReactNode, 
     defaultTheme?: Theme, 
+    attribute?: string, 
 }) {
   const [theme, setThemeInternal] = useState<Theme>(() => {
     if (typeof window !== 'undefined') {
       const storedTheme = localStorage.getItem('tod-theme') as Theme | null;
-      // Ensure storedTheme is valid and one of the available themes
       if (storedTheme && availableThemesList.includes(storedTheme)) {
         return storedTheme;
       }
     }
-    // Ensure defaultTheme is valid if provided, otherwise use 'terminal-green'
     return availableThemesList.includes(defaultTheme) ? defaultTheme : 'terminal-green';
   });
 
-  // Effect to apply the theme to the documentElement and localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('tod-theme', theme);
-      // Remove all potentially existing theme classes from the html element
+      const htmlEl = document.documentElement;
       availableThemesList.forEach(tName => {
-        document.documentElement.classList.remove(`theme-${tName}`);
+        htmlEl.classList.remove(`theme-${tName}`);
       });
-      // Add the current theme class
-      document.documentElement.classList.add(`theme-${theme}`);
-      console.log(`[ThemeContext] Applied theme to HTML: theme-${theme}`);
+      if (theme) { 
+        htmlEl.classList.add(`theme-${theme}`);
+        console.log(`[ThemeContext] Applied theme to HTML: theme-${theme}`);
+      }
     }
   }, [theme]);
 
   const setTheme = useCallback((newTheme: Theme) => {
     if (availableThemesList.includes(newTheme)) {
-      console.log(`[ThemeContext] setTheme called. Current: ${theme}, New: ${newTheme}`);
-      setThemeInternal(newTheme); 
+      console.log(`[ThemeContext] setTheme callback invoked with newTheme: ${newTheme}`);
+      setThemeInternal(currentInternalTheme => {
+        if (currentInternalTheme !== newTheme) {
+          console.log(`[ThemeContext] Actually changing theme from ${currentInternalTheme} to ${newTheme}`);
+          return newTheme;
+        }
+        return currentInternalTheme;
+      }); 
     } else {
       console.warn(`[ThemeContext] Attempted to set invalid theme: ${newTheme}`);
     }
-  }, [theme]); // Include theme in dependency array if logic inside uses it, though for setThemeInternal it's not strictly needed
+  }, [setThemeInternal]); // setThemeInternal from useState is stable. availableThemesList is constant.
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, availableThemes: availableThemesList }}>
