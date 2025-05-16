@@ -6,6 +6,66 @@
 @layer base {
   /* REMOVED: html { @apply overflow-hidden; } */
 
+  .theme-terminal-green {
+    --theme-name: "terminal-green";
+    --background-hsl: 130 20% 5%; /* Very dark green */
+    --foreground-hsl: 130 80% 70%; /* Bright green text */
+
+    --primary-hsl: 130 70% 45%; /* Medium vibrant green */
+    --primary-foreground-hsl: 130 20% 10%; /* Dark green for text on primary */
+
+    --secondary-hsl: 130 30% 20%; /* Darker muted green */
+    --secondary-foreground-hsl: 130 70% 60%;
+
+    --accent-hsl: 130 90% 55%; /* Very bright accent green */
+    --accent-foreground-hsl: 130 20% 5%; /* Dark green for text on accent */
+
+    --muted-hsl: 130 25% 15%;
+    --muted-foreground-hsl: 130 60% 50%;
+
+    --card-hsl: 130 25% 8%; /* Slightly lighter dark green for cards */
+    --card-foreground-hsl: 130 80% 75%;
+
+    --popover-hsl: 130 20% 4%; /* Even darker for popovers */
+    --popover-foreground-hsl: 130 80% 80%;
+
+    --border-hsl: 130 60% 35%; /* Green border */
+    --input-hsl: 130 30% 25%; /* Dark green input background */
+    --ring-hsl: 130 70% 50%; /* Green ring for focus */
+
+    --destructive-hsl: 0 70% 50%; /* Keep destructive as red for contrast */
+    --destructive-foreground-hsl: 0 0% 100%;
+
+    --radius: 0.5rem;
+
+    /* Holographic specific - terminal green defaults */
+    --hologram-glow-color-hsl: var(--accent-hsl);
+    --hologram-base-text-color-hsl: var(--foreground-hsl);
+    --hologram-wireframe-color-hsl: var(--primary-hsl);
+    --hologram-panel-bg-hsl: var(--card-hsl); 
+    --hologram-panel-border-hsl: var(--primary-hsl);
+    --hologram-button-bg-hsl: var(--primary-hsl);
+    --hologram-button-text-hsl: var(--primary-foreground-hsl);
+    
+    /* Item Level Colors HSL (remain globally available) */
+    --level-1-color-hsl: 0 100% 50%; /* Red */
+    --level-2-color-hsl: 30 100% 50%; /* Orange */
+    --level-3-color-hsl: 50 100% 50%; /* Yellow */
+    --level-3-text-color-hsl: 0 0% 0%; /* Black text for yellow */
+    --level-4-color-hsl: 120 70% 40%; /* Green */
+    --level-5-color-hsl: 220 100% 50%; /* Blue */
+    --level-6-color-hsl: 260 100% 55%; /* Indigo */
+    --level-7-color-hsl: 280 100% 55%; /* Violet */
+    --level-8-color-hsl: 320 100% 50%; /* Magenta */
+
+    /* Chart colors can remain or be themed */
+    --chart-1: 130 70% 50%; /* Green chart color */
+    --chart-2: 130 50% 35%; /* Darker green */
+    --chart-3: 130 80% 60%; /* Lighter green */
+    --chart-4: 130 60% 40%; 
+    --chart-5: 130 90% 70%;
+  }
+
   .theme-neutral { /* Default is Neutral Theme now */
     --theme-name: "neutral";
     --background-hsl: 220 15% 8%; /* Dark cool grey */
@@ -66,8 +126,8 @@
     --chart-5: 27 87% 67%;
   }
   
-  :root { /* Apply neutral theme by default if no specific theme class is present */
-      @apply theme-neutral;
+  :root { /* Apply terminal-green theme by default if no specific theme class is present */
+      @apply theme-terminal-green;
   }
 
 
@@ -99,6 +159,7 @@
     --ring-hsl: 204 100% 50%;
     --hologram-panel-bg-hsl: var(--card-hsl);
     --hologram-panel-border-hsl: var(--primary-hsl);
+    --hologram-glow-color-hsl: var(--primary-hsl);
   }
 
   .theme-shadows {
@@ -129,11 +190,12 @@
     --ring-hsl: 0 100% 40%;
     --hologram-panel-bg-hsl: var(--card-hsl);
     --hologram-panel-border-hsl: var(--primary-hsl);
+    --hologram-glow-color-hsl: var(--primary-hsl);
   }
 
   /* Aesthetic Schemes (remain as defined) */
-  .theme-level-2-green {
-    --theme-name: "level-2-green";
+  .theme-level-2-green { /* This can be an alias for terminal-green or a distinct theme */
+    --theme-name: "level-2-green"; /* Consider if this should just be theme-terminal-green */
     --primary-hsl: 145 100% 33%;
     --secondary-hsl: 120 73% 75%;
     --accent-hsl: 0 0% 100%;
@@ -144,6 +206,7 @@
     --ring-hsl: 145 100% 33%;
     --hologram-panel-bg-hsl: var(--card-hsl);
     --hologram-panel-border-hsl: var(--primary-hsl);
+    --hologram-glow-color-hsl: var(--primary-hsl);
   }
 
   .theme-level-3-yellow {
@@ -160,10 +223,11 @@
     --ring-hsl: 54 100% 50%;
     --hologram-panel-bg-hsl: var(--card-hsl);
     --hologram-panel-border-hsl: var(--primary-hsl);
+    --hologram-glow-color-hsl: var(--primary-hsl);
   }
 
   /* Apply HSL variables to ShadCN CSS variables */
-  :root, .theme-neutral, .theme-cyphers, .theme-shadows, .theme-level-2-green, .theme-level-3-yellow {
+  :root, .theme-terminal-green, .theme-neutral, .theme-cyphers, .theme-shadows, .theme-level-2-green, .theme-level-3-yellow {
     --background: hsl(var(--background-hsl));
     --foreground: hsl(var(--foreground-hsl));
     --card: hsl(var(--card-hsl));
@@ -279,15 +343,16 @@
     repeating-linear-gradient(90deg, hsl(var(--muted-foreground-hsl) / 0.1) 0px 1px, transparent 1px 20px);
 }
 
-/* Default for Neutral/Cyphers theme or when no specific theme class is on a higher parent */
+/* Default for Terminal Green/Neutral/Cyphers theme or when no specific theme class is on a higher parent */
+.theme-terminal-green .bg-pad-backing,
 .theme-neutral .bg-pad-backing,
 .theme-cyphers .bg-pad-backing {
-  background-color: hsla(210, 60%, 8%, 0.7) !important; /* Cyphers --background-hsl with 0.7 alpha */
+  background-color: hsla(var(--card-hsl), 0.7) !important; /* Use card HSL with 0.7 alpha */
 }
 
 /* For Shadows theme */
 .theme-shadows .bg-pad-backing {
-  background-color: hsla(0, 60%, 8%, 0.7) !important; /* Shadows --background-hsl with 0.7 alpha */
+  background-color: hsla(var(--card-hsl), 0.7) !important; /* Shadows --card-hsl with 0.7 alpha */
 }
 
 

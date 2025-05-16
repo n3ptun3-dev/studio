@@ -3,32 +3,40 @@
 
 import { useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme, type Theme } from '@/contexts/ThemeContext'; // Ensure Theme type is imported
 
 export function ThemeUpdater() {
   const { faction } = useAppContext();
-  const { theme: currentThemeInstance, setTheme } = useTheme(); // Renamed to avoid conflict
+  const { theme: currentThemeInstance, setTheme } = useTheme();
 
-  console.log('[ThemeUpdater] Rendering. Faction from context:', faction, "Current theme instance:", currentThemeInstance);
+  console.log('[ThemeUpdater] Rendering. Faction from context:', faction, "Current theme instance (from ThemeContext):", currentThemeInstance);
 
   useEffect(() => {
-    console.log('[ThemeUpdater] useEffect triggered. Faction:', faction);
-    let targetThemeKey: 'cyphers' | 'shadows' | 'neutral' = 'neutral';
+    console.log('[ThemeUpdater] useEffect triggered. Faction:', faction, "Current theme instance:", currentThemeInstance);
+    let targetThemeKey: Theme;
 
-    if (faction === 'Cyphers') {
-      targetThemeKey = 'cyphers';
-    } else if (faction === 'Shadows') {
-      targetThemeKey = 'shadows';
+    switch (faction) {
+      case 'Cyphers':
+        targetThemeKey = 'cyphers';
+        break;
+      case 'Shadows':
+        targetThemeKey = 'shadows';
+        break;
+      case 'Observer':
+      default:
+        targetThemeKey = 'terminal-green'; // Default to terminal-green for Observer or undefined faction
+        break;
     }
     
-    console.log('[ThemeUpdater] Target theme key:', targetThemeKey, "Current theme instance from hook:", currentThemeInstance);
+    console.log('[ThemeUpdater] Target theme key determined:', targetThemeKey);
     if (targetThemeKey !== currentThemeInstance) {
-      console.log('[ThemeUpdater] Applying theme for faction:', faction, ' Target theme:', targetThemeKey);
+      console.log('[ThemeUpdater] Applying theme. Current:', currentThemeInstance, 'Target:', targetThemeKey);
       setTheme(targetThemeKey);
     } else {
-      console.log('[ThemeUpdater] Theme already set or faction is Observer/neutral. Current theme:', currentThemeInstance, "Target:", targetThemeKey);
+      console.log('[ThemeUpdater] Theme already set to target or faction dictates current. Current theme:', currentThemeInstance, "Target:", targetThemeKey);
     }
-  }, [faction, setTheme, currentThemeInstance]);
+  }, [faction, currentThemeInstance, setTheme]); // currentThemeInstance and setTheme are dependencies
 
   return null;
 }
+
