@@ -39,20 +39,20 @@ export function TODWindow({ isOpen, onClose, title, children, size = 'default' }
     <div
       className={cn(
         "fixed inset-0 z-50 flex items-center justify-center bg-black/50 transition-opacity duration-200",
-        isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        // isOpen ? "opacity-100" : "opacity-0 pointer-events-none" // DEBUG: Temporarily always visible
+        "opacity-100" 
       )}
       onClick={onClose} // Optional: close on overlay click
     >
       <HolographicPanel
         className={cn(
-          "relative flex flex-col m-4 p-0 overflow-hidden", // TOD Window is themed by HolographicPanel
-          "fixed top-10 bottom-5 left-5 right-5", // Gaps from edges
-          // Adjust max-w and max-h as needed, these are examples
+          "relative flex flex-col m-4 p-0 overflow-hidden",
+          "fixed top-10 bottom-5 left-5 right-5", 
           "max-w-[calc(100vw-40px)] max-h-[calc(100vh-60px)]", 
           "transition-transform duration-200 ease-out",
-          isOpen ? "animate-slide-in-right-tod" : "animate-slide-out-right-tod",
-          // Ensure it uses holographic panel styles with more opacity for content readability
-          "bg-opacity-70 backdrop-blur-lg border-opacity-80" 
+          // isOpen ? "animate-slide-in-right-tod" : "animate-slide-out-right-tod", // DEBUG: Temporarily remove animation
+          "bg-opacity-70 backdrop-blur-lg border-opacity-80",
+          "bg-pink-500 border-4 border-yellow-300" // DEBUG: Highly visible style
         )}
         onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside window
       >

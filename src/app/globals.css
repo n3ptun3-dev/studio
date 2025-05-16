@@ -6,7 +6,7 @@
 @layer base {
   /* REMOVED: html { @apply overflow-hidden; } */
 
-  :root, .theme-neutral { /* Default is Neutral Theme now */
+  .theme-neutral { /* Default is Neutral Theme now */
     --theme-name: "neutral";
     --background-hsl: 220 15% 8%; /* Dark cool grey */
     --foreground-hsl: 220 10% 75%; /* Lighter grey */
@@ -42,7 +42,7 @@
     --hologram-glow-color-hsl: var(--primary-hsl);
     --hologram-base-text-color-hsl: var(--foreground-hsl);
     --hologram-wireframe-color-hsl: var(--primary-hsl);
-    --hologram-panel-bg-hsl: var(--background-hsl);
+    --hologram-panel-bg-hsl: var(--card-hsl); /* Use card HSL for panel background */
     --hologram-panel-border-hsl: var(--primary-hsl);
     --hologram-button-bg-hsl: var(--primary-hsl);
     --hologram-button-text-hsl: var(--primary-foreground-hsl);
@@ -65,6 +65,11 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
   }
+  
+  :root { /* Apply neutral theme by default if no specific theme class is present */
+      @apply theme-neutral;
+  }
+
 
   .theme-cyphers {
     --theme-name: "cyphers";
@@ -92,6 +97,8 @@
     --border-hsl: 204 100% 60%;
     --input-hsl: 210 40% 30%;
     --ring-hsl: 204 100% 50%;
+    --hologram-panel-bg-hsl: var(--card-hsl);
+    --hologram-panel-border-hsl: var(--primary-hsl);
   }
 
   .theme-shadows {
@@ -120,6 +127,8 @@
     --border-hsl: 0 100% 50%;
     --input-hsl: 0 40% 30%;
     --ring-hsl: 0 100% 40%;
+    --hologram-panel-bg-hsl: var(--card-hsl);
+    --hologram-panel-border-hsl: var(--primary-hsl);
   }
 
   /* Aesthetic Schemes (remain as defined) */
@@ -133,6 +142,8 @@
     --foreground-hsl: 145 100% 90%;
     --border-hsl: 145 100% 43%;
     --ring-hsl: 145 100% 33%;
+    --hologram-panel-bg-hsl: var(--card-hsl);
+    --hologram-panel-border-hsl: var(--primary-hsl);
   }
 
   .theme-level-3-yellow {
@@ -147,6 +158,8 @@
     --foreground-hsl: 54 100% 10%;
     --border-hsl: 54 100% 60%;
     --ring-hsl: 54 100% 50%;
+    --hologram-panel-bg-hsl: var(--card-hsl);
+    --hologram-panel-border-hsl: var(--primary-hsl);
   }
 
   /* Apply HSL variables to ShadCN CSS variables */
@@ -174,7 +187,7 @@
     --hologram-glow-color: hsl(var(--hologram-glow-color-hsl, var(--primary-hsl)));
     --hologram-base-text-color: hsl(var(--hologram-base-text-color-hsl, var(--foreground-hsl)));
     --hologram-wireframe-color: hsl(var(--hologram-wireframe-color-hsl, var(--primary-hsl)));
-    --hologram-panel-bg: hsla(var(--hologram-panel-bg-hsl, var(--background-hsl)), 0.3); /* Translucent */
+    --hologram-panel-bg: hsla(var(--hologram-panel-bg-hsl, var(--card-hsl)), 0.6); /* Use card as base, increased opacity */
     --hologram-panel-border: hsl(var(--hologram-panel-border-hsl, var(--primary-hsl)));
     --hologram-button-bg: hsl(var(--hologram-button-bg-hsl, var(--primary-hsl)));
     --hologram-button-text: hsl(var(--hologram-button-text-hsl, var(--primary-foreground-hsl)));
@@ -201,7 +214,7 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-exo2; /* REMOVED overflow-hidden */
+    @apply bg-background text-foreground font-exo2; 
     background-repeat: no-repeat;
     background-size: cover;
     background-attachment: fixed;
@@ -214,7 +227,7 @@
 
 /* Custom holographic styles */
 .holographic-panel {
-  background-color: var(--hologram-panel-bg);
+  background-color: var(--hologram-panel-bg); /* Base background for panels */
   border-color: var(--hologram-panel-border);
   @apply border rounded-lg shadow-[0_0_15px_var(--hologram-glow-color),inset_0_0_10px_var(--hologram-glow-color)];
   backdrop-filter: blur(2px);

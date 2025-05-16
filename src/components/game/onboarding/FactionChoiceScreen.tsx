@@ -23,7 +23,7 @@ const factionDetails = {
     borderColorClass: "border-blue-500",
     selectedRingClass: "ring-2 ring-blue-400 shadow-blue-500/50",
     primaryColorClass: "text-blue-400",
-    selectedBgClass: "bg-blue-600/60", // Made more opaque
+    selectedBgClass: "bg-blue-500/75", // More opaque for selected state
   },
   Shadows: {
     defaultTagline: "Control the Flow. Infiltrate and Disrupt.",
@@ -32,7 +32,7 @@ const factionDetails = {
     borderColorClass: "border-red-500",
     selectedRingClass: "ring-2 ring-red-400 shadow-red-500/50",
     primaryColorClass: "text-red-400",
-    selectedBgClass: "bg-red-600/60", // Made more opaque
+    selectedBgClass: "bg-red-500/75", // More opaque for selected state
   }
 };
 
@@ -60,25 +60,24 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
   };
 
   const handleConfirmFaction = (factionName: Faction) => {
-    console.log('handleConfirmFaction called with:', factionName); // DEBUG
+    console.log('handleConfirmFaction called with:', factionName); 
     if (!factionName || factionName === 'Observer') return;
 
     setAppContextFaction(factionName);
     console.log(`Faction ${factionName} confirmed. Opening Codename Input...`);
     openTODWindow("Agent Codename Assignment", <CodenameInput />);
-    // Note: setOnboardingStep will be handled by CodenameInput component
   };
 
   const handleProceedAsObserver = () => {
     setSelectedFaction('Observer');
     setAppContextFaction('Observer');
-    setTheme('neutral'); // Ensure observer uses neutral theme
-    setOnboardingStep('tod'); // Observers proceed directly to TOD
+    setTheme('neutral'); 
+    setOnboardingStep('tod'); 
   };
 
   return (
     <HolographicPanel
-      key={currentTheme} // Force re-render on theme change
+      key={currentTheme} 
       className="w-full max-w-2xl p-4 md:p-6 flex flex-col flex-grow h-0 overflow-hidden"
     >
       <h1 className="text-2xl sm:text-3xl md:text-4xl font-orbitron mb-4 sm:mb-6 text-center holographic-text flex-shrink-0 py-2">
@@ -89,16 +88,16 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
         {(['Cyphers', 'Shadows'] as const).map((factionName) => {
           const details = factionDetails[factionName];
           const isSelected = selectedFaction === factionName;
-          console.log('Rendering tile for', factionName, 'isSelected:', isSelected); // DEBUG
-
+          
           return (
             <div
               key={factionName}
               className={cn(
-                "rounded-lg border-2 transition-all cursor-pointer flex flex-col items-center text-center holographic-panel h-full", // Removed direct padding, holographic-panel handles it
-                details.borderColorClass,
-                isSelected && details.selectedRingClass,
-                isSelected && details.selectedBgClass
+                "holographic-panel", // Base styling for the tile's look and feel
+                "rounded-lg border-2 transition-all cursor-pointer flex flex-col items-center text-center h-full", // Layout and interaction
+                details.borderColorClass, // Persistent border color based on faction
+                isSelected && details.selectedRingClass, // Ring effect for selected tile
+                isSelected && details.selectedBgClass  // Background color tint for selected tile
               )}
               onClick={() => handleFactionSelect(factionName)}
             >
@@ -117,8 +116,8 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
                   <HolographicButton
                     className="mt-auto w-full py-2 text-sm sm:text-base"
                     onClick={(e) => {
-                      e.stopPropagation(); // CRITICAL: Prevent tile's onClick
-                      console.log('Confirm button for', factionName, 'CLICKED'); // DEBUG
+                      e.stopPropagation(); 
+                      console.log('Confirm button for', factionName, 'CLICKED'); 
                       handleConfirmFaction(factionName);
                     }}
                   >
