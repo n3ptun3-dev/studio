@@ -4,8 +4,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { HolographicPanel } from './HolographicPanel'; // Restore for styling if needed
-import { CodenameInput } from '../onboarding/CodenameInput'; // Example content
+import { HolographicPanel } from './HolographicPanel';
 
 interface TODWindowProps {
   isOpen: boolean;
@@ -24,39 +23,37 @@ export function TODWindow({ isOpen, onClose, title, children, size = 'default' }
   }
   console.log('[TODWindow] Rendering with isOpen true. Title:', title);
 
-  // Using EXTREMELY visible debug style for the outermost div
   return (
     <div
       className={cn(
-        "fixed inset-0 z-[9999] flex items-center justify-center bg-black/70", // Dimmed background
-        // isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none", // Control visibility
-        // "transition-opacity duration-200 ease-in-out"
+        "fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm",
+        isOpen ? "animate-slide-in-right-tod" : "animate-slide-out-right-tod"
       )}
-      onClick={onClose} // Click outside to close
+      onClick={onClose} 
     >
-      {/* This is the actual window panel with debug styles */}
-      <div
+      <HolographicPanel
         className={cn(
-          "relative m-4 p-4 overflow-auto scrollbar-hide z-[10000]",
-          "w-[calc(100vw-80px)] max-w-[600px]", // Responsive width
-          "h-[calc(100vh-100px)] max-h-[600px]", // Responsive height
-          // EXTREMELY visible debug style for the panel
-          "bg-purple-600 border-4 border-lime-400 text-white" 
-          // isOpen ? "animate-slide-in-right-tod" : "animate-slide-out-right-tod" // Apply animations
+          "relative m-4 overflow-auto scrollbar-hide z-[10000]",
+          "w-[calc(100vw-80px)] max-w-[600px]", 
+          "h-[calc(100vh-100px)] max-h-[600px]",
+          // Removed debug direct background/border from here, HolographicPanel class will apply themed styles
         )}
-        onClick={(e) => e.stopPropagation()} // Prevent click inside from closing
+        onClick={(e) => e.stopPropagation()} 
       >
-        <div className="flex items-center justify-between pb-2 mb-2 border-b border-lime-300">
-          <h2 className="text-xl font-orbitron">{title}</h2>
-          <button onClick={onClose} className="p-1 text-lime-300 hover:text-white">
+        <div className="flex items-center justify-between pb-2 mb-2 border-b border-current"> {/* Use current for border to match theme */}
+          <h2 className="text-xl font-orbitron holographic-text">{title}</h2>
+          <button 
+            onClick={onClose} 
+            className="p-1 text-muted-foreground hover:text-foreground"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
         {/* Render children directly */}
-        <div className="text-black bg-white p-2"> {/* Ensure children content is visible if any */}
+        <div className="h-[calc(100%-4rem)] overflow-y-auto scrollbar-hide"> {/* Ensure children area can scroll if content is tall */}
            {children}
         </div>
-      </div>
+      </HolographicPanel>
     </div>
   );
 }
