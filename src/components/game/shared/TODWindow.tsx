@@ -27,13 +27,13 @@ export function TODWindow({ isOpen, onClose, title, children, size = 'default' }
     <div
       className={cn(
         "fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm",
-        isOpen ? "animate-slide-in-right-tod" : "animate-slide-out-right-tod"
+        isOpen ? "animate-slide-in-right-tod" : "animate-slide-out-right-tod" // Animations re-enabled
       )}
       onClick={onClose} 
     >
       <HolographicPanel
         className={cn(
-          "relative m-4 flex flex-col z-[10000]",
+          "relative m-4 flex flex-col z-[10000]", // Reverted to HolographicPanel
           "w-[calc(100vw-80px)] max-w-[600px]", 
           "h-[calc(100vh-100px)] max-h-[600px]",
         )}
@@ -49,7 +49,13 @@ export function TODWindow({ isOpen, onClose, title, children, size = 'default' }
           </button>
         </div>
         
-        <div className="flex-grow min-h-0 overflow-y-auto scrollbar-hide">
+        {/* THEME TEST DIV - REMOVE AFTER TESTING */}
+        <div className="p-2 my-2 bg-primary text-primary-foreground border-2 border-accent">
+          THEME TEST DIV (Should be Faction Colored)
+        </div>
+        {/* END THEME TEST DIV */}
+
+        <div className="flex-grow min-h-0 h-[calc(100%-4rem)] overflow-y-auto scrollbar-hide"> {/* Ensure content area scrolls */}
            {children}
         </div>
       </HolographicPanel>
