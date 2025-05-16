@@ -23,7 +23,7 @@ const factionDetails = {
     borderColorClass: "border-blue-500",
     selectedRingClass: "ring-2 ring-blue-400 shadow-blue-500/50",
     primaryColorClass: "text-blue-400",
-    selectedBgClass: "bg-blue-500/50", // Made more opaque
+    selectedBgClass: "bg-blue-600/60", // Made more opaque
   },
   Shadows: {
     defaultTagline: "Control the Flow. Infiltrate and Disrupt.",
@@ -32,7 +32,7 @@ const factionDetails = {
     borderColorClass: "border-red-500",
     selectedRingClass: "ring-2 ring-red-400 shadow-red-500/50",
     primaryColorClass: "text-red-400",
-    selectedBgClass: "bg-red-500/50", // Made more opaque
+    selectedBgClass: "bg-red-600/60", // Made more opaque
   }
 };
 
@@ -46,8 +46,6 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
   const [selectedFaction, setSelectedFaction] = useState<Faction | null>(null);
 
   useEffect(() => {
-    // Set initial theme to neutral if no faction is selected
-    // Or if a faction is selected, ensure theme matches
     if (selectedFaction && selectedFaction !== 'Observer') {
       setTheme(selectedFaction === 'Cyphers' ? 'cyphers' : 'shadows');
     } else if (!selectedFaction && currentTheme !== 'neutral') {
@@ -55,11 +53,10 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
     }
   }, [selectedFaction, currentTheme, setTheme]);
 
-
   const handleFactionSelect = (factionName: Faction) => {
     if (factionName === 'Observer') return;
-
-    setSelectedFaction(factionName); // This will trigger the useEffect above to set the theme
+    setSelectedFaction(factionName);
+    // Theme will be set by the useEffect above
   };
 
   const handleConfirmFaction = (factionName: Faction) => {
@@ -75,8 +72,8 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
   const handleProceedAsObserver = () => {
     setSelectedFaction('Observer');
     setAppContextFaction('Observer');
-    setTheme('neutral');
-    setOnboardingStep('tod');
+    setTheme('neutral'); // Ensure observer uses neutral theme
+    setOnboardingStep('tod'); // Observers proceed directly to TOD
   };
 
   return (
@@ -92,12 +89,13 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
         {(['Cyphers', 'Shadows'] as const).map((factionName) => {
           const details = factionDetails[factionName];
           const isSelected = selectedFaction === factionName;
+          console.log('Rendering tile for', factionName, 'isSelected:', isSelected); // DEBUG
 
           return (
             <div
               key={factionName}
               className={cn(
-                "p-3 sm:p-4 rounded-lg border-2 transition-all cursor-pointer flex flex-col items-center text-center holographic-panel h-full",
+                "rounded-lg border-2 transition-all cursor-pointer flex flex-col items-center text-center holographic-panel h-full", // Removed direct padding, holographic-panel handles it
                 details.borderColorClass,
                 isSelected && details.selectedRingClass,
                 isSelected && details.selectedBgClass
@@ -119,8 +117,8 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
                   <HolographicButton
                     className="mt-auto w-full py-2 text-sm sm:text-base"
                     onClick={(e) => {
-                      e.stopPropagation(); // Important: prevent tile's onClick
-                      console.log('Confirm button clicked for:', factionName); // DEBUG
+                      e.stopPropagation(); // CRITICAL: Prevent tile's onClick
+                      console.log('Confirm button for', factionName, 'CLICKED'); // DEBUG
                       handleConfirmFaction(factionName);
                     }}
                   >
