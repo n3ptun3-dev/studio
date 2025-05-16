@@ -12,7 +12,7 @@ export function ThemeUpdater() {
   console.log('[ThemeUpdater] Rendering. Faction from context:', faction, "Current theme instance (from ThemeContext):", currentThemeInstance);
 
   useEffect(() => {
-    console.log('[ThemeUpdater] useEffect triggered. Faction:', faction, "Current theme instance:", currentThemeInstance);
+    console.log('[ThemeUpdater] useEffect triggered. Faction:', faction, "Current theme (from context):", currentThemeInstance);
     let targetThemeKey: Theme;
 
     switch (faction) {
@@ -24,19 +24,18 @@ export function ThemeUpdater() {
         break;
       case 'Observer':
       default:
-        targetThemeKey = 'terminal-green'; // Default to terminal-green for Observer or undefined faction
+        targetThemeKey = 'terminal-green';
         break;
     }
     
     console.log('[ThemeUpdater] Target theme key determined:', targetThemeKey);
     if (targetThemeKey !== currentThemeInstance) {
-      console.log('[ThemeUpdater] Applying theme. Current:', currentThemeInstance, 'Target:', targetThemeKey);
+      console.log('[ThemeUpdater] Applying theme. Current:', currentThemeInstance, 'Target:', targetThemeKey, 'For Faction:', faction);
       setTheme(targetThemeKey);
     } else {
-      console.log('[ThemeUpdater] Theme already set to target or faction dictates current. Current theme:', currentThemeInstance, "Target:", targetThemeKey);
+      console.log('[ThemeUpdater] Theme already set to target or faction dictates current. Current theme:', currentThemeInstance, "Target:", targetThemeKey, "Faction:", faction);
     }
-  }, [faction, currentThemeInstance, setTheme]); // currentThemeInstance and setTheme are dependencies
+  }, [faction, setTheme]); // Corrected dependency array: currentThemeInstance removed
 
   return null;
 }
-
