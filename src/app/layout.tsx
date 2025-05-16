@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import { Orbitron, Exo_2, Rajdhani } from 'next/font/google';
 import { GeistSans } from 'geist/font/sans';
@@ -44,7 +45,7 @@ export default function RootLayout({
       <body 
         className={`${geistSans.className} ${geistSans.variable} ${geistMono.className} ${geistMono.variable} ${orbitron.variable} ${exo2.variable} ${rajdhani.variable} antialiased bg-background text-foreground`}>
         <AppProvider>
-          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+          <ThemeProvider attribute="class" defaultTheme="terminal-green" enableSystem disableTransitionOnChange>
             {children}
             <ThemeUpdater />
           </ThemeProvider>
