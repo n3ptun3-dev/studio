@@ -9,6 +9,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Code, Eye, ShieldQuestion } from 'lucide-react';
+import { CodenameInput } from './CodenameInput';
 
 interface FactionChoiceScreenProps {
   setShowAuthPrompt: Dispatch<SetStateAction<boolean>>;
@@ -19,19 +20,19 @@ const factionDetails = {
     defaultTagline: "Information is Power. Decode the Network.",
     theme: "cyphers" as Faction | 'neutral',
     icon: <Code className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 mb-2 text-blue-400 icon-glow" />,
-    borderColorClass: "border-blue-500", // Persistent border color
+    borderColorClass: "border-blue-500",
     selectedRingClass: "ring-2 ring-blue-400 shadow-blue-500/50",
     primaryColorClass: "text-blue-400",
-    selectedBgClass: "bg-blue-700/30", // Faint blue background when selected
+    selectedBgClass: "bg-blue-600/40", // Adjusted for better visibility
   },
   Shadows: {
     defaultTagline: "Control the Flow. Infiltrate and Disrupt.",
     theme: "shadows" as Faction | 'neutral',
     icon: <ShieldQuestion className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 mb-2 text-red-400 icon-glow" />,
-    borderColorClass: "border-red-500", // Persistent border color
+    borderColorClass: "border-red-500",
     selectedRingClass: "ring-2 ring-red-400 shadow-red-500/50",
     primaryColorClass: "text-red-400",
-    selectedBgClass: "bg-red-700/30", // Faint red background when selected
+    selectedBgClass: "bg-red-600/40", // Adjusted for better visibility
   }
 };
 
@@ -45,15 +46,13 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
   const [selectedFaction, setSelectedFaction] = useState<Faction | null>(null);
 
   useEffect(() => {
-    // Ensure theme is neutral if no faction is selected initially
-    // or if selection is cleared (though current logic doesn't clear selection, good for future)
     if (!selectedFaction && currentTheme !== 'neutral') {
       setTheme('neutral');
     }
   }, [selectedFaction, currentTheme, setTheme]);
 
   const handleFactionSelect = (factionName: Faction) => {
-    if (factionName === 'Observer') return; // Observer doesn't get selected in the same way
+    if (factionName === 'Observer') return; 
 
     setSelectedFaction(factionName);
     setTheme(factionName === 'Cyphers' ? 'cyphers' : 'shadows');
@@ -64,25 +63,21 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
 
     setAppContextFaction(factionName);
     console.log(`Faction ${factionName} confirmed. Opening Codename Input...`);
-    openTODWindow("Agent Codename Assignment", <div>Placeholder for Codename Input UI</div>);
-    // Note: setOnboardingStep('fingerprint') or 'tod' will be handled by the AppContext after codename
+    openTODWindow("Agent Codename Assignment", <CodenameInput />);
+    // Note: setOnboardingStep will be handled by CodenameInput component
   };
 
   const handleProceedAsObserver = () => {
-    setSelectedFaction('Observer'); // Visually indicate, though it doesn't get a theme
+    setSelectedFaction('Observer'); 
     setAppContextFaction('Observer');
-    setTheme('neutral'); // Ensure observer proceeds with neutral theme
+    setTheme('neutral'); 
     setOnboardingStep('tod');
   };
 
   return (
     <HolographicPanel
-      key={currentTheme} // Add key here to force re-render on theme change
-      className={cn(
-        "w-full max-w-2xl p-4 md:p-6 flex flex-col flex-grow h-0 overflow-hidden"
-        // The panel's border color will change based on the theme set by handleFactionSelect
-        // via CSS variables used in the .holographic-panel definition
-      )}
+      key={currentTheme} 
+      className="w-full max-w-2xl p-4 md:p-6 flex flex-col flex-grow h-0 overflow-hidden"
     >
       <h1 className="text-2xl sm:text-3xl md:text-4xl font-orbitron mb-4 sm:mb-6 text-center holographic-text flex-shrink-0 py-2">
         Select Your Allegiance
@@ -98,9 +93,9 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
               key={factionName}
               className={cn(
                 "p-3 sm:p-4 rounded-lg border-2 transition-all cursor-pointer flex flex-col items-center text-center holographic-panel h-full",
-                details.borderColorClass, // Always apply team-specific border color
+                details.borderColorClass, 
                 isSelected && details.selectedRingClass,
-                isSelected && details.selectedBgClass // Apply faint background on selection
+                isSelected && details.selectedBgClass 
               )}
               onClick={() => handleFactionSelect(factionName)}
             >
