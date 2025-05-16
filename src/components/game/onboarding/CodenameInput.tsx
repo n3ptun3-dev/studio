@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { HolographicInput, HolographicButton } from '@/components/game/shared/HolographicPanel';
 import { useToast } from '@/hooks/use-toast';
-import { Label } from '@/components/ui/label'; // Import Label
+import { Label } from '@/components/ui/label';
 
 export function CodenameInput() {
   const { 
@@ -20,9 +20,11 @@ export function CodenameInput() {
   const { toast } = useToast();
 
   useEffect(() => {
+    // This effect handles the case where an Observer might somehow reach this screen.
     if (faction === 'Observer') {
       toast({ title: "Observation Protocol", description: "Observers do not set codenames. System engaging.", variant: "default" });
       closeTODWindow();
+      // Ensure onboarding step is correct for observer if they somehow land here.
       if (onboardingStep !== 'tod' && onboardingStep !== 'fingerprint') {
         setOnboardingStep('tod');
       }
@@ -67,20 +69,20 @@ export function CodenameInput() {
     setOnboardingStep('fingerprint'); 
   };
   
+  // If faction is Observer, render nothing as the useEffect will handle navigation.
   if (faction === 'Observer') {
     return null; 
   }
 
   return (
     <div className="flex flex-col items-center justify-center p-4 space-y-4 font-rajdhani">
-      {/* Removed: <h3 className="text-xl font-orbitron holographic-text text-center">Secure Channel Established</h3> */}
-      <p className="text-muted-foreground text-center text-base sm:text-lg leading-relaxed">
+      <p className="text-muted-foreground text-center text-base leading-relaxed">
         Agent, your operational codename is critical for field identification.
         Choose wisely. It cannot be changed once registered with HQ.
       </p>
 
       <div className="w-full max-w-sm space-y-2">
-        <Label htmlFor="codename-input" className="text-base text-muted-foreground holographic-text">Enter Your Codename:</Label>
+        <Label htmlFor="codename-input" className="text-sm text-muted-foreground holographic-text">Enter Your Codename:</Label>
         <HolographicInput
           id="codename-input"
           type="text"
@@ -97,7 +99,7 @@ export function CodenameInput() {
         className="w-full max-w-sm py-3 text-lg mt-2"
         disabled={!codename.trim()}
       >
-        Register Codename
+        Register
       </HolographicButton>
     </div>
   );

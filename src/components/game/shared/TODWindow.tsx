@@ -27,20 +27,22 @@ export function TODWindow({ isOpen, onClose, title, children, size = 'default' }
     <div
       className={cn(
         "fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm",
+        // Apply animations based on isOpen state for smooth transitions
         isOpen ? "animate-slide-in-right-tod" : "animate-slide-out-right-tod"
       )}
       onClick={onClose} 
     >
       <HolographicPanel
         className={cn(
-          "relative m-4 overflow-auto scrollbar-hide z-[10000]",
+          "relative m-4 flex flex-col z-[10000]", // Added flex flex-col
           "w-[calc(100vw-80px)] max-w-[600px]", 
           "h-[calc(100vh-100px)] max-h-[600px]",
-          // Removed debug direct background/border from here, HolographicPanel class will apply themed styles
+          // Removed direct background/border, HolographicPanel class applies themed styles
         )}
         onClick={(e) => e.stopPropagation()} 
       >
-        <div className="flex items-center justify-between pb-2 mb-2 border-b border-current"> {/* Use current for border to match theme */}
+        {/* Title Area - Non-scrollable */}
+        <div className="flex-shrink-0 flex items-center justify-between pb-2 mb-2 border-b border-current">
           <h2 className="text-xl font-orbitron holographic-text">{title}</h2>
           <button 
             onClick={onClose} 
@@ -49,8 +51,9 @@ export function TODWindow({ isOpen, onClose, title, children, size = 'default' }
             <X className="w-5 h-5" />
           </button>
         </div>
-        {/* Render children directly */}
-        <div className="h-[calc(100%-4rem)] overflow-y-auto scrollbar-hide"> {/* Ensure children area can scroll if content is tall */}
+        
+        {/* Content Area - Scrollable */}
+        <div className="flex-grow min-h-0 overflow-y-auto scrollbar-hide">
            {children}
         </div>
       </HolographicPanel>
