@@ -3,19 +3,21 @@
 
 import { useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { useTheme, type Theme } from '@/contexts/ThemeContext'; // Ensure Theme type is imported
+import { useTheme, type Theme } from '@/contexts/ThemeContext'; 
 
 export function ThemeUpdater() {
-  const { faction } = useAppContext();
+  const { faction: appContextFaction } = useAppContext(); // Renamed to avoid conflict
   const { theme: currentThemeInstance, setTheme } = useTheme();
 
-  console.log('[ThemeUpdater] Rendering. Faction from context:', faction, "Current theme instance (from ThemeContext):", currentThemeInstance);
+  console.log('[ThemeUpdater] Rendering. AppContext Faction:', appContextFaction, "Current ThemeContext Theme:", currentThemeInstance);
 
   useEffect(() => {
-    console.log('[ThemeUpdater] useEffect triggered. Faction:', faction, "Current theme (from context):", currentThemeInstance);
+    console.log(
+      `[ThemeUpdater] useEffect running. AppContext Faction: ${appContextFaction}, Current ThemeContext Theme: ${currentThemeInstance}`
+    );
     let targetThemeKey: Theme;
 
-    switch (faction) {
+    switch (appContextFaction) {
       case 'Cyphers':
         targetThemeKey = 'cyphers';
         break;
@@ -24,18 +26,23 @@ export function ThemeUpdater() {
         break;
       case 'Observer':
       default:
-        targetThemeKey = 'terminal-green';
+        targetThemeKey = 'terminal-green'; // Default for Observer or undefined faction
         break;
     }
-    
-    console.log('[ThemeUpdater] Target theme key determined:', targetThemeKey);
+
     if (targetThemeKey !== currentThemeInstance) {
-      console.log('[ThemeUpdater] Applying theme. Current:', currentThemeInstance, 'Target:', targetThemeKey, 'For Faction:', faction);
+      console.log(
+        `[ThemeUpdater] Applying theme. From: ${currentThemeInstance}, To: ${targetThemeKey}, Based on AppContext Faction: ${appContextFaction}`
+      );
       setTheme(targetThemeKey);
     } else {
-      console.log('[ThemeUpdater] Theme already set to target or faction dictates current. Current theme:', currentThemeInstance, "Target:", targetThemeKey, "Faction:", faction);
+      console.log(
+        `[ThemeUpdater] No theme change needed. Target: ${targetThemeKey} already matches Current: ${currentThemeInstance}. AppContext Faction: ${appContextFaction}`
+      );
     }
-  }, [faction, setTheme]); // Corrected dependency array: currentThemeInstance removed
+  // This effect should ONLY react to changes in the global faction or the setTheme function (which is stable).
+  // currentThemeInstance is read inside to determine if a change is needed, but it's not a dependency that re-triggers this effect.
+  }, [appContextFaction, setTheme]); 
 
   return null;
 }
