@@ -10,12 +10,12 @@
     --background-hsl: 130 20% 5%;
     --foreground-hsl: 130 80% 70%;
     --primary-hsl: 130 70% 45%;
-    --primary-foreground-hsl: 130 80% 80%; /* Brighter green for foreground on primary */
+    --primary-foreground-hsl: 130 80% 80%; 
     --secondary-hsl: 130 30% 20%;
     --secondary-foreground-hsl: 130 70% 60%;
-    --accent-hsl: 130 90% 55%;
+    --accent-hsl: 130 90% 55%; /* Bright green */
     --accent-foreground-hsl: 130 20% 5%;
-    --card-hsl: 130 25% 8%; /* Slightly lighter than pure background */
+    --card-hsl: 130 25% 8%; 
     --card-foreground-hsl: 130 80% 75%;
     --popover-hsl: 130 25% 12%;
     --popover-foreground-hsl: 130 80% 75%;
@@ -28,8 +28,6 @@
 
     /* Debug Colors */
     --terminal-debug-color: lime;
-    --cyphers-debug-color: blue;
-    --shadows-debug-color: red;
 
     /* Convert HSL to actual colors for :root / terminal-green */
     --background: hsl(var(--background-hsl));
@@ -53,22 +51,22 @@
     /* Holographic variables for terminal-green */
     --hologram-panel-bg: hsla(var(--card-hsl), 0.6);
     --hologram-panel-border: hsl(var(--primary-hsl));
-    --hologram-glow-color: hsl(var(--accent-hsl));
+    --hologram-glow-color: hsl(var(--accent-hsl)); /* Use bright green accent for glow */
     --hologram-base-text-color: hsl(var(--foreground-hsl));
     --hologram-wireframe-color: hsl(var(--primary-hsl));
     --hologram-button-bg: hsl(var(--primary-hsl));
-    --hologram-button-text: hsl(var(--primary-foreground-hsl)); /* Brighter green button text */
+    --hologram-button-text: hsl(130 85% 75%); /* Explicitly brighter green for button text */
   }
 
   .theme-cyphers {
     --theme-name: "cyphers";
     --background-hsl: 210 60% 8%;
     --foreground-hsl: 200 100% 90%;
-    --primary-hsl: 204 100% 50%;
+    --primary-hsl: 204 100% 50%; /* Electric Blue */
     --primary-foreground-hsl: 0 0% 100%;
-    --secondary-hsl: 180 100% 30%;
+    --secondary-hsl: 180 100% 50%; /* Pale Turquoise */
     --secondary-foreground-hsl: 200 100% 90%;
-    --accent-hsl: 0 0% 100%;
+    --accent-hsl: 0 0% 100%; /* White */
     --accent-foreground-hsl: 210 60% 8%;
     --card-hsl: 210 50% 12%;
     --card-foreground-hsl: 200 100% 90%;
@@ -81,7 +79,7 @@
     --destructive-foreground-hsl: 0 0% 100%;
     --cyphers-debug-color: blue;
 
-    /* Direct color definitions for Tailwind/components */
+    /* Direct color definitions */
     --background: hsl(var(--background-hsl));
     --foreground: hsl(var(--foreground-hsl));
     --primary: hsl(var(--primary-hsl));
@@ -101,7 +99,7 @@
     /* Holographic variables */
     --hologram-panel-bg: hsla(var(--card-hsl), 0.6);
     --hologram-panel-border: hsl(var(--primary-hsl));
-    --hologram-glow-color: hsl(var(--primary-hsl));
+    --hologram-glow-color: hsl(204 100% 50%); /* Direct Electric Blue for glow */
     --hologram-base-text-color: hsl(var(--foreground-hsl));
     --hologram-button-bg: hsl(var(--primary-hsl));
     --hologram-button-text: hsl(var(--primary-foreground-hsl));
@@ -111,11 +109,11 @@
     --theme-name: "shadows";
     --background-hsl: 0 60% 8%;
     --foreground-hsl: 0 0% 90%;
-    --primary-hsl: 0 100% 40%;
+    --primary-hsl: 0 100% 40%; /* Intense Red */
     --primary-foreground-hsl: 0 0% 100%;
-    --secondary-hsl: 16 100% 30%;
+    --secondary-hsl: 16 100% 71%; /* Light Salmon */
     --secondary-foreground-hsl: 0 0% 90%;
-    --accent-hsl: 0 0% 100%;
+    --accent-hsl: 0 0% 100%; /* White */
     --accent-foreground-hsl: 0 60% 8%;
     --card-hsl: 0 50% 12%;
     --card-foreground-hsl: 0 0% 90%;
@@ -128,7 +126,7 @@
     --destructive-foreground-hsl: 0 0% 100%;
     --shadows-debug-color: red;
 
-     /* Direct color definitions for Tailwind/components */
+     /* Direct color definitions */
     --background: hsl(var(--background-hsl));
     --foreground: hsl(var(--foreground-hsl));
     --primary: hsl(var(--primary-hsl));
@@ -148,13 +146,12 @@
     /* Holographic variables */
     --hologram-panel-bg: hsla(var(--card-hsl), 0.6);
     --hologram-panel-border: hsl(var(--primary-hsl));
-    --hologram-glow-color: hsl(var(--primary-hsl));
+    --hologram-glow-color: hsl(0 100% 40%); /* Direct Intense Red for glow */
     --hologram-base-text-color: hsl(var(--foreground-hsl));
     --hologram-button-bg: hsl(var(--primary-hsl));
     --hologram-button-text: hsl(var(--primary-foreground-hsl));
   }
 
-  /* Neutral theme - used for pre-selection or as a base */
   .theme-neutral {
     --theme-name: "neutral";
     --background-hsl: 220 10% 10%;
@@ -163,7 +160,7 @@
     --primary-foreground-hsl: 220 10% 95%;
     --secondary-hsl: 220 20% 20%;
     --secondary-foreground-hsl: 220 10% 60%;
-    --accent-hsl: 220 70% 60%;
+    --accent-hsl: 220 70% 60%; /* Muted blue for neutral accent */
     --accent-foreground-hsl: 220 10% 10%;
     --card-hsl: 220 15% 12%;
     --card-foreground-hsl: 220 10% 75%;
@@ -195,12 +192,11 @@
     /* Holographic variables for neutral */
     --hologram-panel-bg: hsla(var(--card-hsl), 0.6);
     --hologram-panel-border: hsl(var(--primary-hsl));
-    --hologram-glow-color: hsl(var(--accent-hsl));
+    --hologram-glow-color: hsl(var(--accent-hsl)); /* Muted blue glow for neutral */
     --hologram-base-text-color: hsl(var(--foreground-hsl));
     --hologram-button-bg: hsl(var(--primary-hsl));
     --hologram-button-text: hsl(var(--primary-foreground-hsl));
   }
-
 
   /* Item Level Colors HSL (remain globally available) */
   :root {
@@ -242,7 +238,6 @@
     @apply border-border;
   }
   html {
-    /* Ensure html can take full height for min-h-screen on body/main */
     height: 100%;
   }
   body {
@@ -250,24 +245,22 @@
     background-repeat: no-repeat;
     background-size: cover;
     background-attachment: fixed;
-    min-height: 100vh; /* Ensure body takes at least full viewport height */
-    display: flex; /* Make body a flex container */
-    flex-direction: column; /* Stack children vertically */
+    min-height: 100vh; 
+    display: flex; 
+    flex-direction: column; 
   }
 
-  /* Ensure #__next takes full height if body is flex */
   #__next {
     flex: 1 1 auto;
     display: flex;
     flex-direction: column;
   }
-  /* Ensure main app content can also grow */
-  main { /* This might need to be more specific if you have multiple main tags */
+  
+  main { 
     flex: 1 1 auto;
-    display: flex; /* If main itself should be a flex container */
-    flex-direction: column; /* If main's children stack vertically */
+    display: flex; 
+    flex-direction: column; 
   }
-
 
   h1, h2, h3, h4, h5, h6 {
     @apply font-orbitron;
@@ -278,8 +271,12 @@
 .holographic-panel {
   background-color: var(--hologram-panel-bg);
   border-color: var(--hologram-panel-border);
-  @apply border rounded-lg shadow-[0_0_15px_var(--hologram-glow-color),inset_0_0_10px_var(--hologram-glow-color)];
+  border-width: 1px; 
+  border-style: solid; 
+  border-radius: 0.5rem; 
+  box-shadow: 0 0 15px var(--hologram-glow-color), inset 0 0 10px var(--hologram-glow-color);
   backdrop-filter: blur(2px);
+  @apply p-4 md:p-6;
 }
 
 .holographic-text {
@@ -289,13 +286,13 @@
 
 .holographic-button {
   border-color: var(--hologram-button-bg);
-  color: var(--hologram-button-text) !important; /* Ensure text color applies */
+  color: var(--hologram-button-text) !important; 
   @apply bg-transparent border rounded-md px-4 py-2 transition-all duration-300;
   box-shadow: 0 0 8px var(--hologram-button-bg), inset 0 0 5px var(--hologram-button-bg);
 }
 .holographic-button:hover {
   background-color: var(--hologram-button-bg);
-  color: var(--background) !important; /* Text color on hover */
+  color: var(--background) !important; 
   box-shadow: 0 0 15px var(--hologram-button-bg), 0 0 25px var(--hologram-button-bg);
 }
 .holographic-button:disabled {
@@ -312,7 +309,6 @@
    box-shadow: inset 0 0 8px hsl(var(--ring-hsl)), 0 0 8px hsl(var(--ring-hsl));
 }
 
-
 .font-rajdhani {
   font-family: var(--font-rajdhani);
 }
@@ -323,28 +319,22 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Grid for PAD screen */
 .pad-screen-grid {
   background-image:
     repeating-linear-gradient(0deg, hsl(var(--foreground-hsl) / 0.1) 0px 1px, transparent 1px 20px),
     repeating-linear-gradient(90deg, hsl(var(--foreground-hsl) / 0.1) 0px 1px, transparent 1px 20px);
 }
 
-
-/* Background for the main PAD element that slides */
 .theme-terminal-green .bg-pad-backing,
 .theme-cyphers .bg-pad-backing,
 .theme-shadows .bg-pad-backing {
   background-color: hsla(var(--card-hsl), 0.7) !important;
 }
 
-
-/* For glowing icons */
 .icon-glow {
   filter: drop-shadow(0 0 3px var(--hologram-glow-color));
 }
 
-/* Network tap indicator light */
 .network-tap-light {
   @apply w-3 h-3 rounded-full;
   box-shadow: 0 0 8px currentColor, inset 0 0 4px currentColor;
@@ -364,11 +354,10 @@
   50% { opacity: 0.5; }
 }
 
-/* TOD specific for horizontal scrolling */
 .tod-scroll-container {
   display: flex;
   height: 100vh;
-  overflow-x: auto; /* Ensure horizontal scroll is enabled */
+  overflow-x: auto; 
   overflow-y: hidden;
 }
 
@@ -377,8 +366,6 @@
   width: 100vw;
 }
 
-
-/* Parallax layers */
 .parallax-layer {
   position: absolute;
   top: 0;
@@ -388,7 +375,6 @@
   will-change: transform;
 }
 
-/* Scrollbar hiding utilities */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
@@ -397,7 +383,6 @@
   scrollbar-width: none;
 }
 
-/* PAD Gloss Effect */
 .pad-gloss-effect {
   position: relative;
   overflow: hidden;
@@ -430,7 +415,6 @@
   }
 }
 
-/* Keyframes for TOD boot-up */
 @keyframes slide-up-from-bottom {
   from {
     transform: translateY(100%);
@@ -445,7 +429,6 @@
   animation: slide-up-from-bottom 1s ease-out forwards;
 }
 
-/* Keyframes for TODWindow slide in/out */
 @keyframes slide-in-right-tod {
   from { transform: translateX(100%) scale(0.95); opacity: 0; }
   to { transform: translateX(0) scale(1); opacity: 1; }
@@ -460,3 +443,5 @@
 .animate-slide-out-right-tod {
   animation: slide-out-right-tod 0.2s ease-out forwards;
 }
+
+    
