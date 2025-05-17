@@ -5,9 +5,11 @@ import { useAppContext } from '@/contexts/AppContext';
 import { Fingerprint } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { HolographicPanel } from '@/components/game/shared/HolographicPanel';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export function FingerprintScannerScreen() {
-  const { setOnboardingStep, faction } = useAppContext(); // Get faction for theming
+  const { setOnboardingStep, faction } = useAppContext();
+  const { theme: currentGlobalTheme } = useTheme(); // Get current global theme
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [accessGranted, setAccessGranted] = useState(false);
@@ -17,6 +19,7 @@ export function FingerprintScannerScreen() {
   const SCAN_DURATION = 1000; // 1 second
 
   const startScan = () => {
+    if (accessGranted) return; // Prevent re-scan if already granted
     setIsScanning(true);
     setScanProgress(0);
 
@@ -39,6 +42,7 @@ export function FingerprintScannerScreen() {
   };
 
   const cancelScan = () => {
+    if (accessGranted) return; // Don't cancel if already granted
     setIsScanning(false);
     setScanProgress(0);
     if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
@@ -61,12 +65,13 @@ export function FingerprintScannerScreen() {
     };
   }, []);
 
-  const explicitTheme = faction === 'Cyphers' ? 'cyphers' : faction === 'Shadows' ? 'shadows' : 'terminal-green';
+  // Determine the explicit theme to pass to HolographicPanel based on current global theme
+  const explicitThemeForPanel = currentGlobalTheme;
 
   if (accessGranted) {
     return (
       <div className="flex flex-col flex-grow items-center justify-center">
-        <HolographicPanel className="text-center p-8" explicitTheme={explicitTheme}>
+        <HolographicPanel className="text-center p-8" explicitTheme={explicitThemeForPanel}>
           <Fingerprint className="w-24 h-24 mx-auto text-green-400 mb-4 icon-glow" />
           <h2 className="text-3xl font-orbitron holographic-text text-green-400">Access Granted</h2>
           <p className="text-lg text-muted-foreground mt-2">Initializing Spi Vs Spi TOD...</p>
@@ -77,7 +82,7 @@ export function FingerprintScannerScreen() {
 
   return (
     <div className="flex flex-col flex-grow items-center justify-center">
-      <HolographicPanel className="text-center p-8" explicitTheme={explicitTheme}>
+      <HolographicPanel className="text-center p-8" explicitTheme={explicitThemeForPanel}>
         <h2 className="text-2xl font-orbitron mb-6 holographic-text">Spi Vs Spi: Biometric Authentication</h2>
         <p className="text-muted-foreground mb-8">Press and Hold to Authenticate.</p>
         
@@ -126,7 +131,7 @@ export function FingerprintScannerScreen() {
             />
           </svg>
         </div>
-        {isScanning && <p className="mt-4 text-sm text-accent">Scanning...</p>}
+        {/* "Scanning..." text removed */}
       </HolographicPanel>
     </div>
   );
