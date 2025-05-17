@@ -1,10 +1,10 @@
 
 "use client";
+import React, { useEffect, useState } from 'react'; // Added React import
 import { useAppContext } from '@/contexts/AppContext';
 import { HolographicPanel, HolographicButton } from '@/components/game/shared/HolographicPanel';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Zap } from 'lucide-react';
-import { useEffect, useState } from 'react';
 
 export function WelcomeScreen() {
   const { setOnboardingStep } = useAppContext();
@@ -30,12 +30,9 @@ export function WelcomeScreen() {
     );
   }
 
-  // This HolographicPanel is the main content of the WelcomeScreen.
-  // It uses flex-grow and h-0 to take available space from its parent 'main' in page.tsx (within main's padding).
-  // overflow-hidden is key for ScrollArea to work.
   return (
     <HolographicPanel
-      className="w-full max-w-2xl p-4 md:p-6 flex flex-col flex-grow h-0 overflow-hidden"
+      className="w-full max-w-2xl p-4 md:p-6 flex flex-col flex-grow h-0 overflow-hidden" // Added flex-grow and h-0
     >
       <h1 className="text-3xl md:text-4xl font-orbitron mb-4 text-center holographic-text flex-shrink-0">
         Welcome Agent
@@ -46,7 +43,6 @@ export function WelcomeScreen() {
       </h2>
 
       <ScrollArea className="flex-grow min-h-0 mb-6 p-1 border border-primary/30 rounded-md">
-        {/* min-h-0 on ScrollArea is important for flex-grow to work correctly in a flex column */}
         <div className="p-3 font-rajdhani text-sm md:text-base space-y-2 text-muted-foreground">
           <ul className="list-disc list-inside space-y-1">
             <li>The Pi Network is now the backbone of a decentralized digital identity system globally.</li>

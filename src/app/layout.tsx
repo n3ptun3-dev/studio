@@ -1,4 +1,5 @@
 
+import React from 'react'; // Added React import
 import type { Metadata } from 'next';
 import { Orbitron, Exo_2, Rajdhani } from 'next/font/google';
 import { GeistSans } from 'geist/font/sans';
@@ -44,12 +45,12 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body 
         className={`${geistSans.className} ${geistSans.variable} ${geistMono.className} ${geistMono.variable} ${orbitron.variable} ${exo2.variable} ${rajdhani.variable} antialiased bg-background text-foreground`}>
-        <AppProvider>
-          <ThemeProvider attribute="class" defaultTheme="terminal-green" enableSystem disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="terminal-green" enableSystem disableTransitionOnChange>
+          <AppProvider>
             {children}
             <ThemeUpdater />
-          </ThemeProvider>
-        </AppProvider>
+          </AppProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
