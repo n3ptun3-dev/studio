@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Code, Eye, ShieldQuestion } from 'lucide-react';
 import { CodenameInput } from './CodenameInput';
-// Removed useTheme import as this component no longer directly sets the global theme
 
 interface FactionChoiceScreenProps {
   setShowAuthPrompt: (show: boolean) => void;
@@ -19,18 +18,16 @@ const factionDetails = {
     icon: <Code className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 mb-2 text-blue-400 icon-glow" />,
     borderColorClass: "border-blue-500",
     selectedRingClass: "ring-2 ring-offset-2 ring-offset-background ring-blue-400 shadow-[0_0_15px_theme(colors.blue.400)]",
-    selectedBgClass: "bg-sky-500", // Test class
-    unselectedBgClass: "bg-gray-700", // Test class
+    selectedBgClass: "bg-blue-600/40", // Translucent blue overlay
     defaultTagline: "Information is Power. Decode the Network.",
     alignTagline: "Align with The Cyphers",
-    primaryColorClass: "text-blue-400", // For icon/text when not selected with strong BG
+    primaryColorClass: "text-blue-400",
   },
   Shadows: {
     icon: <ShieldQuestion className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 mb-2 text-red-400 icon-glow" />,
     borderColorClass: "border-red-500",
     selectedRingClass: "ring-2 ring-offset-2 ring-offset-background ring-red-400 shadow-[0_0_15px_theme(colors.red.400)]",
-    selectedBgClass: "bg-rose-500", // Test class
-    unselectedBgClass: "bg-gray-700", // Test class
+    selectedBgClass: "bg-red-600/40", // Translucent red overlay
     defaultTagline: "Control the Flow. Infiltrate and Disrupt.",
     alignTagline: "Align with The Shadows",
     primaryColorClass: "text-red-400",
@@ -43,7 +40,7 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
     openTODWindow,
     isTODWindowOpen: contextIsTODWindowOpen,
     setOnboardingStep,
-    faction: globalAppContextFaction, // Read global faction for logging
+    faction: globalAppContextFaction,
   } = useAppContext();
 
   const [selectedFaction, setSelectedFaction] = useState<Faction | null>(null);
@@ -54,7 +51,7 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
     if (factionName === 'Observer') return;
     console.log('FactionChoiceScreen: handleFactionSelect. New selectedFaction will be:', factionName);
     setSelectedFaction(prev => prev === factionName ? null : factionName);
-    // Global theme is NOT changed here. ThemeUpdater handles it after AppContext.faction is set.
+    // Global theme change is handled by ThemeUpdater after AppContext.faction is set.
   };
 
   const handleConfirmFaction = (factionToConfirm: Faction | null) => {
@@ -64,7 +61,7 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
       return;
     }
 
-    setAppContextFaction(factionToConfirm); // This will trigger ThemeUpdater via AppContext
+    setAppContextFaction(factionToConfirm);
     console.log(`Faction ${factionToConfirm} confirmed. Opening Codename Input...`);
     openTODWindow("Agent Codename", <CodenameInput />);
     // setOnboardingStep is handled by CodenameInput after successful submission
@@ -73,7 +70,7 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
   const handleProceedAsObserver = () => {
     console.log("Proceeding as Observer");
     setAppContextFaction('Observer');
-    setOnboardingStep('tod');
+    setOnboardingStep('tod'); // Directly to TOD for observer
   };
 
   return (
@@ -89,18 +86,14 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
           const details = factionDetails[factionName];
           const isSelected = selectedFaction === factionName;
 
-          let tileBgClass = details.unselectedBgClass;
-          if (isSelected) {
-            tileBgClass = details.selectedBgClass;
-          }
           // Log the applied background class for debugging
-          console.log(`Rendering tile for ${factionName} isSelected: ${isSelected} Applied BG Class should be: ${tileBgClass}`);
-
+          console.log(`Rendering tile for ${factionName} isSelected: ${isSelected} Applied BG Class should be: ${isSelected ? details.selectedBgClass : 'holographic-panel (default)' }`);
 
           const tileClasses = cn(
+            "holographic-panel", // Base panel styling
             "transition-all duration-300 cursor-pointer flex flex-col h-full rounded-lg p-3 sm:p-4",
-            tileBgClass, // Apply the determined background class (e.g., bg-gray-700 or bg-sky-500)
-            isSelected ? details.selectedRingClass : details.borderColorClass
+            isSelected ? details.selectedRingClass : details.borderColorClass, // Ring or border
+            isSelected && details.selectedBgClass // Conditional background overlay
           );
 
           return (
@@ -154,3 +147,5 @@ export function FactionChoiceScreen({ setShowAuthPrompt }: FactionChoiceScreenPr
     </HolographicPanel>
   );
 }
+
+    

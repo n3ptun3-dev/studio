@@ -34,17 +34,19 @@ export default function HomePage() {
     todWindowTitle,
     todWindowContent,
     closeTODWindow,
+    // themeVersion: appContextThemeVersion // Get themeVersion via AppContext
    } = useAppContext();
-  const { theme: currentTheme, themeVersion } = useTheme(); // currentTheme is the string like 'terminal-green'
+  const { theme: currentTheme, themeVersion } = useTheme(); // themeVersion from ThemeContext is authoritative for actual theme changes
 
   console.log('HomePage rendering, isTODWindowOpen:', isTODWindowOpen);
   console.log('HomePage rendering. AppContext faction for TODWindow key:', faction);
+  console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key:', themeVersion);
 
 
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const todContainerRef = useRef<HTMLDivElement>(null);
   const [parallaxOffset, setParallaxOffset] = useState(0);
-  const [isClientMounted, setIsClientMounted] = useState(false); // Renamed from isMounted
+  const [isClientMounted, setIsClientMounted] = useState(false);
   const initialScrollSetRef = useRef(false);
   const [playBootAnimation, setPlayBootAnimation] = useState(false);
 
@@ -56,13 +58,12 @@ export default function HomePage() {
     if (isAuthenticated && onboardingStep !== 'tod' && onboardingStep !== 'fingerprint') {
       setOnboardingStep('fingerprint');
     }
-    if (onboardingStep === 'tod' && !playBootAnimation && isClientMounted) { // Check isClientMounted
+    if (onboardingStep === 'tod' && !playBootAnimation && isClientMounted) {
       setTimeout(() => setPlayBootAnimation(true), 100);
     }
   }, [isAuthenticated, onboardingStep, setOnboardingStep, playBootAnimation, isClientMounted]);
 
    useEffect(() => {
-    // Only run if TOD is active AND client is mounted AND App is not loading
     if (onboardingStep !== 'tod' || !isClientMounted || isAppLoading) return;
 
     setIsLoading(true);
@@ -80,8 +81,8 @@ export default function HomePage() {
         playerName: playerSpyName || "Agent",
         faction: faction,
         elintReserves: playerStats.elintReserves,
-        networkActivity: "Medium", // Placeholder
-        vaultDefenses: "Holding",  // Placeholder
+        networkActivity: "Medium", 
+        vaultDefenses: "Holding",
       };
       generateWelcomeMessage(welcomeInput)
         .then(response => {
@@ -102,7 +103,7 @@ export default function HomePage() {
     <ControlCenterSection key="control-center-actual" parallaxOffset={parallaxOffset} />,
     <ScannerSection key="scanner-actual" parallaxOffset={parallaxOffset} />,
     <EquipmentLockerSection key="equipment-locker-actual" parallaxOffset={parallaxOffset} />,
-    <VaultSection key="vault-actual" parallaxOffset={parallaxOffset} />, 
+    <VaultSection key="vault-actual" parallaxOffset={parallaxOffset} />,
     <AgentSection key="agent-clone-end" parallaxOffset={parallaxOffset} />,
   ], [parallaxOffset]);
 
@@ -116,13 +117,12 @@ export default function HomePage() {
 
       setParallaxOffset(currentScrollLeft);
 
-      const numActualSections = sectionComponents.length - 2; 
       const maxPossibleScrollLeft = (sectionComponents.length - 1) * clientWidth;
 
-      if (currentScrollLeft <= 5) { 
+      if (currentScrollLeft <= 5) {
          todContainerRef.current.scrollLeft = (sectionComponents.length - 2) * clientWidth;
       }
-      else if (currentScrollLeft >= maxPossibleScrollLeft - 5) { 
+      else if (currentScrollLeft >= maxPossibleScrollLeft - 5) {
         todContainerRef.current.scrollLeft = clientWidth;
       }
     }
@@ -139,14 +139,14 @@ export default function HomePage() {
           container.scrollLeft = initialScrollPosition;
           setParallaxOffset(initialScrollPosition);
           console.log("Initial scroll set to:", initialScrollPosition);
-          initialScrollSetRef.current = true; 
+          initialScrollSetRef.current = true;
         } else if (container.clientWidth === 0 && !initialScrollSetRef.current) {
             requestAnimationFrame(setInitialScroll);
         }
       };
 
       if (!initialScrollSetRef.current) {
-        requestAnimationFrame(setInitialScroll); 
+        requestAnimationFrame(setInitialScroll);
       }
 
       container.addEventListener('scroll', handleScroll, { passive: true });
@@ -159,7 +159,6 @@ export default function HomePage() {
   }, [onboardingStep, isAppLoading, isClientMounted, handleScroll]);
 
 
-  // Render null or a very minimal skeleton during server render / pre-hydration.
   if (!isClientMounted) {
     return (
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6">
@@ -169,21 +168,24 @@ export default function HomePage() {
     );
   }
 
-  // Show global app loading if AppContext is still loading and we're not yet in the TOD state.
   if (isAppLoading && onboardingStep !== 'tod') {
       return (
         <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6">
           <ParallaxBackground parallaxOffset={0} />
           <div className="animate-pulse text-2xl font-orbitron holographic-text">LOADING INTERFACE...</div>
-          {/* TODWindow might be needed here if an error during loading opens it, ensure key is unique */}
-           <TODWindow key={`${faction}-${themeVersion}-loading-${isTODWindowOpen}`} isOpen={isTODWindowOpen} onClose={closeTODWindow} title={todWindowTitle}>
+           <TODWindow
+            key={`${faction}-${themeVersion}-loading-${isTODWindowOpen}`}
+            isOpen={isTODWindowOpen}
+            onClose={closeTODWindow}
+            title={todWindowTitle}
+            themeVersion={themeVersion}
+          >
             {todWindowContent}
           </TODWindow>
         </main>
       );
   }
 
-  // Render onboarding steps if not yet in TOD state.
   if (onboardingStep !== 'tod') {
     return (
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6">
@@ -195,15 +197,22 @@ export default function HomePage() {
           <div className="animate-pulse text-2xl font-orbitron holographic-text">LOADING NEXT STEP...</div>
         )}
         {showAuthPrompt && <AuthPromptModal onClose={() => setShowAuthPrompt(false)} />}
-        <TODWindow key={`${faction}-${themeVersion}-${onboardingStep}-${isTODWindowOpen}`} isOpen={isTODWindowOpen} onClose={closeTODWindow} title={todWindowTitle}>
+        <TODWindow
+          key={`${faction}-${themeVersion}-onboarding-${onboardingStep}-${isTODWindowOpen}`}
+          isOpen={isTODWindowOpen}
+          onClose={closeTODWindow}
+          title={todWindowTitle}
+          themeVersion={themeVersion}
+        >
           {todWindowContent}
         </TODWindow>
       </main>
     );
   }
 
-  // This is the main view for the TOD itself
-  // console.log('HomePage rendering. Current Theme for TODWindow key:', currentTheme);
+  // Main TOD view
+  console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key:', themeVersion);
+  console.log('HomePage rendering. AppContext faction for TODWindow key:', faction);
   return (
     <main className="relative h-screen w-screen">
       <ParallaxBackground parallaxOffset={parallaxOffset} />
@@ -212,18 +221,18 @@ export default function HomePage() {
         className="parallax-layer z-[5] opacity-20"
         style={{
           transform: `translateX(-${parallaxOffset * 0.5}px)`,
-          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`, 
+          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`,
           backgroundImage: `
             repeating-linear-gradient(
               45deg,
-              hsl(var(--accent-hsl) / 0.2), 
+              hsl(var(--accent-hsl) / 0.2),
               hsl(var(--accent-hsl) / 0.2) 1px,
               transparent 1px,
               transparent 60px
             ),
             repeating-linear-gradient(
               -45deg,
-              hsl(var(--accent-hsl) / 0.2), 
+              hsl(var(--accent-hsl) / 0.2),
               hsl(var(--accent-hsl) / 0.2) 1px,
               transparent 1px,
               transparent 60px
@@ -240,12 +249,12 @@ export default function HomePage() {
             playBootAnimation && "animate-slide-up-from-bottom"
         )}
         style={{
-          WebkitOverflowScrolling: 'touch', 
+          WebkitOverflowScrolling: 'touch',
         }}
       >
-        {sectionComponents.map((SectionComponentInstance, index) => (
+        {sectionComponents.map((SectionComponentInstance) => (
           <div
-            key={SectionComponentInstance.key || `tod-section-${index}`}
+            key={SectionComponentInstance.key || `tod-section-${SectionComponentInstance.type.name}-${Math.random()}`}
             className="tod-section"
           >
             {SectionComponentInstance}
@@ -253,9 +262,17 @@ export default function HomePage() {
         ))}
       </div>
 
-      <TODWindow key={`${faction}-${themeVersion}-tod-${isTODWindowOpen}`} isOpen={isTODWindowOpen} onClose={closeTODWindow} title={todWindowTitle}>
+      <TODWindow
+        key={`${faction}-${themeVersion}-tod-${isTODWindowOpen}`}
+        isOpen={isTODWindowOpen}
+        onClose={closeTODWindow}
+        title={todWindowTitle}
+        themeVersion={themeVersion}
+      >
         {todWindowContent}
       </TODWindow>
     </main>
   );
 }
+
+    

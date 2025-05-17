@@ -2,7 +2,9 @@
 "use client";
 
 import type { ReactNode } from 'react';
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import type { Theme } from './ThemeContext'; // Assuming Theme is exported from ThemeContext
+import { useTheme } from './ThemeContext'; // To get themeVersion
 
 export type Faction = 'Cyphers' | 'Shadows' | 'Observer';
 export type OnboardingStep = 'welcome' | 'factionChoice' | 'authPrompt' | 'fingerprint' | 'tod';
@@ -50,6 +52,7 @@ interface AppContextType {
   todWindowContent: ReactNode | null;
   openTODWindow: (title: string, content: ReactNode) => void;
   closeTODWindow: () => void;
+  themeVersion: number; // Added for TODWindow re-keying
 }
 
 export interface GameMessage {
@@ -87,7 +90,7 @@ function generateFactionTeamCode(seedDate: Date, faction: Faction): string {
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [_faction, _setFaction] = useState<Faction>('Observer');
+  const [_faction, _setFactionInternal] = useState<Faction>('Observer');
   const [_isAuthenticated, _setIsAuthenticated] = useState(false);
   const [_playerSpyName, _setPlayerSpyName] = useState<string | null>(null);
   const [_playerPiName, _setPlayerPiName] = useState<string | null>(null);
@@ -103,12 +106,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [_dailyTeamCode, _setDailyTeamCode] = useState<Record<Faction, string>>({
     Cyphers: '', Shadows: '', Observer: ''
   });
-  const [_isLoading, _setIsLoading] = useState(true);
+  const [_isLoading, _setIsLoading] = useState(true); // Start true until initial setup is done
   const [_messages, _setMessages] = useState<GameMessage[]>([]);
 
   const [_isTODWindowOpen, _setIsTODWindowOpen] = useState(false);
   const [_todWindowTitle, _setTODWindowTitle] = useState('');
   const [_todWindowContent, _setTODWindowContent] = useState<ReactNode | null>(null);
+
+  const { themeVersion } = useTheme(); // Get themeVersion from ThemeContext
 
   useEffect(() => {
     const inPiBrowser = navigator.userAgent.includes("PiBrowser");
@@ -120,23 +125,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
       Shadows: generateFactionTeamCode(today, 'Shadows'),
       Observer: generateFactionTeamCode(today, 'Observer'),
     });
-    _setIsLoading(false); 
-  }, []); 
+    _setIsLoading(false);
+  }, []);
 
   const setFaction = useCallback((newFaction: Faction) => {
     console.log('[AppContext] setFaction called with:', newFaction);
-    _setFaction(newFaction);
-  }, [_setFaction]);
+    _setFactionInternal(newFaction);
+  }, [_setFactionInternal]);
 
   useEffect(() => {
     console.log('[AppContext] INTERNAL faction state changed to:', _faction);
   }, [_faction]);
 
-  const setIsAuthenticated = useCallback((auth: boolean) => _setIsAuthenticated(auth), [_setIsAuthenticated]);
-  const setPlayerSpyName = useCallback((name: string | null) => _setPlayerSpyName(name), [_setPlayerSpyName]);
-  const setPlayerPiName = useCallback((name: string | null) => _setPlayerPiName(name), [_setPlayerPiName]);
-  const setOnboardingStep = useCallback((step: OnboardingStep) => _setOnboardingStep(step), [_setOnboardingStep]);
-  const setIsLoading = useCallback((loading: boolean) => _setIsLoading(loading), [_setIsLoading]);
+
+  const setIsAuthenticated = useCallback((auth: boolean) => _setIsAuthenticated(auth), []);
+  const setPlayerSpyName = useCallback((name: string | null) => _setPlayerSpyName(name), []);
+  const setPlayerPiName = useCallback((name: string | null) => _setPlayerPiName(name), []);
+  const setOnboardingStep = useCallback((step: OnboardingStep) => _setOnboardingStep(step), []);
+  const setIsLoading = useCallback((loading: boolean) => _setIsLoading(loading), []);
 
   const addMessage = useCallback((message: Omit<GameMessage, 'id' | 'timestamp'>) => {
     const newMessage: GameMessage = {
@@ -149,16 +155,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const pinnedMessages = prev.filter(m => m.isPinned);
       return [...pinnedMessages, ...newMessagesList.slice(0, 50 - pinnedMessages.length)];
     });
-  }, [_setMessages]);
+  }, []);
 
   const updatePlayerStats = useCallback((newStats: Partial<PlayerStats>) => {
     _setPlayerStats(prevStats => ({ ...prevStats, ...newStats }));
-  }, [_setPlayerStats]);
+  }, []);
 
   const addXp = useCallback((amount: number) => {
     _setPlayerStats(prevStats => ({ ...prevStats, xp: prevStats.xp + amount }));
     addMessage({ text: `+${amount} XP`, type: 'notification'});
-  }, [_setPlayerStats, addMessage]);
+  }, [addMessage]);
 
   const openTODWindow = useCallback((title: string, content: ReactNode) => {
     console.log('[AppContext] openTODWindow called. Title:', title, "Content:", content);
@@ -166,16 +172,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     _setTODWindowContent(content);
     console.log('[AppContext] Setting isTODWindowOpen to true.');
     _setIsTODWindowOpen(true);
-  }, [_setTODWindowTitle, _setTODWindowContent, _setIsTODWindowOpen]);
+  }, []);
 
   const closeTODWindow = useCallback(() => {
     _setIsTODWindowOpen(false);
-    _setTODWindowContent(null); 
-  }, [_setIsTODWindowOpen, _setTODWindowContent]);
+    _setTODWindowContent(null);
+  }, []);
 
-  useEffect(() => {
+   useEffect(() => {
     console.log('[AppContext] isTODWindowOpen state changed to:', _isTODWindowOpen);
   }, [_isTODWindowOpen]);
+
 
   const contextValue = useMemo(() => ({
     faction: _faction, setFaction,
@@ -189,7 +196,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     isLoading: _isLoading, setIsLoading,
     messages: _messages, addMessage,
     isTODWindowOpen: _isTODWindowOpen, todWindowTitle: _todWindowTitle, todWindowContent: _todWindowContent,
-    openTODWindow, closeTODWindow
+    openTODWindow, closeTODWindow,
+    themeVersion // Pass themeVersion through AppContext
   }), [
     _faction, setFaction,
     _isAuthenticated, setIsAuthenticated,
@@ -202,7 +210,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     _isLoading, setIsLoading,
     _messages, addMessage,
     _isTODWindowOpen, _todWindowTitle, _todWindowContent,
-    openTODWindow, closeTODWindow
+    openTODWindow, closeTODWindow,
+    themeVersion // Add themeVersion to dependency array
   ]);
 
   return (
@@ -219,3 +228,5 @@ export function useAppContext() {
   }
   return context;
 }
+
+    
