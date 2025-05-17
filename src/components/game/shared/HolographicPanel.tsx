@@ -1,5 +1,6 @@
 
 import type { HTMLAttributes, ReactNode } from 'react';
+import React from 'react'; // Ensure React is imported for JSX
 import { cn } from "@/lib/utils";
 import type { Theme } from '@/contexts/ThemeContext';
 
@@ -15,10 +16,10 @@ export function HolographicPanel({ children, className, glassmorphism = false, e
   return (
     <div
       className={cn(
-        "holographic-panel p-4 md:p-6",
+        "holographic-panel p-4 md:p-6", // Base holographic-panel class
         glassmorphism && "bg-opacity-30 backdrop-blur-md border-opacity-50",
-        themeClass,
-        className
+        themeClass, // Apply explicit theme class
+        className // Allow additional classes to be passed
       )}
       {...props}
     >
@@ -36,9 +37,9 @@ export function HolographicButton({ children, className, explicitTheme, ...props
   return (
     <button
       className={cn(
-        "holographic-button",
-        themeClass,
-        className
+        "holographic-button", // Base holographic-button class
+        themeClass, // Apply explicit theme class
+        className // Allow additional classes
       )}
       {...props}
     >
@@ -56,9 +57,9 @@ export function HolographicInput({ className, explicitTheme, ...props }: Hologra
   return (
     <input
       className={cn(
-        "holographic-input",
-        themeClass,
-        className
+        "holographic-input", // Base holographic-input class
+        themeClass, // Apply explicit theme class
+        className // Allow additional classes
       )}
       {...props}
     />

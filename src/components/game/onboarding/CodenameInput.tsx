@@ -2,21 +2,21 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useAppContext, type Faction } from '@/contexts/AppContext'; // Added Faction type import
+import { useAppContext } from '@/contexts/AppContext';
+import type { Theme } from '@/contexts/ThemeContext';
 import { HolographicInput, HolographicButton } from '@/components/game/shared/HolographicPanel';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
-import type { Theme } from '@/contexts/ThemeContext'; // Added Theme type import
 
 interface CodenameInputProps {
-  explicitTheme?: Theme; // Prop to receive the theme
+  explicitTheme?: Theme;
 }
 
 export function CodenameInput({ explicitTheme }: CodenameInputProps) {
-  const { 
-    setPlayerSpyName, 
-    setOnboardingStep, 
-    closeTODWindow, 
+  const {
+    setPlayerSpyName,
+    setOnboardingStep,
+    closeTODWindow,
     faction,
     onboardingStep
   } = useAppContext();
@@ -29,8 +29,7 @@ export function CodenameInput({ explicitTheme }: CodenameInputProps) {
       toast({ title: "Observation Protocol", description: "Observers do not set codenames. System engaging.", variant: "default" });
       closeTODWindow();
       if (onboardingStep !== 'tod' && onboardingStep !== 'fingerprint') {
-        // Ensure observer flow doesn't get stuck if they land here out of order
-        setOnboardingStep('tod'); 
+        setOnboardingStep('tod');
       }
     }
   }, [faction, closeTODWindow, setOnboardingStep, toast, onboardingStep]);
@@ -47,21 +46,10 @@ export function CodenameInput({ explicitTheme }: CodenameInputProps) {
       setError("Codename must be between 3 and 20 characters.");
       return;
     }
-    if (!/^[a-zA-Z0-9]+(?: [a-zA-Z0-9]+)*$/.test(trimmedCodename)) { // Allow single spaces
+    if (!/^[a-zA-Z0-9]+(?: [a-zA-Z0-9]+)*$/.test(trimmedCodename)) {
        setError("Codename can only contain letters, numbers, and single spaces between words.");
        return;
     }
-    
-    // const offensiveCheck = filterOffensiveWords(trimmedCodename);
-    // if (!offensiveCheck) {
-    //   setError("This codename is not permitted. Please choose another.");
-    //   toast({
-    //     variant: "destructive",
-    //     title: "Invalid Codename",
-    //     description: "The chosen codename is not allowed. Please try a different one.",
-    //   });
-    //   return;
-    // }
 
     setPlayerSpyName(trimmedCodename);
     toast({
@@ -69,16 +57,17 @@ export function CodenameInput({ explicitTheme }: CodenameInputProps) {
         description: `Welcome, Agent ${trimmedCodename}. Prepare for deployment.`,
     });
     closeTODWindow();
-    setOnboardingStep('fingerprint'); 
+    // This will trigger FingerprintScannerScreen
+    setOnboardingStep('fingerprint');
   };
-  
+
   if (faction === 'Observer') {
-    return null; 
+    return null;
   }
 
   return (
     <div className="flex flex-col items-center justify-center p-4 space-y-4 font-rajdhani">
-      <p className="text-muted-foreground text-center text-base leading-relaxed mb-2">
+      <p className="text-muted-foreground text-center text-base leading-relaxed mb-2 holographic-text">
         Agent, your operational codename is critical for field identification.
         Choose wisely. It cannot be changed once registered with HQ.
       </p>
