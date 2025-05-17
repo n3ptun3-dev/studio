@@ -26,57 +26,83 @@ export function TODWindow({
   size = 'default',
   explicitTheme,
   themeVersion,
-  showCloseButton = true, // Default to true if not provided by props
+  showCloseButton = true,
 }: TODWindowProps) {
-  const [isAnimating, setIsAnimating] = useState(false);
   const [isVisible, setIsVisible] = useState(isOpen);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  // Log props on every render
+  console.log(
+    `[TODWindow] Render/Props Update. isOpen: ${isOpen}, Title: "${title}", explicitTheme: ${explicitTheme}, themeVersion: ${themeVersion}, showCloseButton: ${showCloseButton}, isVisible: ${isVisible}, isAnimating: ${isAnimating}`
+  );
 
   useEffect(() => {
+    console.log(`[TODWindow] isOpen Effect. New isOpen: ${isOpen}, Current isVisible: ${isVisible}`);
     if (isOpen) {
-      setIsVisible(true);
-      setIsAnimating(true);
+      if (!isVisible) { // Only set visible and start animation if it wasn't already
+        setIsVisible(true);
+        console.log(`[TODWindow] isOpen Effect: Set isVisible to true.`);
+        requestAnimationFrame(() => {
+          setIsAnimating(true);
+          console.log(`[TODWindow] isOpen Effect: Set isAnimating to true (starting enter animation).`);
+        });
+      } else if (!isAnimating && isVisible) {
+        // If it's already visible and not animating (e.g. content changed while open)
+        // no animation state change needed unless forced by other logic
+         console.log(`[TODWindow] isOpen Effect: Already visible and not animating. isOpen is true.`);
+      }
     } else {
-      setIsAnimating(true); 
-      // Don't set isVisible to false immediately, let animation play out
+      // isOpen is false
+      if (isVisible || isAnimating) { // Only start close animation if it was visible or animating open
+        setIsAnimating(true); // Start close animation
+        console.log(`[TODWindow] isOpen Effect: Set isAnimating to true (starting close animation).`);
+      }
+      // isVisible will be set to false in handleAnimationEnd
     }
-  }, [isOpen]);
+  }, [isOpen]); // Removed isVisible from deps to avoid loop if isOpen causes isVisible to change
 
   const handleAnimationEnd = () => {
+    console.log(`[TODWindow] Animation ended. Current isOpen: ${isOpen}, Current isAnimating: ${isAnimating}`);
     setIsAnimating(false);
     if (!isOpen) {
       setIsVisible(false);
+      console.log(`[TODWindow] Animation ended: Set isVisible to false.`);
+    } else {
+      console.log(`[TODWindow] Animation ended: Window is open, isVisible remains true.`);
     }
   };
   
   const effectiveTheme = explicitTheme || 'terminal-green';
-  console.log('[TODWindow] Component function executing. isOpen:', isOpen, "isVisible:", isVisible, "isAnimating:", isAnimating, "Title:", title, "Explicit Theme:", explicitTheme, "ShowCloseButton:", showCloseButton);
 
-  if (!isVisible && !isAnimating) { // Only return null if not visible AND not animating
-    console.log('[TODWindow] Rendering null because !isVisible and !isAnimating.');
-    return null;
+  // More robust check for rendering null
+  if (!isOpen && !isAnimating && !isVisible) {
+     console.log(`[TODWindow] Rendering null: isOpen=${isOpen}, isAnimating=${isAnimating}, isVisible=${isVisible}`);
+     return null;
   }
+
+  const overlayClasses = cn(
+    "fixed inset-0 z-[9999] flex items-center justify-center transition-opacity duration-200",
+    (isOpen && isVisible) ? "opacity-100" : "opacity-0",
+    (!isOpen && !isAnimating) && "pointer-events-none" // Make non-interactive if fully closed
+  );
+  
+  console.log(`[TODWindow] Applying overlayClasses: "${overlayClasses}"`);
   
   return (
-    // Overlay: fades in/out
     <div
-      className={cn(
-        "fixed inset-0 z-[9999] flex items-center justify-center transition-opacity duration-200",
-        isOpen && isVisible ? "opacity-100" : "opacity-0", // Fade based on isOpen & isVisible
-        !isVisible && !isAnimating && "pointer-events-none" // Allow clicks through when fully hidden
-      )}
+      className={overlayClasses}
       onClick={onClose} 
+      aria-hidden={!isOpen}
     >
-      {/* Content Panel: slides in/out, has the backdrop blur & themed background */}
       <HolographicPanel
-        key={`${effectiveTheme}-${themeVersion}`} // Re-key HolographicPanel on theme or version change
+        key={`${effectiveTheme}-${themeVersion}-window-panel`} // Ensure panel re-keys with theme and version
         className={cn(
           "relative m-4 flex flex-col z-[10000]",
           "w-[calc(100vw-80px)] max-w-[600px]", 
           "h-[calc(100vh-100px)] max-h-[600px]",
-          // Apply overlay styles directly to the sliding panel
-          "bg-black/70 backdrop-blur-sm", 
-          // Animations
-          (isOpen && isVisible) ? "animate-slide-in-right-tod" : (!isOpen && isVisible) ? "animate-slide-out-right-tod" : ""
+          "bg-background/70 backdrop-blur-sm",
+          (isOpen && isVisible) ? "animate-slide-in-right-tod" : (!isOpen && isAnimating) ? "animate-slide-out-right-tod" : "",
+          (!isVisible && !isAnimating) && "hidden" // Effectively hide if not visible and not animating
         )}
         onClick={(e) => e.stopPropagation()} 
         explicitTheme={effectiveTheme} 
@@ -90,10 +116,10 @@ export function TODWindow({
           <h2 className={cn("text-xl font-orbitron text-foreground holographic-text")}>
             {title}
           </h2>
-          {showCloseButton && ( // Correctly use the prop
+          {showCloseButton && (
             <button
               onClick={(e) => {
-                e.stopPropagation(); // Prevent overlay click
+                e.stopPropagation();
                 onClose();
               }}
               className={cn("p-1 text-muted-foreground hover:text-foreground")}
@@ -111,5 +137,3 @@ export function TODWindow({
     </div>
   );
 }
-
-    
