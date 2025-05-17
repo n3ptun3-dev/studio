@@ -3,12 +3,13 @@
 
 import { useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { useTheme, type Theme } from '@/contexts/ThemeContext'; 
+import { useTheme, type Theme } from '@/contexts/ThemeContext';
 
 export function ThemeUpdater() {
   const { faction: appContextFaction } = useAppContext();
-  const { theme: currentThemeInstance, setTheme } = useTheme();
+  const { theme: currentThemeInstance, setTheme } = useTheme(); // currentThemeInstance is from ThemeContext
 
+  // Debug logs
   console.log('[ThemeUpdater] Rendering. AppContext Faction:', appContextFaction, "Current ThemeContext Theme:", currentThemeInstance);
 
   useEffect(() => {
@@ -26,7 +27,7 @@ export function ThemeUpdater() {
         break;
       case 'Observer':
       default:
-        targetThemeKey = 'terminal-green'; 
+        targetThemeKey = 'terminal-green';
         break;
     }
 
@@ -40,7 +41,10 @@ export function ThemeUpdater() {
         `[ThemeUpdater] No theme change needed. Target: ${targetThemeKey} already matches Current: ${currentThemeInstance}. AppContext Faction: ${appContextFaction}`
       );
     }
-  }, [appContextFaction, currentThemeInstance, setTheme]); 
+  // Important: Only run this effect if appContextFaction (the source of truth for the global theme) changes,
+  // or if setTheme function reference changes (which it shouldn't often).
+  // currentThemeInstance should NOT be a dependency here, as this effect *causes* currentThemeInstance to change.
+  }, [appContextFaction, setTheme, currentThemeInstance]); // currentThemeInstance is added back to ensure it reacts if the theme was changed by another source
 
   return null;
 }

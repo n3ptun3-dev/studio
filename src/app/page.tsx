@@ -3,7 +3,7 @@
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useAppContext, type Faction } from '@/contexts/AppContext';
-import { useTheme, type Theme } from '@/contexts/ThemeContext';
+import { useTheme, type Theme } from '@/contexts/ThemeContext'; // Import useTheme
 import { WelcomeScreen } from '@/components/game/onboarding/WelcomeScreen';
 import { FactionChoiceScreen } from '@/components/game/onboarding/FactionChoiceScreen';
 import { AuthPromptModal } from '@/components/game/onboarding/AuthPromptModal';
@@ -36,8 +36,9 @@ export default function HomePage() {
     todWindowContent,
     closeTODWindow,
    } = useAppContext();
-  const { theme: currentTheme, themeVersion } = useTheme(); // ThemeContext theme
+  const { theme: currentTheme, themeVersion } = useTheme(); // Get currentTheme and themeVersion for TODWindow key
 
+  // Debug logs
   console.log('HomePage rendering, isTODWindowOpen:', isTODWindowOpen);
   console.log('HomePage rendering. AppContext faction for TODWindow key:', faction);
   console.log('HomePage rendering. Current ThemeContext theme for TODWindow key:', currentTheme);
@@ -96,17 +97,21 @@ export default function HomePage() {
         })
         .finally(() => setIsLoading(false));
     }
-  }, [onboardingStep, isClientMounted, isAppLoading, isTODWindowOpen, playerSpyName, faction, playerStats, addMessage, setIsLoading]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onboardingStep, isClientMounted, playerSpyName, faction, playerStats.xp, playerStats.elintReserves, addMessage, setIsLoading]); // isAppLoading, isTODWindowOpen removed to avoid potential loops if they toggle frequently
 
 
   const sectionComponents = React.useMemo(() => [
-    <VaultSection key="vault-clone-start" parallaxOffset={parallaxOffset} />,
-    <AgentSection key="agent-actual" parallaxOffset={parallaxOffset} />,
+    // Start with a clone of the last "real" section for smooth looping from right to left
+    <AgentSection key="agent-clone-start" parallaxOffset={parallaxOffset} />,
     <ControlCenterSection key="control-center-actual" parallaxOffset={parallaxOffset} />,
     <ScannerSection key="scanner-actual" parallaxOffset={parallaxOffset} />,
     <EquipmentLockerSection key="equipment-locker-actual" parallaxOffset={parallaxOffset} />,
     <VaultSection key="vault-actual" parallaxOffset={parallaxOffset} />,
-    <AgentSection key="agent-clone-end" parallaxOffset={parallaxOffset} />,
+    // The first "real" section, which is AgentSection after VaultSection in the loop
+    <AgentSection key="agent-actual" parallaxOffset={parallaxOffset} />,
+    // End with a clone of the second "real" section for smooth looping from left to right
+    <ControlCenterSection key="control-center-clone-end" parallaxOffset={parallaxOffset} />,
   ], [parallaxOffset]);
 
 
@@ -115,20 +120,21 @@ export default function HomePage() {
       const currentScrollLeft = todContainerRef.current.scrollLeft;
       const clientWidth = todContainerRef.current.clientWidth;
 
-      if (clientWidth === 0) return;
+      if (clientWidth === 0) return; // Avoid division by zero if not rendered yet
 
       setParallaxOffset(currentScrollLeft);
 
       const maxPossibleScrollLeft = (sectionComponents.length - 1) * clientWidth;
-
-      if (currentScrollLeft <= 5) { 
+      
+      // Adjusted conditions for smoother looping
+      if (currentScrollLeft <= 5) { // If scrolled to the far left (into the first clone)
          todContainerRef.current.scrollLeft = (sectionComponents.length - 2) * clientWidth - 5;
       }
-      else if (currentScrollLeft >= maxPossibleScrollLeft - 5) { 
+      else if (currentScrollLeft >= maxPossibleScrollLeft - 5) { // If scrolled to the far right (into the last clone)
         todContainerRef.current.scrollLeft = clientWidth + 5;
       }
     }
-  }, [sectionComponents.length]); 
+  }, [sectionComponents.length]); // parallaxOffset removed as it was causing re-runs of this effect when it changed
 
   useEffect(() => {
     const container = todContainerRef.current;
@@ -137,12 +143,24 @@ export default function HomePage() {
       const setInitialScroll = () => {
         if (container.clientWidth > 0 && !initialScrollSetRef.current) {
           const sectionWidth = container.clientWidth;
-          const initialScrollPosition = sectionWidth; 
+          // Start on the first "real" AgentSection, which is the second item if Vault is cloned at start,
+          // or more generally, the (N-1)th visual section before the final clone.
+          // Given the new order: VaultClone, AgentActual, CCActual, ScannerActual, EquipActual, VaultActual, AgentCloneEnd
+          // We want to start on AgentActual, which is the second item (index 1).
+          // So, if sectionComponents has length L, the actual content starts at index 1 and ends at L-2.
+          // The "Agent" section is the first *actual* section after the initial clone.
+          // If sections are [VaultCloneStart, AgentActual, CCActual, ScannerActual, EquipActual, VaultActual, AgentCloneEnd] (length 7)
+          // VaultActual (original end) is at index 5.
+          // AgentActual (original start) is at index 1.
+          // We want to start at AgentActual (index 1).
+          const initialScrollPosition = sectionWidth * 1; // Start at the first *actual* Agent section
           container.scrollLeft = initialScrollPosition;
           setParallaxOffset(initialScrollPosition);
           console.log("Initial scroll set to:", initialScrollPosition);
           initialScrollSetRef.current = true;
         } else if (container.clientWidth === 0 && !initialScrollSetRef.current) {
+            // If clientWidth is 0, the container isn't rendered yet.
+            // Wait for the next frame to try again.
             requestAnimationFrame(setInitialScroll);
         }
       };
@@ -158,7 +176,7 @@ export default function HomePage() {
         }
       };
     }
-  }, [onboardingStep, isAppLoading, isClientMounted, handleScroll]);
+  }, [onboardingStep, isAppLoading, isClientMounted, handleScroll]); // Removed parallaxOffset, sectionComponents.length
 
 
   if (!isClientMounted) {
@@ -176,11 +194,11 @@ export default function HomePage() {
           <ParallaxBackground />
           <div className="animate-pulse text-2xl font-orbitron holographic-text">LOADING INTERFACE...</div>
            <TODWindow
-            key={`${faction}-${themeVersion}-loading-${isTODWindowOpen}`} 
+            key={`${faction}-${themeVersion}-loading-${isTODWindowOpen}`}
             isOpen={isTODWindowOpen}
             onClose={closeTODWindow}
             title={todWindowTitle}
-            explicitTheme={currentTheme} 
+            explicitTheme={currentTheme}
             themeVersion={themeVersion}
           >
             {todWindowContent}
@@ -203,18 +221,19 @@ export default function HomePage() {
           return <div className="animate-pulse text-2xl font-orbitron holographic-text">LOADING NEXT STEP...</div>;
       }
     };
+    // This main container handles padding and scrolling for onboarding screens
     return (
-      <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6 overflow-y-auto">
+      <main className="relative flex flex-col items-center justify-start min-h-screen bg-background text-foreground p-4 sm:p-6 overflow-y-auto">
         <ParallaxBackground />
         {renderOnboarding()}
         {showAuthPrompt && <AuthPromptModal onClose={() => setShowAuthPrompt(false)} />}
         <TODWindow
-          key={`${faction}-${themeVersion}-onboarding-${onboardingStep}-${isTODWindowOpen}`} 
+          key={`${faction}-${themeVersion}-onboarding-${onboardingStep}-${isTODWindowOpen}`}
           isOpen={isTODWindowOpen}
           onClose={closeTODWindow}
           title={todWindowTitle}
-          explicitTheme={currentTheme} 
-          themeVersion={themeVersion}
+          explicitTheme={currentTheme} // TODWindow needs the current theme
+          themeVersion={themeVersion}   // And themeVersion to re-key its internal panel
         >
           {todWindowContent}
         </TODWindow>
@@ -230,25 +249,25 @@ export default function HomePage() {
 
 
   return (
-    <main className="relative h-screen w-screen overflow-hidden"> 
-      <ParallaxBackground parallaxOffset={parallaxOffset} />
+    <main className="relative h-screen w-screen"> {/* Removed overflow-hidden from here */}
+      <ParallaxBackground /> {/* parallaxOffset removed from here */}
 
       <div
-        className="parallax-layer z-[5] opacity-20" 
+        className="parallax-layer z-[5] opacity-20"
         style={{
-          transform: `translateX(-${parallaxOffset * 0.5}px)`, 
-          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`, 
+          transform: `translateX(-${parallaxOffset * 0.5}px)`,
+          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`, // Ensure it's wide enough
           backgroundImage: `
             repeating-linear-gradient(
               45deg,
-              hsl(var(--accent-hsl) / 0.2), 
+              hsl(var(--accent-hsl) / 0.2),
               hsl(var(--accent-hsl) / 0.2) 1px,
               transparent 1px,
               transparent 60px
             ),
             repeating-linear-gradient(
               -45deg,
-              hsl(var(--accent-hsl) / 0.2), 
+              hsl(var(--accent-hsl) / 0.2),
               hsl(var(--accent-hsl) / 0.2) 1px,
               transparent 1px,
               transparent 60px
@@ -262,16 +281,18 @@ export default function HomePage() {
         ref={todContainerRef}
         className={cn(
             "tod-scroll-container absolute inset-0 z-10 scrollbar-hide",
-            playBootAnimation && "animate-slide-up-from-bottom" 
+            playBootAnimation && "animate-slide-up-from-bottom"
         )}
         style={{
-          WebkitOverflowScrolling: 'touch', 
+          WebkitOverflowScrolling: 'touch',
+          // scrollSnapType: 'x mandatory', // Removed for smoother scroll
         }}
       >
-        {sectionComponents.map((SectionComponentInstance) => (
+        {sectionComponents.map((SectionComponentInstance, index) => (
           <div
-            key={SectionComponentInstance.key || `tod-section-${SectionComponentInstance.type?.name || 'unknown'}-${Math.random()}`}
+            key={SectionComponentInstance.key || `tod-section-${index}`}
             className="tod-section"
+            // style={{ scrollSnapAlign: 'start' }} // Removed for smoother scroll
           >
             {SectionComponentInstance}
           </div>
@@ -279,12 +300,12 @@ export default function HomePage() {
       </div>
 
       <TODWindow
-        key={`${faction}-${themeVersion}-tod-${isTODWindowOpen}`} 
+        key={`${faction}-${themeVersion}-tod-${isTODWindowOpen}`} // Key includes faction and themeVersion
         isOpen={isTODWindowOpen}
         onClose={closeTODWindow}
         title={todWindowTitle}
-        explicitTheme={currentTheme}
-        themeVersion={themeVersion}
+        explicitTheme={currentTheme} // Pass the current theme
+        themeVersion={themeVersion} // Pass themeVersion to re-key internal HolographicPanel
       >
         {todWindowContent}
       </TODWindow>

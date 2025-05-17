@@ -15,21 +15,21 @@ interface FactionChoiceScreenProps {}
 const factionDetails = {
   Cyphers: {
     icon: <Code className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 mb-2 text-blue-400 icon-glow" />,
+    themeName: 'cyphers' as const,
     borderColorClass: "border-blue-500", // For selected state border
     selectedBgClass: "bg-blue-600/40", // For selected state background overlay
-    selectedRingClass: "ring-sky-400", // For selected state outer ring/glow
+    selectedRingClass: "ring-2 ring-sky-400", // For selected state outer ring/glow
     defaultTagline: "Information is Power. Decode the Network.",
     alignTagline: "Align with The Cyphers",
-    themeName: 'cyphers' as const,
   },
   Shadows: {
     icon: <ShieldQuestion className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 mb-2 text-red-400 icon-glow" />,
+    themeName: 'shadows' as const,
     borderColorClass: "border-red-500",
     selectedBgClass: "bg-red-600/40",
-    selectedRingClass: "ring-rose-400",
+    selectedRingClass: "ring-2 ring-rose-400",
     defaultTagline: "Control the Flow. Infiltrate and Disrupt.",
     alignTagline: "Align with The Shadows",
-    themeName: 'shadows' as const,
   }
 };
 
@@ -37,33 +37,33 @@ export function FactionChoiceScreen({}: FactionChoiceScreenProps) {
   const {
     setFaction: setAppContextFaction,
     openTODWindow,
-    isTODWindowOpen: contextIsTODWindowOpen, 
-    faction: globalAppContextFaction, 
+    isTODWindowOpen: contextIsTODWindowOpen,
+    faction: globalAppContextFaction,
     setOnboardingStep,
   } = useAppContext();
-  const { theme: currentTheme, setTheme } = useTheme();
-  
+  const { theme: currentTheme, setTheme } = useTheme(); // currentTheme is global
+
   const [selectedFaction, setSelectedFaction] = useState<Faction | null>(null);
 
-  console.log('FactionChoiceScreen rendering. Selected Faction:', selectedFaction, "isTODWindowOpen (from context):", contextIsTODWindowOpen, "Global App Faction:", globalAppContextFaction, "Current ThemeContext Theme:", currentTheme);
-  
+  // This effect changes the global theme when a tile is selected for preview.
   useEffect(() => {
     let targetTheme: Theme = 'terminal-green';
     if (selectedFaction && selectedFaction !== 'Observer') {
       targetTheme = selectedFaction === 'Cyphers' ? 'cyphers' : 'shadows';
     }
-    
-    console.log(`FactionChoiceScreen: Theme useEffect. Selected: ${selectedFaction}, Current Theme (from context): ${currentTheme}, Target Theme to set: ${targetTheme}`);
+    console.log(`FactionChoiceScreen: Theme useEffect. Selected: ${selectedFaction}, Current Global Theme (from context): ${currentTheme}, Target Global Theme to set: ${targetTheme}`);
     if (targetTheme !== currentTheme) {
-        console.log(`FactionChoiceScreen: Changing theme from ${currentTheme} to ${targetTheme}`);
+        console.log(`FactionChoiceScreen: Changing global theme from ${currentTheme} to ${targetTheme}`);
         setTheme(targetTheme);
     }
-  }, [selectedFaction, setTheme, currentTheme]); // currentTheme is needed to prevent unnecessary setTheme calls
+  }, [selectedFaction, currentTheme, setTheme]);
+
 
   const handleFactionSelect = (factionName: Faction) => {
-    if (factionName === 'Observer') return; 
+    if (factionName === 'Observer') return;
     console.log('FactionChoiceScreen: handleFactionSelect. New selectedFaction will be:', factionName);
-    setSelectedFaction(prev => prev === factionName ? null : factionName);
+    setSelectedFaction(prev => (prev === factionName ? null : factionName));
+    // Global theme change is handled by the useEffect above
   };
 
   const handleConfirmFaction = (factionToConfirm: Faction | null) => {
@@ -72,24 +72,24 @@ export function FactionChoiceScreen({}: FactionChoiceScreenProps) {
       return;
     }
     console.log('Confirm button for', factionToConfirm, 'CLICKED');
-    setAppContextFaction(factionToConfirm); 
+    setAppContextFaction(factionToConfirm); // This will trigger ThemeUpdater
     console.log(`Faction ${factionToConfirm} confirmed. Opening Codename Input...`);
-    // The theme of CodenameInput's TODWindow will be handled by the global theme set by ThemeUpdater
-    openTODWindow("Agent Codename", <CodenameInput />); 
+    openTODWindow("Agent Codename", <CodenameInput explicitTheme={factionToConfirm === 'Cyphers' ? 'cyphers' : 'shadows'} />);
   };
 
   const handleProceedAsObserver = () => {
     console.log("Proceeding as Observer");
-    setSelectedFaction('Observer'); // Visually indicate selection
-    setAppContextFaction('Observer'); 
+    setSelectedFaction('Observer'); // Visually indicate selection (though not strictly necessary for Observer)
+    setAppContextFaction('Observer'); // Set global faction to Observer
     setTheme('terminal-green'); // Ensure global theme is terminal-green
-    setOnboardingStep('tod'); 
+    setOnboardingStep('tod');
   };
-  
+
+  // The main HolographicPanel's theme will change due to the useEffect above.
   return (
-    <HolographicPanel 
+    <HolographicPanel
       className={cn(
-        "w-full max-w-2xl p-4 md:p-6 flex flex-col flex-grow h-0 overflow-hidden"
+        "w-full max-w-2xl p-4 md:p-6 flex flex-col flex-grow h-0 overflow-hidden" // h-0 with flex-grow
       )}
     >
       <h1 className="text-2xl sm:text-3xl md:text-4xl font-orbitron py-2 mb-2 sm:mb-4 text-center holographic-text flex-shrink-0">
@@ -100,18 +100,16 @@ export function FactionChoiceScreen({}: FactionChoiceScreenProps) {
         {(['Cyphers', 'Shadows'] as const).map((factionName) => {
           const details = factionDetails[factionName];
           const isSelected = selectedFaction === factionName;
-          
-          // Unselected tiles get their specific faction border color.
+
+          // Tiles get their own specific border color always.
           // Selected tiles enhance this with a background overlay and ring.
           const tileClasses = cn(
-            "holographic-panel", // Base panel style (will pick up current theme)
+            "holographic-panel", // Base panel style, will pick up current global theme for its base
             "transition-all duration-300 cursor-pointer flex flex-col h-full items-center text-center",
-            details.borderColorClass, // Persistent faction-colored border
+            details.borderColorClass, // Persistent faction-colored border on the tile
             isSelected && details.selectedBgClass, // Translucent faction color overlay when selected
             isSelected && details.selectedRingClass // Ring/glow effect when selected
           );
-
-          console.log(`Rendering tile for ${factionName} isSelected: ${isSelected} Applied BG Class should be: ${isSelected ? details.selectedBgClass : 'holographic-panel (default)'}`);
 
           return (
             <div
@@ -138,10 +136,10 @@ export function FactionChoiceScreen({}: FactionChoiceScreenProps) {
                   <HolographicButton
                     className="mt-auto w-full py-2 text-sm sm:text-base"
                     onClick={(e) => {
-                      e.stopPropagation(); 
+                      e.stopPropagation();
                       handleConfirmFaction(factionName);
                     }}
-                    // Button inherits theme from the screen, which changes on tile selection
+                    // Button should pick up current global theme (set by tile selection)
                   >
                     Confirm
                   </HolographicButton>
