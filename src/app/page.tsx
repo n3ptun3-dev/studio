@@ -23,7 +23,7 @@ export default function HomePage() {
     onboardingStep,
     setOnboardingStep,
     isAuthenticated,
-    faction, 
+    faction,
     playerSpyName,
     playerStats,
     addMessage,
@@ -33,18 +33,17 @@ export default function HomePage() {
     todWindowTitle,
     todWindowContent,
     closeTODWindow,
-    todWindowOptions, 
-   } = useAppContext();
+    todWindowOptions,
+  } = useAppContext();
   const { theme: currentTheme, themeVersion } = useTheme();
 
   console.log('HomePage rendering, isTODWindowOpen:', isTODWindowOpen);
   console.log('HomePage rendering. AppContext faction for TODWindow key:', faction);
   console.log('HomePage rendering. Current ThemeContext theme for TODWindow key:', currentTheme);
   console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key:', themeVersion);
-  console.log('HomePage rendering. TODWindow options:', todWindowOptions);
+  // console.log('HomePage rendering. TODWindow options:', todWindowOptions);
 
 
-  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const todContainerRef = useRef<HTMLDivElement>(null);
   const [parallaxOffset, setParallaxOffset] = useState(0);
   const [isClientMounted, setIsClientMounted] = useState(false);
@@ -60,11 +59,11 @@ export default function HomePage() {
       setOnboardingStep('fingerprint');
     }
     if (onboardingStep === 'tod' && !playBootAnimation && isClientMounted) {
-      setTimeout(() => setPlayBootAnimation(true), 100); 
+      setTimeout(() => setPlayBootAnimation(true), 100);
     }
   }, [isAuthenticated, onboardingStep, setOnboardingStep, playBootAnimation, isClientMounted]);
 
-   useEffect(() => {
+  useEffect(() => {
     if (onboardingStep !== 'tod' || !isClientMounted || isAppLoading || isTODWindowOpen) return;
 
     setIsLoading(true);
@@ -80,9 +79,9 @@ export default function HomePage() {
     } else {
       const welcomeInput: WelcomeMessageInput = {
         playerName: playerSpyName || "Agent",
-        faction: faction, 
+        faction: faction,
         elintReserves: playerStats.elintReserves,
-        networkActivity: "Medium", 
+        networkActivity: "Medium",
         vaultDefenses: "Holding",
       };
       generateWelcomeMessage(welcomeInput)
@@ -95,8 +94,8 @@ export default function HomePage() {
         })
         .finally(() => setIsLoading(false));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onboardingStep, isClientMounted, playerSpyName, faction, playerStats.xp, playerStats.elintReserves, addMessage, setIsLoading]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onboardingStep, isClientMounted, playerSpyName, faction, playerStats.xp, playerStats.elintReserves, addMessage, setIsLoading, isAppLoading, isTODWindowOpen]);
 
 
   const sectionComponents = React.useMemo(() => [
@@ -115,50 +114,51 @@ export default function HomePage() {
       const currentScrollLeft = todContainerRef.current.scrollLeft;
       const clientWidth = todContainerRef.current.clientWidth;
 
-      if (clientWidth === 0) return; 
+      if (clientWidth === 0) return;
 
       setParallaxOffset(currentScrollLeft);
 
       const maxPossibleScrollLeft = (sectionComponents.length - 1) * clientWidth;
-      
-      if (currentScrollLeft <= 5) { 
-         todContainerRef.current.scrollLeft = (sectionComponents.length - 2) * clientWidth - 5;
-      }
-      else if (currentScrollLeft >= maxPossibleScrollLeft - 5) { 
+
+      if (currentScrollLeft <= 5) {
+        todContainerRef.current.scrollLeft = (sectionComponents.length - 2) * clientWidth - 5;
+      } else if (currentScrollLeft >= maxPossibleScrollLeft - 5) {
         todContainerRef.current.scrollLeft = clientWidth + 5;
       }
     }
-  }, [sectionComponents.length]); 
+  }, [sectionComponents.length]); // setParallaxOffset is stable
 
   useEffect(() => {
     const container = todContainerRef.current;
-    if (onboardingStep === 'tod' && !isAppLoading && isClientMounted && container) {
-
-      const setInitialScroll = () => {
-        if (container.clientWidth > 0 && !initialScrollSetRef.current) {
-          const sectionWidth = container.clientWidth;
-          const initialScrollPosition = sectionWidth * 1; 
-          container.scrollLeft = initialScrollPosition;
-          setParallaxOffset(initialScrollPosition);
-          console.log("Initial scroll set to:", initialScrollPosition);
-          initialScrollSetRef.current = true;
-        } else if (container.clientWidth === 0 && !initialScrollSetRef.current) {
-            requestAnimationFrame(setInitialScroll);
-        }
-      };
+    if (onboardingStep === 'tod' && !isAppLoading && isClientMounted && container && playBootAnimation) { // Wait for boot animation to be triggered
 
       if (!initialScrollSetRef.current) {
-        requestAnimationFrame(setInitialScroll);
+        requestAnimationFrame(() => {
+          if (todContainerRef.current && todContainerRef.current.clientWidth > 0 && !initialScrollSetRef.current) {
+            const sectionWidth = todContainerRef.current.clientWidth;
+            const targetSectionIndex = 1; // AgentSection is at index 1 of sectionComponents
+            const initialScrollPosition = sectionWidth * targetSectionIndex;
+            
+            console.log(`Attempting initial scroll: TargetIndex=${targetSectionIndex}, Width=${sectionWidth}, ScrollTo=${initialScrollPosition} (Should be AgentSection)`);
+            todContainerRef.current.scrollLeft = initialScrollPosition;
+            setParallaxOffset(initialScrollPosition); // Sync parallax with initial scroll
+            initialScrollSetRef.current = true;
+            console.log(`Initial scroll DONE. todContainerRef.current.scrollLeft = ${todContainerRef.current.scrollLeft}`);
+          } else if (todContainerRef.current && todContainerRef.current.clientWidth === 0 && !initialScrollSetRef.current) {
+            console.warn("Initial scroll: clientWidth is 0 even after rAF. Layout might not be stable.");
+            // Consider a retry mechanism or error if this state persists, though ideally rAF handles it.
+          }
+        });
       }
 
       container.addEventListener('scroll', handleScroll, { passive: true });
       return () => {
         if (container) {
-            container.removeEventListener('scroll', handleScroll);
+          container.removeEventListener('scroll', handleScroll);
         }
       };
     }
-  }, [onboardingStep, isAppLoading, isClientMounted, handleScroll]); 
+  }, [onboardingStep, isAppLoading, isClientMounted, playBootAnimation, handleScroll, sectionComponents.length]); // Added sectionComponents.length due to handleScroll dependency
 
 
   if (!isClientMounted) {
@@ -171,23 +171,23 @@ export default function HomePage() {
   }
 
   if (isAppLoading && onboardingStep !== 'tod') {
-      return (
-        <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6">
-          <ParallaxBackground />
-          <div className="animate-pulse text-2xl font-orbitron holographic-text">LOADING INTERFACE...</div>
-           <TODWindow
-            key={`${faction}-${themeVersion}-loading-${isTODWindowOpen}`}
-            isOpen={isTODWindowOpen}
-            onClose={closeTODWindow}
-            title={todWindowTitle}
-            explicitTheme={currentTheme}
-            themeVersion={themeVersion}
-            showCloseButton={todWindowOptions.showCloseButton} // Pass correctly
-          >
-            {todWindowContent}
-          </TODWindow>
-        </main>
-      );
+    return (
+      <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6">
+        <ParallaxBackground />
+        <div className="animate-pulse text-2xl font-orbitron holographic-text">LOADING INTERFACE...</div>
+        <TODWindow
+          key={`${faction}-${themeVersion}-loading-${isTODWindowOpen}`}
+          isOpen={isTODWindowOpen}
+          onClose={closeTODWindow}
+          title={todWindowTitle}
+          explicitTheme={currentTheme}
+          themeVersion={themeVersion}
+          showCloseButton={todWindowOptions.showCloseButton}
+        >
+          {todWindowContent}
+        </TODWindow>
+      </main>
+    );
   }
 
   if (onboardingStep !== 'tod') {
@@ -199,7 +199,7 @@ export default function HomePage() {
           return <FactionChoiceScreen />;
         case 'fingerprint':
           return <FingerprintScannerScreen />;
-        default: 
+        default:
           return <div className="animate-pulse text-2xl font-orbitron holographic-text">LOADING NEXT STEP...</div>;
       }
     };
@@ -207,15 +207,15 @@ export default function HomePage() {
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6 overflow-y-auto">
         <ParallaxBackground />
         {renderOnboarding()}
-        {showAuthPrompt && <AuthPromptModal onClose={() => setShowAuthPrompt(false)} />}
+        {/* AuthPromptModal was removed in a previous step, assuming Pi Browser integration is handled differently or not primary focus now */}
         <TODWindow
-          key={`${faction}-${themeVersion}-onboarding-${onboardingStep}-${isTODWindowOpen}`}
+          key={`${faction}-${themeVersion}-${onboardingStep}-${isTODWindowOpen}`}
           isOpen={isTODWindowOpen}
           onClose={closeTODWindow}
           title={todWindowTitle}
           explicitTheme={currentTheme}
           themeVersion={themeVersion}
-          showCloseButton={todWindowOptions.showCloseButton} // Pass correctly
+          showCloseButton={todWindowOptions.showCloseButton}
         >
           {todWindowContent}
         </TODWindow>
@@ -223,17 +223,19 @@ export default function HomePage() {
     );
   }
 
-  console.log('HomePage rendering. Current ThemeContext theme for TODWindow key (main TOD):', currentTheme);
-  
+  console.log('HomePage rendering. AppContext faction for TODWindow key:', faction);
+  console.log('HomePage rendering. Current ThemeContext theme for TODWindow key:', currentTheme);
+  console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key:', themeVersion);
+
   return (
-    <main className="relative h-screen w-screen"> 
+    <main className="relative h-screen w-screen overflow-hidden">
       <ParallaxBackground />
 
       <div
         className="parallax-layer z-[5] opacity-20"
         style={{
           transform: `translateX(-${parallaxOffset * 0.5}px)`,
-          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`, 
+          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`,
           backgroundImage: `
             repeating-linear-gradient(
               45deg,
@@ -257,8 +259,8 @@ export default function HomePage() {
       <div
         ref={todContainerRef}
         className={cn(
-            "tod-scroll-container absolute inset-0 z-10 scrollbar-hide",
-            playBootAnimation && "animate-slide-up-from-bottom"
+          "tod-scroll-container absolute inset-0 z-10 scrollbar-hide",
+          playBootAnimation && "animate-slide-up-from-bottom"
         )}
         style={{
           WebkitOverflowScrolling: 'touch',
@@ -275,18 +277,16 @@ export default function HomePage() {
       </div>
 
       <TODWindow
-        key={`${faction}-${themeVersion}-tod-${isTODWindowOpen}`} 
+        key={`${faction}-${themeVersion}-tod-${isTODWindowOpen}`}
         isOpen={isTODWindowOpen}
         onClose={closeTODWindow}
         title={todWindowTitle}
-        explicitTheme={currentTheme} 
-        themeVersion={themeVersion} 
-        showCloseButton={todWindowOptions.showCloseButton} // Pass correctly
+        explicitTheme={currentTheme}
+        themeVersion={themeVersion}
+        showCloseButton={todWindowOptions.showCloseButton}
       >
         {todWindowContent}
       </TODWindow>
     </main>
   );
 }
-
-    
