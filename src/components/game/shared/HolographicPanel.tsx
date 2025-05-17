@@ -1,18 +1,23 @@
+
 import type { HTMLAttributes, ReactNode } from 'react';
 import { cn } from "@/lib/utils";
+import type { Theme } from '@/contexts/ThemeContext';
 
 interface HolographicPanelProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
   className?: string;
-  glassmorphism?: boolean; // For a slightly more solid, blurred glass look
+  glassmorphism?: boolean;
+  explicitTheme?: Theme;
 }
 
-export function HolographicPanel({ children, className, glassmorphism = false, ...props }: HolographicPanelProps) {
+export function HolographicPanel({ children, className, glassmorphism = false, explicitTheme, ...props }: HolographicPanelProps) {
+  const themeClass = explicitTheme ? `theme-${explicitTheme}` : '';
   return (
     <div
       className={cn(
-        "holographic-panel p-4 md:p-6", // Uses styles from globals.css
-        glassmorphism && "bg-opacity-30 backdrop-blur-md border-opacity-50", // More pronounced glass effect
+        "holographic-panel p-4 md:p-6",
+        glassmorphism && "bg-opacity-30 backdrop-blur-md border-opacity-50",
+        themeClass,
         className
       )}
       {...props}
@@ -22,11 +27,17 @@ export function HolographicPanel({ children, className, glassmorphism = false, .
   );
 }
 
-export function HolographicButton({ children, className, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+interface HolographicButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  explicitTheme?: Theme;
+}
+
+export function HolographicButton({ children, className, explicitTheme, ...props }: HolographicButtonProps) {
+  const themeClass = explicitTheme ? `theme-${explicitTheme}` : '';
   return (
     <button
       className={cn(
-        "holographic-button", // Uses styles from globals.css
+        "holographic-button",
+        themeClass,
         className
       )}
       {...props}
@@ -36,16 +47,20 @@ export function HolographicButton({ children, className, ...props }: React.Butto
   );
 }
 
-export function HolographicInput({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
+interface HolographicInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  explicitTheme?: Theme;
+}
+
+export function HolographicInput({ className, explicitTheme, ...props }: HolographicInputProps) {
+  const themeClass = explicitTheme ? `theme-${explicitTheme}` : '';
   return (
     <input
       className={cn(
-        "holographic-input", // Uses styles from globals.css
+        "holographic-input",
+        themeClass,
         className
       )}
       {...props}
     />
   );
 }
-
-    

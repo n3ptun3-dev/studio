@@ -2,12 +2,17 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useAppContext } from '@/contexts/AppContext';
+import { useAppContext, type Faction } from '@/contexts/AppContext'; // Added Faction type import
 import { HolographicInput, HolographicButton } from '@/components/game/shared/HolographicPanel';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
+import type { Theme } from '@/contexts/ThemeContext'; // Added Theme type import
 
-export function CodenameInput() {
+interface CodenameInputProps {
+  explicitTheme?: Theme; // Prop to receive the theme
+}
+
+export function CodenameInput({ explicitTheme }: CodenameInputProps) {
   const { 
     setPlayerSpyName, 
     setOnboardingStep, 
@@ -20,13 +25,12 @@ export function CodenameInput() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // This effect handles the case where an Observer might somehow reach this screen.
     if (faction === 'Observer') {
       toast({ title: "Observation Protocol", description: "Observers do not set codenames. System engaging.", variant: "default" });
       closeTODWindow();
-      // Ensure onboarding step is correct for observer if they somehow land here.
       if (onboardingStep !== 'tod' && onboardingStep !== 'fingerprint') {
-        setOnboardingStep('tod');
+        // Ensure observer flow doesn't get stuck if they land here out of order
+        setOnboardingStep('tod'); 
       }
     }
   }, [faction, closeTODWindow, setOnboardingStep, toast, onboardingStep]);
@@ -43,12 +47,11 @@ export function CodenameInput() {
       setError("Codename must be between 3 and 20 characters.");
       return;
     }
-    if (!/^[a-zA-Z0-9]+(?: [a-zA-Z0-9]+)*$/.test(trimmedCodename)) {
+    if (!/^[a-zA-Z0-9]+(?: [a-zA-Z0-9]+)*$/.test(trimmedCodename)) { // Allow single spaces
        setError("Codename can only contain letters, numbers, and single spaces between words.");
        return;
     }
     
-    // Offensive word filter bypassed for dev
     // const offensiveCheck = filterOffensiveWords(trimmedCodename);
     // if (!offensiveCheck) {
     //   setError("This codename is not permitted. Please choose another.");
@@ -69,19 +72,18 @@ export function CodenameInput() {
     setOnboardingStep('fingerprint'); 
   };
   
-  // If faction is Observer, render nothing as the useEffect will handle navigation.
   if (faction === 'Observer') {
     return null; 
   }
 
   return (
     <div className="flex flex-col items-center justify-center p-4 space-y-4 font-rajdhani">
-      <p className="text-muted-foreground text-center text-base leading-relaxed">
+      <p className="text-muted-foreground text-center text-base leading-relaxed mb-2">
         Agent, your operational codename is critical for field identification.
         Choose wisely. It cannot be changed once registered with HQ.
       </p>
 
-      <div className="w-full max-w-sm space-y-2">
+      <div className="w-full max-w-sm space-y-1">
         <Label htmlFor="codename-input" className="text-sm text-muted-foreground holographic-text">Enter Your Codename:</Label>
         <HolographicInput
           id="codename-input"
@@ -90,14 +92,16 @@ export function CodenameInput() {
           onChange={(e) => setCodename(e.target.value)}
           className="w-full text-center text-lg"
           maxLength={20}
+          explicitTheme={explicitTheme}
         />
-        {error && <p className="text-xs text-destructive text-center">{error}</p>}
+        {error && <p className="text-xs text-destructive text-center pt-1">{error}</p>}
       </div>
 
       <HolographicButton
         onClick={handleSubmit}
         className="w-full max-w-sm py-3 text-lg mt-2"
         disabled={!codename.trim()}
+        explicitTheme={explicitTheme}
       >
         Register
       </HolographicButton>
