@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import type { Theme } from '@/contexts/ThemeContext';
 import { HolographicInput, HolographicButton } from '@/components/game/shared/HolographicPanel';
@@ -29,7 +29,7 @@ export function CodenameInput({ explicitTheme }: CodenameInputProps) {
       toast({ title: "Observation Protocol", description: "Observers do not set codenames. System engaging.", variant: "default" });
       closeTODWindow();
       if (onboardingStep !== 'tod' && onboardingStep !== 'fingerprint') {
-        setOnboardingStep('tod');
+        setOnboardingStep('fingerprint');
       }
     }
   }, [faction, closeTODWindow, setOnboardingStep, toast, onboardingStep]);
@@ -46,7 +46,7 @@ export function CodenameInput({ explicitTheme }: CodenameInputProps) {
       setError("Codename must be between 3 and 20 characters.");
       return;
     }
-    if (!/^[a-zA-Z0-9]+(?: [a-zA-Z0-9]+)*$/.test(trimmedCodename)) {
+    if (!/^[a-zA-Z0-9]+(?: [a-zA-Z0-9]+)*$/.test(trimmedCodename)) { // Allows single spaces between words
        setError("Codename can only contain letters, numbers, and single spaces between words.");
        return;
     }
@@ -57,19 +57,18 @@ export function CodenameInput({ explicitTheme }: CodenameInputProps) {
         description: `Welcome, Agent ${trimmedCodename}. Prepare for deployment.`,
     });
     closeTODWindow();
-    // This will trigger FingerprintScannerScreen
     setOnboardingStep('fingerprint');
   };
 
   if (faction === 'Observer') {
-    return null;
+    return null; 
   }
 
   return (
     <div className="flex flex-col items-center justify-center p-4 space-y-4 font-rajdhani">
       <p className="text-muted-foreground text-center text-base leading-relaxed mb-2 holographic-text">
         Agent, your operational codename is critical for field identification.
-        Choose wisely. It cannot be changed once registered with HQ.
+        Choose wisely; altering it later may have... consequences.
       </p>
 
       <div className="w-full max-w-sm space-y-1">
@@ -97,3 +96,4 @@ export function CodenameInput({ explicitTheme }: CodenameInputProps) {
     </div>
   );
 }
+    
