@@ -1,6 +1,6 @@
 
 "use client";
-import React, { useState, useEffect } from 'react'; // Added React import
+import React, { useState, useEffect } from 'react';
 import { HolographicPanel, HolographicButton } from '../shared/HolographicPanel';
 import { useAppContext, type Faction } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
@@ -8,28 +8,28 @@ import { cn } from '@/lib/utils';
 import { Code, Eye, ShieldQuestion } from 'lucide-react';
 import { CodenameInput } from './CodenameInput';
 
-interface FactionChoiceScreenProps {
-  // setShowAuthPrompt: (show: boolean) => void; // Not currently used
-}
+interface FactionChoiceScreenProps {}
 
 const factionDetails = {
   Cyphers: {
     icon: <Code className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 mb-2 text-blue-400 icon-glow" />,
-    borderColorClass: "border-blue-500", // For unselected state
-    selectedBgClass: "bg-sky-500", // Test color - opaque
+    baseBorderColorClass: "border-blue-500", // For unselected state
+    selectedBgClass: "bg-sky-500", // Test: Opaque bright blue for selection
     selectedRingClass: "ring-2 ring-offset-1 ring-offset-background ring-sky-300 shadow-[0_0_15px_theme(colors.sky.300)]",
     defaultTagline: "Information is Power. Decode the Network.",
     alignTagline: "Align with The Cyphers",
-    primaryColorClass: "text-blue-400",
+    primaryColorClass: "text-blue-400", // For icon and text when not selected with ring
+    themeName: 'cyphers' as const,
   },
   Shadows: {
     icon: <ShieldQuestion className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 mb-2 text-red-400 icon-glow" />,
-    borderColorClass: "border-red-500", // For unselected state
-    selectedBgClass: "bg-rose-500", // Test color - opaque
+    baseBorderColorClass: "border-red-500", // For unselected state
+    selectedBgClass: "bg-rose-500", // Test: Opaque bright red for selection
     selectedRingClass: "ring-2 ring-offset-1 ring-offset-background ring-rose-300 shadow-[0_0_15px_theme(colors.rose.300)]",
     defaultTagline: "Control the Flow. Infiltrate and Disrupt.",
     alignTagline: "Align with The Shadows",
-    primaryColorClass: "text-red-400",
+    primaryColorClass: "text-red-400", // For icon and text when not selected with ring
+    themeName: 'shadows' as const,
   }
 };
 
@@ -42,16 +42,15 @@ export function FactionChoiceScreen({}: FactionChoiceScreenProps) {
   } = useAppContext();
 
   const [selectedFaction, setSelectedFaction] = useState<Faction | null>(null);
-  // const { theme: currentTheme, setTheme } = useTheme(); // Removed: local theme preview logic
+  // Removed useTheme as global theme changes are handled by ThemeUpdater
 
-  // THEME DEBUG
   console.log('FactionChoiceScreen rendering. Selected Faction:', selectedFaction, "isTODWindowOpen (from context):", contextIsTODWindowOpen, "Global App Faction:", globalAppContextFaction);
-
 
   const handleFactionSelect = (factionName: Faction) => {
     if (factionName === 'Observer') return;
     console.log('FactionChoiceScreen: handleFactionSelect. New selectedFaction will be:', factionName);
     setSelectedFaction(prev => prev === factionName ? null : factionName);
+    // No global theme change here anymore.
   };
 
   const handleConfirmFaction = (factionToConfirm: Faction | null) => {
@@ -60,8 +59,6 @@ export function FactionChoiceScreen({}: FactionChoiceScreenProps) {
       console.error("Attempted to confirm with no faction or as Observer directly.");
       return;
     }
-
-    console.log('handleConfirmFaction called with:', factionToConfirm);
     setAppContextFaction(factionToConfirm);
     console.log(`Faction ${factionToConfirm} confirmed. Opening Codename Input...`);
     openTODWindow("Agent Codename", <CodenameInput />);
@@ -70,13 +67,11 @@ export function FactionChoiceScreen({}: FactionChoiceScreenProps) {
   const handleProceedAsObserver = () => {
     console.log("Proceeding as Observer");
     setAppContextFaction('Observer');
-    openTODWindow("Agent Codename", <CodenameInput />);
+    openTODWindow("Agent Codename", <CodenameInput />); // CodenameInput will auto-close for Observer
   };
 
   return (
-    <HolographicPanel
-      className="w-full max-w-2xl p-4 md:p-6 flex flex-col flex-grow h-0 overflow-hidden"
-    >
+    <HolographicPanel className="w-full max-w-2xl p-4 md:p-6 flex flex-col flex-grow h-0 overflow-hidden">
       <h1 className="text-2xl sm:text-3xl md:text-4xl font-orbitron py-2 mb-2 text-center holographic-text flex-shrink-0">
         Select Your Allegiance
       </h1>
@@ -86,19 +81,17 @@ export function FactionChoiceScreen({}: FactionChoiceScreenProps) {
           const details = factionDetails[factionName];
           const isSelected = selectedFaction === factionName;
           
-          let tileBgClass = 'bg-gray-700'; // Default unselected tile background
-          if (isSelected) {
-            tileBgClass = details.selectedBgClass; // e.g., bg-sky-500 or bg-rose-500
-          }
-          // THEME DEBUG
+          // Direct Tailwind classes for testing background changes
+          const tileBgClass = isSelected ? details.selectedBgClass : 'bg-gray-700';
+          const tileBorderClass = isSelected ? details.selectedRingClass : details.baseBorderColorClass;
+
           console.log(`Rendering tile for ${factionName} isSelected: ${isSelected} Applied BG Class should be: ${tileBgClass}`);
 
           const tileClasses = cn(
             "border-2",
-            isSelected ? (factionName === 'Cyphers' ? details.selectedRingClass : details.selectedRingClass) : details.borderColorClass,
-            tileBgClass,
-            "transition-all duration-300 cursor-pointer flex flex-col h-full rounded-lg p-3 sm:p-4",
-            isSelected && (factionName === 'Cyphers' ? 'text-sky-300' : 'text-rose-300')
+            tileBorderClass, // Apply resolved border class
+            tileBgClass,     // Apply resolved background class
+            "transition-all duration-300 cursor-pointer flex flex-col h-full rounded-lg p-3 sm:p-4"
           );
 
           return (

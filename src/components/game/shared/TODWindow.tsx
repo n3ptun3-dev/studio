@@ -4,8 +4,8 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { HolographicPanel } from './HolographicPanel';
-import type { Theme } from '@/contexts/ThemeContext'; 
+import { HolographicPanel } from './HolographicPanel'; // Restored
+import type { Theme } from '@/contexts/ThemeContext';
 
 interface TODWindowProps {
   isOpen: boolean;
@@ -13,11 +13,12 @@ interface TODWindowProps {
   title: string;
   children: React.ReactNode;
   size?: 'default' | 'large';
-  explicitTheme?: Theme; 
+  explicitTheme?: Theme;
+  themeVersion?: number;
 }
 
-export function TODWindow({ isOpen, onClose, title, children, size = 'default', explicitTheme }: TODWindowProps) {
-  console.log('[TODWindow] Component function executing. isOpen:', isOpen, "Title:", title, "Explicit Theme:", explicitTheme);
+export function TODWindow({ isOpen, onClose, title, children, size = 'default', explicitTheme, themeVersion }: TODWindowProps) {
+  console.log('[TODWindow] Component function executing. isOpen:', isOpen, "Title:", title, "Explicit Theme:", explicitTheme, "ThemeVersion for HP key:", themeVersion);
 
   if (!isOpen) {
     console.log('[TODWindow] Rendering null because isOpen is false.');
@@ -31,17 +32,18 @@ export function TODWindow({ isOpen, onClose, title, children, size = 'default', 
     <div
       className={cn(
         "fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm",
-        isOpen ? "animate-slide-in-right-tod" : "animate-slide-out-right-tod", 
-        windowThemeClass 
+        isOpen ? "animate-slide-in-right-tod" : "animate-slide-out-right-tod",
+        windowThemeClass // Apply theme class to the outermost div
       )}
       onClick={onClose}
     >
       <HolographicPanel
-        key={explicitTheme || 'default-theme'} 
+        key={explicitTheme || 'default-theme'} // Keying the HolographicPanel might help it pick up new theme vars
         className={cn(
           "relative m-4 flex flex-col z-[10000]",
           "w-[calc(100vw-80px)] max-w-[600px]",
           "h-[calc(100vh-100px)] max-h-[600px]",
+          // windowThemeClass // Theme class is on parent now
         )}
         onClick={(e) => e.stopPropagation()}
       >
@@ -55,18 +57,30 @@ export function TODWindow({ isOpen, onClose, title, children, size = 'default', 
           </button>
         </div>
 
-        {/* THEME TEST DIV - Now uses direct inline styles with CSS variables */}
+        {/* THEME TEST DIV 1 - Uses CSS variable */}
         <div
-          className="p-2 my-2 border-2"
+          className="p-2 my-1 border-2"
           style={{
             backgroundColor: 'hsl(var(--primary-hsl))',
             color: 'hsl(var(--primary-foreground-hsl))',
             borderColor: 'hsl(var(--accent-hsl))',
           }}
         >
-          THEME TEST DIV (Should be Faction Colored)
+          TEST DIV (Using CSS Var --primary-hsl)
         </div>
-        {/* END THEME TEST DIV */}
+
+        {/* THEME TEST DIV 2 - Hardcoded HSL for Shadows theme's primary */}
+        <div
+          className="p-2 my-1 border-2"
+          style={{
+            backgroundColor: 'hsl(0 100% 40%)', /* Shadows --primary-hsl */
+            color: 'hsl(0 0% 100%)',           /* Shadows --primary-foreground-hsl */
+            borderColor: 'hsl(0 0% 100%)',        /* Shadows --accent-hsl */
+          }}
+        >
+          TEST DIV (Hardcoded HSL 0 100% 40%)
+        </div>
+        {/* END THEME TEST DIVS */}
 
         <div className="flex-grow min-h-0 h-[calc(100%-4rem)] overflow-y-auto scrollbar-hide">
            {children}
