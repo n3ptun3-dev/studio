@@ -19,6 +19,7 @@ interface TODWindowProps {
 
 export function TODWindow({ isOpen, onClose, title, children, size = 'default', explicitTheme, themeVersion }: TODWindowProps) {
   const windowThemeClass = explicitTheme ? `theme-${explicitTheme}` : 'theme-terminal-green';
+  
   console.log('[TODWindow] Component function executing. isOpen:', isOpen, "Title:", title, "Explicit Theme:", explicitTheme, "ThemeVersion for HP key:", themeVersion);
 
   if (!isOpen) {
@@ -31,14 +32,14 @@ export function TODWindow({ isOpen, onClose, title, children, size = 'default', 
     <div
       className={cn(
         "fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm",
-        "animate-slide-in-right-tod", // Simplified for debugging, always animates in if open
-        windowThemeClass // Apply theme class to the outermost div
+        "animate-slide-in-right-tod",
+        windowThemeClass 
       )}
       onClick={onClose}
     >
       <HolographicPanel
-        key={explicitTheme || 'default-theme'} // Keying the HolographicPanel
-        explicitTheme={explicitTheme} // Pass down the explicit theme
+        key={explicitTheme || 'default-theme'} 
+        explicitTheme={explicitTheme} 
         className={cn(
           "relative m-4 flex flex-col z-[10000]",
           "w-[calc(100vw-80px)] max-w-[600px]",
@@ -55,8 +56,23 @@ export function TODWindow({ isOpen, onClose, title, children, size = 'default', 
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* ---- START DEBUG DIVS ---- */}
+        <div className="p-2 my-1 border-2 bg-primary text-primary-foreground border-accent">
+          THEME TEST DIV (Using Tailwind bg-primary)
+        </div>
+        <div 
+          className="p-2 my-1 border-2"
+          style={{
+            backgroundColor: 'hsl(var(--primary-hsl))',
+            color: 'hsl(var(--primary-foreground-hsl))',
+            borderColor: 'hsl(var(--accent-hsl))',
+          }}
+        >
+          THEME TEST DIV (Using inline style hsl(var(--primary-hsl)))
+        </div>
+        {/* ---- END DEBUG DIVS ---- */}
         
-        {/* Children (content area) */}
         <div className="flex-grow min-h-0 h-[calc(100%-4rem)] overflow-y-auto scrollbar-hide">
            {children}
         </div>
