@@ -2,8 +2,8 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useAppContext } from '@/contexts/AppContext';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useAppContext, type Faction } from '@/contexts/AppContext';
+import { useTheme, type Theme } from '@/contexts/ThemeContext';
 import { WelcomeScreen } from '@/components/game/onboarding/WelcomeScreen';
 import { FactionChoiceScreen } from '@/components/game/onboarding/FactionChoiceScreen';
 import { AuthPromptModal } from '@/components/game/onboarding/AuthPromptModal';
@@ -24,7 +24,7 @@ export default function HomePage() {
     onboardingStep,
     setOnboardingStep,
     isAuthenticated,
-    faction,
+    faction, // AppContext faction
     playerSpyName,
     playerStats,
     addMessage,
@@ -34,12 +34,12 @@ export default function HomePage() {
     todWindowTitle,
     todWindowContent,
     closeTODWindow,
-    // themeVersion: appContextThemeVersion // Get themeVersion via AppContext
    } = useAppContext();
-  const { theme: currentTheme, themeVersion } = useTheme(); // themeVersion from ThemeContext is authoritative for actual theme changes
+  const { theme: currentTheme, themeVersion } = useTheme(); // ThemeContext theme
 
   console.log('HomePage rendering, isTODWindowOpen:', isTODWindowOpen);
   console.log('HomePage rendering. AppContext faction for TODWindow key:', faction);
+  console.log('HomePage rendering. Current ThemeContext theme for TODWindow key:', currentTheme);
   console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key:', themeVersion);
 
 
@@ -59,12 +59,16 @@ export default function HomePage() {
       setOnboardingStep('fingerprint');
     }
     if (onboardingStep === 'tod' && !playBootAnimation && isClientMounted) {
-      setTimeout(() => setPlayBootAnimation(true), 100);
+      setTimeout(() => setPlayBootAnimation(true), 100); // Trigger boot animation
     }
   }, [isAuthenticated, onboardingStep, setOnboardingStep, playBootAnimation, isClientMounted]);
 
    useEffect(() => {
     if (onboardingStep !== 'tod' || !isClientMounted || isAppLoading) return;
+
+    // Prevent AI welcome message if TOD window is open (e.g. codename input)
+    if (isTODWindowOpen) return;
+
 
     setIsLoading(true);
     const isNewUser = !playerStats.xp && !playerStats.elintReserves;
@@ -79,7 +83,7 @@ export default function HomePage() {
     } else {
       const welcomeInput: WelcomeMessageInput = {
         playerName: playerSpyName || "Agent",
-        faction: faction,
+        faction: faction, // Use faction from AppContext
         elintReserves: playerStats.elintReserves,
         networkActivity: "Medium", 
         vaultDefenses: "Holding",
@@ -94,7 +98,7 @@ export default function HomePage() {
         })
         .finally(() => setIsLoading(false));
     }
-  }, [onboardingStep, isAuthenticated, playerSpyName, faction, playerStats, addMessage, setIsLoading, isClientMounted, isAppLoading]);
+  }, [onboardingStep, isAuthenticated, playerSpyName, faction, playerStats, addMessage, setIsLoading, isClientMounted, isAppLoading, isTODWindowOpen]);
 
 
   const sectionComponents = React.useMemo(() => [
@@ -119,14 +123,14 @@ export default function HomePage() {
 
       const maxPossibleScrollLeft = (sectionComponents.length - 1) * clientWidth;
 
-      if (currentScrollLeft <= 5) {
-         todContainerRef.current.scrollLeft = (sectionComponents.length - 2) * clientWidth;
+      if (currentScrollLeft <= 5) { // Adjust threshold for smoother loop
+         todContainerRef.current.scrollLeft = (sectionComponents.length - 2) * clientWidth - 5;
       }
-      else if (currentScrollLeft >= maxPossibleScrollLeft - 5) {
-        todContainerRef.current.scrollLeft = clientWidth;
+      else if (currentScrollLeft >= maxPossibleScrollLeft - 5) { // Adjust threshold
+        todContainerRef.current.scrollLeft = clientWidth + 5;
       }
     }
-  }, [sectionComponents.length]);
+  }, [sectionComponents.length]); // parallaxOffset removed as it's set inside
 
   useEffect(() => {
     const container = todContainerRef.current;
@@ -135,7 +139,7 @@ export default function HomePage() {
       const setInitialScroll = () => {
         if (container.clientWidth > 0 && !initialScrollSetRef.current) {
           const sectionWidth = container.clientWidth;
-          const initialScrollPosition = sectionWidth;
+          const initialScrollPosition = sectionWidth; // Start on the first "actual" AgentSection
           container.scrollLeft = initialScrollPosition;
           setParallaxOffset(initialScrollPosition);
           console.log("Initial scroll set to:", initialScrollPosition);
@@ -174,11 +178,11 @@ export default function HomePage() {
           <ParallaxBackground parallaxOffset={0} />
           <div className="animate-pulse text-2xl font-orbitron holographic-text">LOADING INTERFACE...</div>
            <TODWindow
-            key={`${faction}-${themeVersion}-loading-${isTODWindowOpen}`}
+            key={`${faction}-${themeVersion}-loading-${isTODWindowOpen}`} // faction from AppContext
             isOpen={isTODWindowOpen}
             onClose={closeTODWindow}
             title={todWindowTitle}
-            themeVersion={themeVersion}
+            explicitTheme={currentTheme} // Pass currentTheme for direct application
           >
             {todWindowContent}
           </TODWindow>
@@ -186,23 +190,31 @@ export default function HomePage() {
       );
   }
 
+  // Onboarding steps
   if (onboardingStep !== 'tod') {
+    const renderOnboarding = () => {
+      switch (onboardingStep) {
+        case 'welcome':
+          return <WelcomeScreen />;
+        case 'factionChoice':
+          return <FactionChoiceScreen setShowAuthPrompt={setShowAuthPrompt} />;
+        case 'fingerprint':
+          return <FingerprintScannerScreen />;
+        default:
+          return <div className="animate-pulse text-2xl font-orbitron holographic-text">LOADING NEXT STEP...</div>;
+      }
+    };
     return (
-      <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6">
+      <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6 overflow-y-auto">
         <ParallaxBackground parallaxOffset={0} />
-        {onboardingStep === 'welcome' && <WelcomeScreen />}
-        {onboardingStep === 'factionChoice' && <FactionChoiceScreen setShowAuthPrompt={setShowAuthPrompt} />}
-        {onboardingStep === 'fingerprint' && <FingerprintScannerScreen />}
-        {onboardingStep !== 'welcome' && onboardingStep !== 'factionChoice' && onboardingStep !== 'fingerprint' && (
-          <div className="animate-pulse text-2xl font-orbitron holographic-text">LOADING NEXT STEP...</div>
-        )}
+        {renderOnboarding()}
         {showAuthPrompt && <AuthPromptModal onClose={() => setShowAuthPrompt(false)} />}
         <TODWindow
-          key={`${faction}-${themeVersion}-onboarding-${onboardingStep}-${isTODWindowOpen}`}
+          key={`${faction}-${themeVersion}-onboarding-${isTODWindowOpen}-${onboardingStep}`} // faction from AppContext
           isOpen={isTODWindowOpen}
           onClose={closeTODWindow}
           title={todWindowTitle}
-          themeVersion={themeVersion}
+          explicitTheme={currentTheme} // Pass currentTheme for direct application
         >
           {todWindowContent}
         </TODWindow>
@@ -211,28 +223,30 @@ export default function HomePage() {
   }
 
   // Main TOD view
-  console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key:', themeVersion);
   console.log('HomePage rendering. AppContext faction for TODWindow key:', faction);
+  console.log('HomePage rendering. Current ThemeContext theme for TODWindow key:', currentTheme);
+  console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key:', themeVersion);
+
   return (
-    <main className="relative h-screen w-screen">
+    <main className="relative h-screen w-screen"> 
       <ParallaxBackground parallaxOffset={parallaxOffset} />
 
       <div
-        className="parallax-layer z-[5] opacity-20"
+        className="parallax-layer z-[5] opacity-30" // Increased opacity slightly for accent grid
         style={{
-          transform: `translateX(-${parallaxOffset * 0.5}px)`,
-          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`,
+          transform: `translateX(-${parallaxOffset * 0.5}px)`, // Slower parallax scroll
+          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`, // Adjust width calculation
           backgroundImage: `
             repeating-linear-gradient(
               45deg,
-              hsl(var(--accent-hsl) / 0.2),
+              hsl(var(--accent-hsl) / 0.2), /* Using accent color with reduced opacity */
               hsl(var(--accent-hsl) / 0.2) 1px,
               transparent 1px,
               transparent 60px
             ),
             repeating-linear-gradient(
               -45deg,
-              hsl(var(--accent-hsl) / 0.2),
+              hsl(var(--accent-hsl) / 0.2), /* Using accent color with reduced opacity */
               hsl(var(--accent-hsl) / 0.2) 1px,
               transparent 1px,
               transparent 60px
@@ -246,15 +260,15 @@ export default function HomePage() {
         ref={todContainerRef}
         className={cn(
             "tod-scroll-container absolute inset-0 z-10 scrollbar-hide",
-            playBootAnimation && "animate-slide-up-from-bottom"
+            playBootAnimation && "animate-slide-up-from-bottom" // Boot-up animation
         )}
         style={{
-          WebkitOverflowScrolling: 'touch',
+          WebkitOverflowScrolling: 'touch', // For smoother scrolling on iOS
         }}
       >
         {sectionComponents.map((SectionComponentInstance) => (
           <div
-            key={SectionComponentInstance.key || `tod-section-${SectionComponentInstance.type.name}-${Math.random()}`}
+            key={SectionComponentInstance.key || `tod-section-${SectionComponentInstance.type?.name || 'unknown'}-${Math.random()}`}
             className="tod-section"
           >
             {SectionComponentInstance}
@@ -263,11 +277,11 @@ export default function HomePage() {
       </div>
 
       <TODWindow
-        key={`${faction}-${themeVersion}-tod-${isTODWindowOpen}`}
+        key={`${faction}-${themeVersion}-tod-${isTODWindowOpen}`} // faction from AppContext
         isOpen={isTODWindowOpen}
         onClose={closeTODWindow}
         title={todWindowTitle}
-        themeVersion={themeVersion}
+        explicitTheme={currentTheme} // Pass currentTheme for direct application
       >
         {todWindowContent}
       </TODWindow>

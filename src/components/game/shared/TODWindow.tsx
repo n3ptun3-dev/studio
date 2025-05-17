@@ -5,6 +5,7 @@ import React from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { HolographicPanel } from './HolographicPanel';
+import type { Theme } from '@/contexts/ThemeContext'; // Import Theme type
 
 interface TODWindowProps {
   isOpen: boolean;
@@ -12,32 +13,38 @@ interface TODWindowProps {
   title: string;
   children: React.ReactNode;
   size?: 'default' | 'large';
-  themeVersion: number; // Added to receive themeVersion
+  explicitTheme?: Theme; // New prop to receive the theme name
 }
 
-export function TODWindow({ isOpen, onClose, title, children, size = 'default', themeVersion }: TODWindowProps) {
-  console.log('[TODWindow] Component function executing. isOpen:', isOpen, "Title:", title, "themeVersion:", themeVersion);
+export function TODWindow({ isOpen, onClose, title, children, size = 'default', explicitTheme }: TODWindowProps) {
+  console.log('[TODWindow] Component function executing. isOpen:', isOpen, "Title:", title, "Explicit Theme:", explicitTheme);
 
   if (!isOpen) {
     console.log('[TODWindow] Rendering null because isOpen is false.');
     return null;
   }
-  console.log('[TODWindow] Rendering with isOpen true. Title:', title, "themeVersion:", themeVersion);
+  console.log('[TODWindow] Rendering with isOpen true. Title:', title, "Explicit Theme:", explicitTheme);
+
+  // Apply the theme class directly to the outermost div of the TODWindow
+  const windowThemeClass = explicitTheme ? `theme-${explicitTheme}` : '';
 
   return (
     <div
       className={cn(
         "fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm",
-        isOpen ? "animate-slide-in-right-tod" : "animate-slide-out-right-tod" // Animation classes
+        isOpen ? "animate-slide-in-right-tod" : "animate-slide-out-right-tod", // Animation classes
+        windowThemeClass // Apply the explicit theme class here
       )}
       onClick={onClose}
     >
       <HolographicPanel
-        key={themeVersion} // Key the internal HolographicPanel with themeVersion
+        // Keying the HolographicPanel with explicitTheme ensures it re-renders if the theme name changes
+        key={explicitTheme || 'default-theme'} 
         className={cn(
           "relative m-4 flex flex-col z-[10000]",
           "w-[calc(100vw-80px)] max-w-[600px]",
           "h-[calc(100vh-100px)] max-h-[600px]",
+          // No explicit theme class needed here if parent has it, but it doesn't hurt if HolographicPanel adapts
         )}
         onClick={(e) => e.stopPropagation()}
       >
@@ -65,4 +72,3 @@ export function TODWindow({ isOpen, onClose, title, children, size = 'default', 
   );
 }
 
-    
