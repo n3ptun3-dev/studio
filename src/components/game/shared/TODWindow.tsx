@@ -14,7 +14,7 @@ interface TODWindowProps {
   children: React.ReactNode;
   size?: 'default' | 'large';
   explicitTheme?: Theme;
-  themeVersion?: number;
+  themeVersion?: number; // To help ensure re-render when theme changes
   showCloseButton?: boolean;
 }
 
@@ -31,35 +31,30 @@ export function TODWindow({
   const [isVisible, setIsVisible] = useState(isOpen);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  // Log props on every render
-  console.log(
-    `[TODWindow] Render/Props Update. isOpen: ${isOpen}, Title: "${title}", explicitTheme: ${explicitTheme}, themeVersion: ${themeVersion}, showCloseButton: ${showCloseButton}, isVisible: ${isVisible}, isAnimating: ${isAnimating}`
-  );
+  // Enhanced logging
+  useEffect(() => {
+    console.log(`[TODWindow] Render/Props Update. isOpen: ${isOpen}, Title: "${title}", explicitTheme: ${explicitTheme}, themeVersion: ${themeVersion}, showCloseButton: ${showCloseButton}, isVisible: ${isVisible}, isAnimating: ${isAnimating}`);
+  }, [isOpen, title, explicitTheme, themeVersion, showCloseButton, isVisible, isAnimating]);
+
 
   useEffect(() => {
     console.log(`[TODWindow] isOpen Effect. New isOpen: ${isOpen}, Current isVisible: ${isVisible}`);
     if (isOpen) {
-      if (!isVisible) { // Only set visible and start animation if it wasn't already
+      if (!isVisible) {
         setIsVisible(true);
         console.log(`[TODWindow] isOpen Effect: Set isVisible to true.`);
         requestAnimationFrame(() => {
           setIsAnimating(true);
           console.log(`[TODWindow] isOpen Effect: Set isAnimating to true (starting enter animation).`);
         });
-      } else if (!isAnimating && isVisible) {
-        // If it's already visible and not animating (e.g. content changed while open)
-        // no animation state change needed unless forced by other logic
-         console.log(`[TODWindow] isOpen Effect: Already visible and not animating. isOpen is true.`);
       }
     } else {
-      // isOpen is false
-      if (isVisible || isAnimating) { // Only start close animation if it was visible or animating open
-        setIsAnimating(true); // Start close animation
+      if (isVisible || isAnimating) {
+        setIsAnimating(true);
         console.log(`[TODWindow] isOpen Effect: Set isAnimating to true (starting close animation).`);
       }
-      // isVisible will be set to false in handleAnimationEnd
     }
-  }, [isOpen]); // Removed isVisible from deps to avoid loop if isOpen causes isVisible to change
+  }, [isOpen]);
 
   const handleAnimationEnd = () => {
     console.log(`[TODWindow] Animation ended. Current isOpen: ${isOpen}, Current isAnimating: ${isAnimating}`);
@@ -72,37 +67,36 @@ export function TODWindow({
     }
   };
   
-  const effectiveTheme = explicitTheme || 'terminal-green';
+  const effectiveTheme = explicitTheme || 'terminal-green'; // Default if not specified
 
-  // More robust check for rendering null
   if (!isOpen && !isAnimating && !isVisible) {
      console.log(`[TODWindow] Rendering null: isOpen=${isOpen}, isAnimating=${isAnimating}, isVisible=${isVisible}`);
      return null;
   }
-
+  
   const overlayClasses = cn(
-    "fixed inset-0 z-[9999] flex items-center justify-center transition-opacity duration-200",
+    "fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm transition-opacity duration-200",
     (isOpen && isVisible) ? "opacity-100" : "opacity-0",
-    (!isOpen && !isAnimating) && "pointer-events-none" // Make non-interactive if fully closed
+    (!isOpen && !isAnimating) && "pointer-events-none"
   );
-  
+
   console.log(`[TODWindow] Applying overlayClasses: "${overlayClasses}"`);
-  
+
   return (
     <div
       className={overlayClasses}
-      onClick={onClose} 
+      onClick={showCloseButton ? onClose : undefined} // Only allow overlay click to close if showCloseButton is true
       aria-hidden={!isOpen}
     >
       <HolographicPanel
-        key={`${effectiveTheme}-${themeVersion}-window-panel`} // Ensure panel re-keys with theme and version
+        key={`${effectiveTheme}-${themeVersion}-window-panel`}
         className={cn(
           "relative m-4 flex flex-col z-[10000]",
           "w-[calc(100vw-80px)] max-w-[600px]", 
           "h-[calc(100vh-100px)] max-h-[600px]",
-          "bg-background/70 backdrop-blur-sm",
+          // Background and blur removed from here, applied to overlay
           (isOpen && isVisible) ? "animate-slide-in-right-tod" : (!isOpen && isAnimating) ? "animate-slide-out-right-tod" : "",
-          (!isVisible && !isAnimating) && "hidden" // Effectively hide if not visible and not animating
+          (!isVisible && !isAnimating) && "hidden" 
         )}
         onClick={(e) => e.stopPropagation()} 
         explicitTheme={effectiveTheme} 
@@ -131,6 +125,13 @@ export function TODWindow({
         </div>
         
         <div className="flex-grow min-h-0 h-[calc(100%-4rem)] overflow-y-auto scrollbar-hide">
+           {/* THEME TEST DIV - REMOVE AFTER DEBUGGING */}
+           {/* <div
+            className={cn("p-2 my-1 border-2", `theme-${explicitTheme}`)}
+            style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)', borderColor: `var(--${explicitTheme}-debug-color, orange)`, borderWidth: '5px', borderStyle: 'solid' }}
+           >
+            TEST DIV (Inline Style Var --primary, Border theme-debug-color) on {explicitTheme}
+           </div> */}
            {children}
         </div>
       </HolographicPanel>
