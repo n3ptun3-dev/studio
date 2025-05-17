@@ -14,7 +14,7 @@ interface TODWindowProps {
   children: React.ReactNode;
   size?: 'default' | 'large';
   explicitTheme?: Theme;
-  themeVersion?: number; // Keep for potential re-keying of HolographicPanel if needed
+  themeVersion?: number; // Passed from AppContext via HomePage
 }
 
 export function TODWindow({ isOpen, onClose, title, children, size = 'default', explicitTheme, themeVersion }: TODWindowProps) {
@@ -33,13 +33,13 @@ export function TODWindow({ isOpen, onClose, title, children, size = 'default', 
       className={cn(
         "fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm",
         "animate-slide-in-right-tod",
-        windowThemeClass 
+        windowThemeClass // Apply theme to the main overlay
       )}
       onClick={onClose}
     >
       <HolographicPanel
-        key={explicitTheme || 'default-theme'} 
-        explicitTheme={explicitTheme} 
+        key={explicitTheme || 'default-theme'} // Key the HolographicPanel itself with the theme
+        explicitTheme={explicitTheme} // Pass theme to HolographicPanel
         className={cn(
           "relative m-4 flex flex-col z-[10000]",
           "w-[calc(100vw-80px)] max-w-[600px]",
@@ -56,22 +56,29 @@ export function TODWindow({ isOpen, onClose, title, children, size = 'default', 
             <X className="w-5 h-5" />
           </button>
         </div>
-
-        {/* ---- START DEBUG DIVS ---- */}
-        <div className="p-2 my-1 border-2 bg-primary text-primary-foreground border-accent">
-          THEME TEST DIV (Using Tailwind bg-primary)
+        
+        {/* Test Div 1: Tailwind classes with explicit theme */}
+        <div className={cn(
+          "p-2 my-1 border-2 bg-primary text-primary-foreground border-accent",
+          explicitTheme ? `theme-${explicitTheme}` : 'theme-terminal-green'
+        )}>
+          TEST DIV (Using Tailwind bg-primary)
         </div>
+
+        {/* Test Div 2: Inline styles with explicit theme */}
         <div 
-          className="p-2 my-1 border-2"
+          className={cn(
+            "p-2 my-1 border-2",
+            explicitTheme ? `theme-${explicitTheme}` : 'theme-terminal-green'
+          )}
           style={{
             backgroundColor: 'hsl(var(--primary-hsl))',
             color: 'hsl(var(--primary-foreground-hsl))',
             borderColor: 'hsl(var(--accent-hsl))',
           }}
         >
-          THEME TEST DIV (Using inline style hsl(var(--primary-hsl)))
+          TEST DIV (Using Inline CSS Var --primary-hsl)
         </div>
-        {/* ---- END DEBUG DIVS ---- */}
         
         <div className="flex-grow min-h-0 h-[calc(100%-4rem)] overflow-y-auto scrollbar-hide">
            {children}
