@@ -3,7 +3,7 @@
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { useTheme } from '@/contexts/ThemeContext'; // Still potentially useful for other themed elements in HomePage
+import { useTheme } from '@/contexts/ThemeContext';
 import { WelcomeScreen } from '@/components/game/onboarding/WelcomeScreen';
 import { FactionChoiceScreen } from '@/components/game/onboarding/FactionChoiceScreen';
 import { AuthPromptModal } from '@/components/game/onboarding/AuthPromptModal';
@@ -24,7 +24,7 @@ export default function HomePage() {
     onboardingStep,
     setOnboardingStep,
     isAuthenticated,
-    faction, // <<< Use this faction for the TODWindow key
+    faction,
     playerSpyName,
     playerStats,
     addMessage,
@@ -35,10 +35,10 @@ export default function HomePage() {
     todWindowContent,
     closeTODWindow,
    } = useAppContext();
-  // const { theme: currentTheme } = useTheme(); // We'll key on faction now
+  const { theme: currentTheme, themeVersion } = useTheme();
 
   console.log('HomePage rendering, isTODWindowOpen:', isTODWindowOpen);
-  console.log('HomePage rendering. AppContext faction for TODWindow key:', faction);
+  console.log('HomePage rendering. AppContext faction for TODWindow key:', faction, "Current Theme from useTheme():", currentTheme, "ThemeVersion:", themeVersion);
 
 
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
@@ -62,8 +62,9 @@ export default function HomePage() {
   }, [isAuthenticated, onboardingStep, setOnboardingStep, playBootAnimation]);
 
    useEffect(() => {
-    // IMPORTANT: Only run welcome message logic if onboarding is complete and TOD is active
-    if (onboardingStep === 'tod' && isAuthenticated && isMounted && !isAppLoading) {
+    if (onboardingStep !== 'tod') return; // Only run if TOD is active
+
+    if (isAuthenticated && isMounted && !isAppLoading) {
       setIsLoading(true);
       const isNewUser = !playerStats.xp && !playerStats.elintReserves;
 
@@ -79,8 +80,8 @@ export default function HomePage() {
           playerName: playerSpyName || "Agent",
           faction: faction,
           elintReserves: playerStats.elintReserves,
-          networkActivity: "Medium",
-          vaultDefenses: "Holding",
+          networkActivity: "Medium", // Placeholder
+          vaultDefenses: "Holding",  // Placeholder
         };
         generateWelcomeMessage(welcomeInput)
           .then(response => {
@@ -102,7 +103,7 @@ export default function HomePage() {
     <ControlCenterSection key="control-center-actual" parallaxOffset={parallaxOffset} />,
     <ScannerSection key="scanner-actual" parallaxOffset={parallaxOffset} />,
     <EquipmentLockerSection key="equipment-locker-actual" parallaxOffset={parallaxOffset} />,
-    <VaultSection key="vault-actual" parallaxOffset={parallaxOffset} />,
+    <VaultSection key="vault-actual" parallaxOffset={parallaxOffset} />, // This is the one that stays as the 6th actual section
     <AgentSection key="agent-clone-end" parallaxOffset={parallaxOffset} />,
   ], [parallaxOffset]);
 
@@ -116,20 +117,30 @@ export default function HomePage() {
 
       setParallaxOffset(currentScrollLeft);
 
-      const numActualSections = sectionComponents.length - 2;
-      const scrollPosActualVault = (numActualSections -1) * clientWidth;
-      const scrollPosActualAgent = clientWidth;
+      const numActualSections = sectionComponents.length - 2; // Agent, Control, Scanner, Equip, Vault = 5 actual
+      const scrollPosActualVaultEnd = (numActualSections) * clientWidth; // Position of the *start* of the cloned Agent section (which is after the actual Vault)
+                                                                        // The actual vault is at (numActualSections-1) * clientWidth.
+                                                                        // So the end of the scrollable area is (sectionComponents.length - 1) * clientWidth.
+
+      const scrollPosActualAgentStart = clientWidth; // This is the start of the first "actual" Agent section (index 1)
       const maxPossibleScrollLeft = (sectionComponents.length - 1) * clientWidth;
 
 
-      if (currentScrollLeft <= 5) {
-        todContainerRef.current.scrollLeft = scrollPosActualVault;
+      // If scrolled to the very beginning (clone of Vault)
+      if (currentScrollLeft <= 5) { // Using a small threshold for precision
+        // Jump to the actual Vault section (index 5 which is sectionComponents.length - 2)
+        // The cloned vault is at index 0. The actual one is at index (numActualSections = 5).
+        // sectionComponents has 7 items. Clone start (Vault), Agent, Control, Scanner, Equip, Vault (Actual), Clone end (Agent)
+        // Actual Vault is at index 5. So scrollLeft should be 5 * clientWidth.
+         todContainerRef.current.scrollLeft = (sectionComponents.length - 2) * clientWidth;
       }
-      else if (currentScrollLeft >= maxPossibleScrollLeft - 5) {
-        todContainerRef.current.scrollLeft = scrollPosActualAgent;
+      // If scrolled to the very end (clone of Agent)
+      else if (currentScrollLeft >= maxPossibleScrollLeft - 5) { // Using a small threshold
+        // Jump to the actual Agent section (index 1)
+        todContainerRef.current.scrollLeft = clientWidth;
       }
     }
-  }, [sectionComponents.length]);
+  }, [sectionComponents.length]); // parallaxOffset removed as it causes re-runs; setParallaxOffset is stable
 
   useEffect(() => {
     const container = todContainerRef.current;
@@ -138,23 +149,20 @@ export default function HomePage() {
       const setInitialScroll = () => {
         if (container.clientWidth > 0 && !initialScrollSetRef.current) {
           const sectionWidth = container.clientWidth;
+          // Start at the first "actual" Agent section (index 1)
           const initialScrollPosition = sectionWidth;
           container.scrollLeft = initialScrollPosition;
           setParallaxOffset(initialScrollPosition);
-
-          if (Math.abs(container.scrollLeft - initialScrollPosition) < 5) {
-            initialScrollSetRef.current = true;
-            console.log("Initial scroll set to:", initialScrollPosition);
-          } else {
-             requestAnimationFrame(setInitialScroll);
-          }
-        } else if (container.clientWidth === 0) {
+          console.log("Initial scroll set to:", initialScrollPosition);
+          initialScrollSetRef.current = true; // Set true once attempted
+        } else if (container.clientWidth === 0 && !initialScrollSetRef.current) {
+            // Retry if clientWidth is not yet available
             requestAnimationFrame(setInitialScroll);
         }
       };
-      
+
       if (!initialScrollSetRef.current) {
-        setInitialScroll();
+        requestAnimationFrame(setInitialScroll); // Use rAF for initial setup
       }
 
       container.addEventListener('scroll', handleScroll, { passive: true });
@@ -168,64 +176,48 @@ export default function HomePage() {
 
 
   if (!isMounted || (isAppLoading && onboardingStep !== 'tod')) {
-    return (
-      <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
-        <ParallaxBackground parallaxOffset={0} />
-        <div className="animate-pulse text-2xl font-orbitron holographic-text">INITIALIZING TOD...</div>
-      </main>
-    );
-  }
-
-  const renderOnboarding = () => {
-    switch (onboardingStep) {
-      case 'welcome':
-        return <WelcomeScreen />;
-      case 'factionChoice':
-        return <FactionChoiceScreen setShowAuthPrompt={setShowAuthPrompt} />;
-      case 'fingerprint':
-        return <FingerprintScannerScreen />;
-      default:
-        return null;
-    }
-  };
-
-  if (onboardingStep !== 'tod') {
+    // This is the view for initial loading or onboarding steps other than 'tod'
     return (
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6">
         <ParallaxBackground parallaxOffset={0} />
-        {renderOnboarding()}
+        {onboardingStep === 'welcome' && <WelcomeScreen />}
+        {onboardingStep === 'factionChoice' && <FactionChoiceScreen setShowAuthPrompt={setShowAuthPrompt} />}
+        {onboardingStep === 'fingerprint' && <FingerprintScannerScreen />}
+        {onboardingStep !== 'welcome' && onboardingStep !== 'factionChoice' && onboardingStep !== 'fingerprint' && onboardingStep !== 'tod' && (
+          <div className="animate-pulse text-2xl font-orbitron holographic-text">LOADING INTERFACE...</div>
+        )}
         {showAuthPrompt && <AuthPromptModal onClose={() => setShowAuthPrompt(false)} />}
-         {/* Key TODWindow on faction from AppContext */}
-         <TODWindow key={`${faction}-onboarding-${isTODWindowOpen}`} isOpen={isTODWindowOpen} onClose={closeTODWindow} title={todWindowTitle}>
+        <TODWindow key={`${faction}-${themeVersion}-onboarding-${isTODWindowOpen}`} isOpen={isTODWindowOpen} onClose={closeTODWindow} title={todWindowTitle}>
           {todWindowContent}
         </TODWindow>
       </main>
     );
   }
-  
+
+  // This is the main view for the TOD itself
   return (
     <main className="relative h-screen w-screen">
       <ParallaxBackground parallaxOffset={parallaxOffset} />
 
       <div
-        className="parallax-layer z-[5] opacity-20"
+        className="parallax-layer z-[5] opacity-20" // Reduced opacity from 0.3 to 0.2
         style={{
           transform: `translateX(-${parallaxOffset * 0.5}px)`,
-          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`,
+          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`, // Adjusted width calculation
         }}
       >
         <div className="absolute inset-0" style={{
           backgroundImage: `
             repeating-linear-gradient(
               45deg,
-              hsl(var(--accent-hsl) / 0.2),
+              hsl(var(--accent-hsl) / 0.2), /* Was 0.3, now 0.2 for thinner/more transparent */
               hsl(var(--accent-hsl) / 0.2) 1px,
               transparent 1px,
               transparent 60px
             ),
             repeating-linear-gradient(
               -45deg,
-              hsl(var(--accent-hsl) / 0.2),
+              hsl(var(--accent-hsl) / 0.2), /* Was 0.3, now 0.2 */
               hsl(var(--accent-hsl) / 0.2) 1px,
               transparent 1px,
               transparent 60px
@@ -241,7 +233,7 @@ export default function HomePage() {
             playBootAnimation && "animate-slide-up-from-bottom"
         )}
         style={{
-          WebkitOverflowScrolling: 'touch',
+          WebkitOverflowScrolling: 'touch', // For smoother scrolling on iOS
         }}
       >
         {sectionComponents.map((SectionComponentInstance, index) => (
@@ -254,11 +246,9 @@ export default function HomePage() {
         ))}
       </div>
 
-      {/* Key TODWindow on faction from AppContext */}
-      <TODWindow key={`${faction}-tod-${isTODWindowOpen}`} isOpen={isTODWindowOpen} onClose={closeTODWindow} title={todWindowTitle}>
+      <TODWindow key={`${faction}-${themeVersion}-tod-${isTODWindowOpen}`} isOpen={isTODWindowOpen} onClose={closeTODWindow} title={todWindowTitle}>
         {todWindowContent}
       </TODWindow>
     </main>
   );
 }
-    
