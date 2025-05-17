@@ -4,20 +4,20 @@
 @tailwind utilities;
 
 @layer base {
-  :root, .theme-terminal-green { /* Default to terminal-green */
+  :root, .theme-terminal-green { 
     --theme-name: "terminal-green";
     /* Terminal Green HSL Values */
     --background-hsl: 130 20% 5%;
     --foreground-hsl: 130 80% 70%;
-    --primary-hsl: 130 70% 45%; /* Bright Green */
+    --primary-hsl: 130 70% 45%; 
     --primary-foreground-hsl: 130 20% 10%;
-    --secondary-hsl: 130 30% 20%; /* Darker Muted Green */
+    --secondary-hsl: 130 30% 20%; 
     --secondary-foreground-hsl: 130 70% 60%;
-    --accent-hsl: 130 90% 55%; /* Glowing Green */
+    --accent-hsl: 130 90% 55%; 
     --accent-foreground-hsl: 130 20% 5%;
     --card-hsl: 130 25% 8%;
     --card-foreground-hsl: 130 80% 75%;
-    --popover-hsl: 130 25% 12%; /* Same as card, can be different if needed */
+    --popover-hsl: 130 25% 12%; 
     --popover-foreground-hsl: 130 80% 75%;
     --border-hsl: 130 60% 35%;
     --input-hsl: 130 30% 25%;
@@ -28,8 +28,8 @@
 
     /* Debug Colors */
     --terminal-debug-color: lime;
-    --cyphers-debug-color: orange; /* Fallback */
-    --shadows-debug-color: orange; /* Fallback */
+    --cyphers-debug-color: blue; 
+    --shadows-debug-color: red; 
 
     /* Convert HSL to actual colors for :root / terminal-green */
     --background: hsl(var(--background-hsl));
@@ -57,18 +57,18 @@
     --hologram-base-text-color: hsl(var(--foreground-hsl));
     --hologram-wireframe-color: hsl(var(--primary-hsl));
     --hologram-button-bg: hsl(var(--primary-hsl));
-    --hologram-button-text: hsl(var(--primary-foreground-hsl), 0.9); /* Slightly brighter button text */
+    --hologram-button-text: hsl(var(--foreground-hsl)); /* Brighter green button text */
   }
 
   .theme-cyphers {
     --theme-name: "cyphers";
     --background-hsl: 210 60% 8%;
     --foreground-hsl: 200 100% 90%;
-    --primary-hsl: 204 100% 50%; /* Electric Blue */
+    --primary-hsl: 204 100% 50%; 
     --primary-foreground-hsl: 0 0% 100%;
-    --secondary-hsl: 180 100% 30%; /* Darker Turquoise for secondary */
+    --secondary-hsl: 180 100% 30%; 
     --secondary-foreground-hsl: 200 100% 90%;
-    --accent-hsl: 0 0% 100%; /* White */
+    --accent-hsl: 0 0% 100%; 
     --accent-foreground-hsl: 210 60% 8%;
     --card-hsl: 210 50% 12%;
     --card-foreground-hsl: 200 100% 90%;
@@ -77,6 +77,8 @@
     --border-hsl: 204 100% 60%;
     --input-hsl: 210 40% 15%;
     --ring-hsl: 204 100% 55%;
+    --destructive-hsl: 0 70% 50%;
+    --destructive-foreground-hsl: 0 0% 100%;
     --cyphers-debug-color: blue;
 
     /* Direct color definitions for Tailwind/components */
@@ -109,11 +111,11 @@
     --theme-name: "shadows";
     --background-hsl: 0 60% 8%;
     --foreground-hsl: 0 0% 90%;
-    --primary-hsl: 0 100% 40%; /* Intense Red */
+    --primary-hsl: 0 100% 40%; 
     --primary-foreground-hsl: 0 0% 100%;
-    --secondary-hsl: 16 100% 30%; /* Darker Salmon for secondary */
+    --secondary-hsl: 16 100% 30%; 
     --secondary-foreground-hsl: 0 0% 90%;
-    --accent-hsl: 0 0% 100%;  /* White */
+    --accent-hsl: 0 0% 100%;  
     --accent-foreground-hsl: 0 60% 8%;
     --card-hsl: 0 50% 12%;
     --card-foreground-hsl: 0 0% 90%;
@@ -122,6 +124,8 @@
     --border-hsl: 0 100% 50%;
     --input-hsl: 0 40% 15%;
     --ring-hsl: 0 100% 55%;
+    --destructive-hsl: 0 70% 50%;
+    --destructive-foreground-hsl: 0 0% 100%;
     --shadows-debug-color: red;
 
      /* Direct color definitions for Tailwind/components */
@@ -155,19 +159,21 @@
     --theme-name: "neutral";
     --background-hsl: 220 10% 10%;
     --foreground-hsl: 220 10% 70%;
-    --primary-hsl: 220 60% 50%; /* Muted Blue */
+    --primary-hsl: 220 60% 50%; 
     --primary-foreground-hsl: 220 10% 95%;
     --secondary-hsl: 220 20% 20%;
     --secondary-foreground-hsl: 220 10% 60%;
-    --accent-hsl: 220 70% 60%; /* Brighter Muted Blue */
+    --accent-hsl: 220 70% 60%; 
     --accent-foreground-hsl: 220 10% 10%;
-    --card-hsl: 220 15% 12%; /* Darker card for neutral */
+    --card-hsl: 220 15% 12%; 
     --card-foreground-hsl: 220 10% 75%;
     --popover-hsl: 220 15% 15%;
     --popover-foreground-hsl: 220 10% 75%;
     --border-hsl: 220 20% 30%;
     --input-hsl: 220 20% 25%;
     --ring-hsl: 220 60% 55%;
+    --destructive-hsl: 0 70% 50%;
+    --destructive-foreground-hsl: 0 0% 100%;
 
     /* Direct color definitions */
     --background: hsl(var(--background-hsl));
@@ -233,7 +239,7 @@
 
 @layer base {
   * {
-    @apply border-border; /* Uses --border from the active theme */
+    @apply border-border; 
   }
   body {
     @apply bg-background text-foreground font-exo2;
@@ -262,13 +268,13 @@
 
 .holographic-button {
   border-color: var(--hologram-button-bg); 
-  color: var(--hologram-button-text) !important; /* Use !important to ensure text color applies */
+  color: var(--hologram-button-text) !important; 
   @apply bg-transparent border rounded-md px-4 py-2 transition-all duration-300;
   box-shadow: 0 0 8px var(--hologram-button-bg), inset 0 0 5px var(--hologram-button-bg);
 }
 .holographic-button:hover {
   background-color: var(--hologram-button-bg);
-  color: var(--background) !important; /* Ensure hover text color contrasts with button background */
+  color: var(--background) !important; 
   box-shadow: 0 0 15px var(--hologram-button-bg), 0 0 25px var(--hologram-button-bg);
 }
 .holographic-button:disabled {

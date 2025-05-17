@@ -2,9 +2,9 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { HolographicButton } from '@/components/game/shared/HolographicPanel'; // Keep for button
+import { HolographicButton } from '@/components/game/shared/HolographicPanel'; 
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Zap } from 'lucide-react';
+import { Wifi } from 'lucide-react'; // Changed from Zap
 import { cn } from '@/lib/utils';
 
 export function WelcomeScreen() {
@@ -14,7 +14,7 @@ export function WelcomeScreen() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowContent(true);
-    }, 1500); // Increased duration to 1.5 seconds
+    }, 2000); // Increased duration to 2 seconds
     return () => clearTimeout(timer);
   }, []);
 
@@ -22,7 +22,7 @@ export function WelcomeScreen() {
     return (
       // This div will be centered by its parent <main> in page.tsx
       <div className="flex flex-col items-center justify-center text-center">
-        <Zap className="w-24 h-24 text-primary animate-pulse icon-glow" />
+        <Wifi className="w-16 h-16 md:w-20 md:h-20 text-primary animate-pulse icon-glow" /> 
         <p className="mt-4 text-xl font-orbitron holographic-text">Establishing Secure Connection...</p>
       </div>
     );
@@ -32,7 +32,7 @@ export function WelcomeScreen() {
     <div 
       className={cn(
         "w-full max-w-2xl p-4 md:p-6 flex flex-col flex-grow h-0 overflow-hidden",
-        "holographic-panel" // Apply holographic panel styling to the root
+        "holographic-panel" 
       )}
     >
       <h1 className="text-3xl md:text-4xl font-orbitron mb-4 text-center holographic-text flex-shrink-0">

@@ -6,7 +6,7 @@ import { useAppContext } from '@/contexts/AppContext';
 import { useTheme, type Theme } from '@/contexts/ThemeContext'; 
 
 export function ThemeUpdater() {
-  const { faction: appContextFaction } = useAppContext(); // Renamed to avoid conflict
+  const { faction: appContextFaction } = useAppContext();
   const { theme: currentThemeInstance, setTheme } = useTheme();
 
   console.log('[ThemeUpdater] Rendering. AppContext Faction:', appContextFaction, "Current ThemeContext Theme:", currentThemeInstance);
@@ -26,7 +26,7 @@ export function ThemeUpdater() {
         break;
       case 'Observer':
       default:
-        targetThemeKey = 'terminal-green'; // Default for Observer or undefined faction
+        targetThemeKey = 'terminal-green'; 
         break;
     }
 
@@ -40,9 +40,7 @@ export function ThemeUpdater() {
         `[ThemeUpdater] No theme change needed. Target: ${targetThemeKey} already matches Current: ${currentThemeInstance}. AppContext Faction: ${appContextFaction}`
       );
     }
-  // This effect should ONLY react to changes in the global faction or the setTheme function (which is stable).
-  // currentThemeInstance is read inside to determine if a change is needed, but it's not a dependency that re-triggers this effect.
-  }, [appContextFaction, setTheme]); 
+  }, [appContextFaction, currentThemeInstance, setTheme]); 
 
   return null;
 }
