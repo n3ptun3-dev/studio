@@ -5,49 +5,110 @@
 
 @layer base {
   /* REMOVED: html { @apply overflow-hidden; } */
+  /* REMOVED: body { @apply overflow-hidden; } */
 
   .theme-terminal-green {
     --theme-name: "terminal-green";
-    --background-hsl: 130 20% 5%; /* Very dark green */
-    --foreground-hsl: 130 80% 70%; /* Bright green text */
-
-    --primary-hsl: 130 70% 45%; /* Medium vibrant green */
-    --primary-foreground-hsl: 130 20% 10%; /* Dark green for text on primary */
-
-    --secondary-hsl: 130 30% 20%; /* Darker muted green */
+    --background-hsl: 130 20% 5%;
+    --foreground-hsl: 130 80% 70%;
+    --primary-hsl: 130 70% 45%;
+    --primary-foreground-hsl: 130 20% 10%;
+    --secondary-hsl: 130 30% 20%; /* For border test: Darker muted green */
     --secondary-foreground-hsl: 130 70% 60%;
-
-    --accent-hsl: 130 90% 55%; /* Very bright accent green */
-    --accent-foreground-hsl: 130 20% 5%; /* Dark green for text on accent */
-
+    --accent-hsl: 130 90% 55%;
+    --accent-foreground-hsl: 130 20% 5%;
     --muted-hsl: 130 25% 15%;
     --muted-foreground-hsl: 130 60% 50%;
-
-    --card-hsl: 130 25% 8%; /* Slightly lighter dark green for cards */
+    --card-hsl: 130 25% 8%;
     --card-foreground-hsl: 130 80% 75%;
-
-    --popover-hsl: 130 20% 4%; /* Even darker for popovers */
+    --popover-hsl: 130 20% 4%;
     --popover-foreground-hsl: 130 80% 80%;
-
-    --border-hsl: 130 60% 35%; /* Green border */
-    --input-hsl: 130 30% 25%; /* Dark green input background */
-    --ring-hsl: 130 70% 50%; /* Green ring for focus */
-
-    --destructive-hsl: 0 70% 50%; /* Keep destructive as red for contrast */
+    --border-hsl: 130 60% 35%;
+    --input-hsl: 130 30% 25%;
+    --ring-hsl: 130 70% 50%;
+    --destructive-hsl: 0 70% 50%;
     --destructive-foreground-hsl: 0 0% 100%;
-
     --radius: 0.5rem;
 
-    /* Holographic specific - terminal green defaults */
     --hologram-glow-color-hsl: var(--accent-hsl);
     --hologram-base-text-color-hsl: var(--foreground-hsl);
     --hologram-wireframe-color-hsl: var(--primary-hsl);
-    --hologram-panel-bg-hsl: var(--card-hsl); 
+    --hologram-panel-bg-hsl: var(--card-hsl);
     --hologram-panel-border-hsl: var(--primary-hsl);
     --hologram-button-bg-hsl: var(--primary-hsl);
     --hologram-button-text-hsl: var(--primary-foreground-hsl);
-    
-    /* Item Level Colors HSL (remain globally available) */
+  }
+
+  /* Default to terminal-green if no other theme class is present on html */
+  :root {
+    @apply theme-terminal-green;
+     /* Fallback debug colors if no theme var is found */
+    --shadows-debug-color: orange;
+    --cyphers-debug-color: orange;
+    --terminal-debug-color: orange;
+  }
+
+  .theme-cyphers {
+    --theme-name: "cyphers";
+    --background-hsl: 210 60% 8%;
+    --foreground-hsl: 200 100% 90%;
+    --primary-hsl: 204 100% 50%;      /* Electric Blue */
+    --primary-foreground-hsl: 0 0% 100%;
+    --secondary-hsl: 180 100% 50%;    /* Pale Turquoise - FOR BORDER TEST */
+    --secondary-foreground-hsl: 210 60% 15%;
+    --accent-hsl: 0 0% 100%;          /* White */
+    --accent-foreground-hsl: 204 100% 50%;
+    --muted-hsl: 210 40% 25%;
+    --muted-foreground-hsl: 200 80% 70%;
+    --card-hsl: 210 50% 12%;
+    --card-foreground-hsl: 200 100% 90%;
+    --popover-hsl: 210 50% 10%;
+    --popover-foreground-hsl: 200 100% 90%;
+    --border-hsl: 204 100% 60%;
+    --input-hsl: 210 40% 30%;
+    --ring-hsl: 204 100% 50%;
+
+    --hologram-panel-bg-hsl: var(--card-hsl);
+    --hologram-panel-border-hsl: var(--primary-hsl);
+    --hologram-glow-color-hsl: var(--primary-hsl);
+    --cyphers-debug-color: blue; /* Specific debug color */
+  }
+
+  .theme-shadows {
+    --theme-name: "shadows";
+    --background-hsl: 0 60% 8%;
+    --foreground-hsl: 0 0% 90%;
+    --primary-hsl: 0 100% 40%;       /* Intense Red */
+    --primary-foreground-hsl: 0 0% 100%;
+    --secondary-hsl: 16 100% 71%;     /* Light Salmon - FOR BORDER TEST */
+    --secondary-foreground-hsl: 0 60% 15%;
+    --accent-hsl: 0 0% 100%;          /* White */
+    --accent-foreground-hsl: 0 100% 40%;
+    --muted-hsl: 0 40% 25%;
+    --muted-foreground-hsl: 0 0% 70%;
+    --card-hsl: 0 50% 12%;
+    --card-foreground-hsl: 0 0% 90%;
+    --popover-hsl: 0 50% 10%;
+    --popover-foreground-hsl: 0 0% 90%;
+    --border-hsl: 0 100% 50%;
+    --input-hsl: 0 40% 30%;
+    --ring-hsl: 0 100% 40%;
+
+    --hologram-panel-bg-hsl: var(--card-hsl);
+    --hologram-panel-border-hsl: var(--primary-hsl);
+    --hologram-glow-color-hsl: var(--primary-hsl);
+    --shadows-debug-color: red; /* Specific debug color */
+  }
+  
+  .theme-terminal-green { /* Re-affirming for clarity and ensuring debug color */
+    --terminal-debug-color: lime;
+    /* All other terminal-green vars are as defined above */
+  }
+
+
+  /* Item Level Colors HSL (remain globally available, not part of base themes) */
+  /* These are defined once and don't change with Cypher/Shadow/Terminal themes */
+  :root {
     --level-1-color-hsl: 0 100% 50%; /* Red */
     --level-2-color-hsl: 30 100% 50%; /* Orange */
     --level-3-color-hsl: 50 100% 50%; /* Yellow */
@@ -58,85 +119,20 @@
     --level-7-color-hsl: 280 100% 55%; /* Violet */
     --level-8-color-hsl: 320 100% 50%; /* Magenta */
 
-    /* Chart colors can remain or be themed */
-    --chart-1: 130 70% 50%; /* Green chart color */
-    --chart-2: 130 50% 35%; /* Darker green */
-    --chart-3: 130 80% 60%; /* Lighter green */
-    --chart-4: 130 60% 40%; 
+    /* Chart colors */
+    --chart-1: 130 70% 50%;
+    --chart-2: 130 50% 35%;
+    --chart-3: 130 80% 60%;
+    --chart-4: 130 60% 40%;
     --chart-5: 130 90% 70%;
   }
-  
-  :root { /* Apply terminal-green theme by default */
-      @apply theme-terminal-green;
-  }
 
-  .theme-cyphers {
-    --theme-name: "cyphers";
-    --background-hsl: 210 60% 8%;
-    --foreground-hsl: 200 100% 90%;
 
-    --primary-hsl: 204 100% 50%; /* Electric Blue #0077CC */
-    --primary-foreground-hsl: 0 0% 100%;
-
-    --secondary-hsl: 195 53% 79%; /* Light Blue #ADD8E6 */
-    --secondary-foreground-hsl: 210 60% 15%;
-
-    --accent-hsl: 0 0% 100%;
-    --accent-foreground-hsl: 204 100% 50%;
-
-    --muted-hsl: 210 40% 25%;
-    --muted-foreground-hsl: 200 80% 70%;
-
-    --card-hsl: 210 50% 12%;
-    --card-foreground-hsl: 200 100% 90%;
-
-    --popover-hsl: 210 50% 10%;
-    --popover-foreground-hsl: 200 100% 90%;
-
-    --border-hsl: 204 100% 60%;
-    --input-hsl: 210 40% 30%;
-    --ring-hsl: 204 100% 50%;
-    --hologram-panel-bg-hsl: var(--card-hsl);
-    --hologram-panel-border-hsl: var(--primary-hsl);
-    --hologram-glow-color-hsl: var(--primary-hsl);
-  }
-
-  .theme-shadows {
-    --theme-name: "shadows";
-    --background-hsl: 0 60% 8%;
-    --foreground-hsl: 0 0% 90%;
-
-    --primary-hsl: 0 100% 40%; /* Intense Red #CC0000 */
-    --primary-foreground-hsl: 0 0% 100%;
-
-    --secondary-hsl: 16 100% 71%; /* Light Salmon #FFA07A */
-    --secondary-foreground-hsl: 0 60% 15%;
-
-    --accent-hsl: 0 0% 100%;
-    --accent-foreground-hsl: 0 100% 40%;
-
-    --muted-hsl: 0 40% 25%;
-    --muted-foreground-hsl: 0 0% 70%;
-
-    --card-hsl: 0 50% 12%;
-    --card-foreground-hsl: 0 0% 90%;
-
-    --popover-hsl: 0 50% 10%;
-    --popover-foreground-hsl: 0 0% 90%;
-
-    --border-hsl: 0 100% 50%;
-    --input-hsl: 0 40% 30%;
-    --ring-hsl: 0 100% 40%;
-    --hologram-panel-bg-hsl: var(--card-hsl);
-    --hologram-panel-border-hsl: var(--primary-hsl);
-    --hologram-glow-color-hsl: var(--primary-hsl);
-  }
-
-  /* Aesthetic Schemes (remain as defined) */
-  .theme-level-2-green { /* This can be an alias for terminal-green or a distinct theme */
-    --theme-name: "level-2-green"; /* Consider if this should just be theme-terminal-green */
+  /* Aesthetic Schemes (remain as defined for now) */
+  .theme-level-2-green {
+    --theme-name: "level-2-green";
     --primary-hsl: 145 100% 33%;
-    --secondary-hsl: 120 73% 75%;
+    --secondary-hsl: 120 73% 75%; /* Defaulting for level themes */
     --accent-hsl: 0 0% 100%;
     --accent-foreground-hsl: 145 100% 33%;
     --background-hsl: 145 60% 8%;
@@ -152,7 +148,7 @@
     --theme-name: "level-3-yellow";
     --primary-hsl: 54 100% 50%;
     --primary-foreground-hsl: 0 0% 0%;
-    --secondary-hsl: 56 100% 90%;
+    --secondary-hsl: 56 100% 90%; /* Defaulting for level themes */
     --secondary-foreground-hsl: 54 60% 15%;
     --accent-hsl: 0 0% 0%;
     --accent-foreground-hsl: 54 100% 50%;
@@ -165,7 +161,9 @@
     --hologram-glow-color-hsl: var(--primary-hsl);
   }
 
+
   /* Apply HSL variables to ShadCN CSS variables */
+  /* This block ensures that Tailwind utilities like bg-primary use the themed HSL values */
   :root, .theme-terminal-green, .theme-cyphers, .theme-shadows, .theme-level-2-green, .theme-level-3-yellow {
     --background: hsl(var(--background-hsl));
     --foreground: hsl(var(--foreground-hsl));
@@ -187,14 +185,16 @@
     --input: hsl(var(--input-hsl));
     --ring: hsl(var(--ring-hsl));
 
-    --hologram-glow-color: hsl(var(--hologram-glow-color-hsl, var(--primary-hsl)));
+    /* Holographic variables use the theme's primary/accent/foreground by default */
+    --hologram-glow-color: hsl(var(--hologram-glow-color-hsl, var(--accent-hsl)));
     --hologram-base-text-color: hsl(var(--hologram-base-text-color-hsl, var(--foreground-hsl)));
     --hologram-wireframe-color: hsl(var(--hologram-wireframe-color-hsl, var(--primary-hsl)));
-    --hologram-panel-bg: hsla(var(--hologram-panel-bg-hsl, var(--card-hsl)), 0.6); /* Use card as base, increased opacity */
+    --hologram-panel-bg: hsla(var(--hologram-panel-bg-hsl, var(--card-hsl)), 0.6);
     --hologram-panel-border: hsl(var(--hologram-panel-border-hsl, var(--primary-hsl)));
     --hologram-button-bg: hsl(var(--hologram-button-bg-hsl, var(--primary-hsl)));
     --hologram-button-text: hsl(var(--hologram-button-text-hsl, var(--primary-foreground-hsl)));
 
+    /* Item level colors (defined once in :root, used globally) */
     --level-1-color: hsl(var(--level-1-color-hsl));
     --level-2-color: hsl(var(--level-2-color-hsl));
     --level-3-color: hsl(var(--level-3-color-hsl));
@@ -217,7 +217,7 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-exo2; 
+    @apply bg-background text-foreground font-exo2;
     background-repeat: no-repeat;
     background-size: cover;
     background-attachment: fixed;
@@ -230,7 +230,7 @@
 
 /* Custom holographic styles */
 .holographic-panel {
-  background-color: var(--hologram-panel-bg); /* Base background for panels */
+  background-color: var(--hologram-panel-bg);
   border-color: var(--hologram-panel-border);
   @apply border rounded-lg shadow-[0_0_15px_var(--hologram-glow-color),inset_0_0_10px_var(--hologram-glow-color)];
   backdrop-filter: blur(2px);
@@ -242,14 +242,14 @@
 }
 
 .holographic-button {
-  border-color: var(--hologram-button-bg);
+  border-color: var(--hologram-button-bg); 
   color: var(--hologram-button-text);
   @apply bg-transparent border rounded-md px-4 py-2 transition-all duration-300;
   box-shadow: 0 0 8px var(--hologram-button-bg), inset 0 0 5px var(--hologram-button-bg);
 }
 .holographic-button:hover {
   background-color: var(--hologram-button-bg);
-  color: var(--background); /* Use CSS var for background text color on hover */
+  color: var(--background); 
   box-shadow: 0 0 15px var(--hologram-button-bg), 0 0 25px var(--hologram-button-bg);
 }
 .holographic-button:disabled {
@@ -266,6 +266,7 @@
    box-shadow: inset 0 0 8px hsl(var(--ring-hsl)), 0 0 8px hsl(var(--ring-hsl));
 }
 
+
 .font-rajdhani {
   font-family: var(--font-rajdhani);
 }
@@ -276,21 +277,20 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Grid for PAD screen */
 .pad-screen-grid {
   background-image:
     repeating-linear-gradient(0deg, hsl(var(--muted-foreground-hsl) / 0.1) 0px 1px, transparent 1px 20px),
     repeating-linear-gradient(90deg, hsl(var(--muted-foreground-hsl) / 0.1) 0px 1px, transparent 1px 20px);
 }
 
-/* Default for Terminal Green/Cyphers theme or when no specific theme class is on a higher parent */
+/* Background for the main PAD element that slides */
 .theme-terminal-green .bg-pad-backing,
 .theme-cyphers .bg-pad-backing {
-  background-color: hsla(var(--card-hsl), 0.7) !important; /* Use card HSL with 0.7 alpha */
+  background-color: hsla(var(--card-hsl), 0.7) !important;
 }
-
-/* For Shadows theme */
 .theme-shadows .bg-pad-backing {
-  background-color: hsla(var(--card-hsl), 0.7) !important; /* Shadows --card-hsl with 0.7 alpha */
+  background-color: hsla(var(--card-hsl), 0.7) !important;
 }
 
 
@@ -322,15 +322,16 @@
 /* TOD specific for horizontal scrolling */
 .tod-scroll-container {
   display: flex;
-  height: 100vh;
-  overflow-x: auto; /* Ensure horizontal scrolling is enabled */
-  overflow-y: hidden; /* Prevent vertical scroll on the container itself */
+  height: 100vh; 
+  overflow-x: auto; 
+  overflow-y: hidden; 
 }
 
 .tod-section {
-  @apply flex-shrink-0 h-full relative;
-  width: 100vw;
+  @apply flex-shrink-0 h-full relative; 
+  width: 100vw; 
 }
+
 
 /* Parallax layers */
 .parallax-layer {
@@ -351,27 +352,28 @@
   scrollbar-width: none;
 }
 
+/* PAD Gloss Effect */
 .pad-gloss-effect {
-  position: relative; /* Needed for absolute positioning of pseudo-element */
-  overflow: hidden; /* Keep the gloss within the PAD bounds */
+  position: relative; 
+  overflow: hidden; 
 }
 
 .pad-gloss-effect::after {
   content: '';
   position: absolute;
   top: 0;
-  left: -150%; /* Start off-screen to the left */
-  width: 50%; /* Width of the gloss highlight */
+  left: -150%; 
+  width: 50%; 
   height: 100%;
   background: linear-gradient(
     to right,
-    hsla(0, 0%, 100%, 0) 0%,       /* Transparent start */
-    hsla(0, 0%, 100%, 0.05) 50%,  /* Faint white highlight in the middle */
-    hsla(0, 0%, 100%, 0) 100%     /* Transparent end */
+    hsla(0, 0%, 100%, 0) 0%,
+    hsla(0, 0%, 100%, 0.05) 50%,
+    hsla(0, 0%, 100%, 0) 100%
   );
-  transform: skewX(-25deg); /* Angled highlight */
+  transform: skewX(-25deg); 
   animation: gloss-sweep 10s linear infinite;
-  pointer-events: none; /* So it doesn't interfere with clicks */
+  pointer-events: none; 
 }
 
 @keyframes gloss-sweep {
@@ -379,7 +381,7 @@
     left: -150%;
   }
   100% {
-    left: 150%; /* Sweep across to the right */
+    left: 150%; 
   }
 }
 
@@ -394,8 +396,22 @@
     opacity: 1;
   }
 }
-
 .animate-slide-up-from-bottom {
   animation: slide-up-from-bottom 1s ease-out forwards;
 }
-    
+
+/* Keyframes for TODWindow slide in/out */
+@keyframes slide-in-right-tod {
+  from { transform: translateX(100%) scale(0.95); opacity: 0; }
+  to { transform: translateX(0) scale(1); opacity: 1; }
+}
+@keyframes slide-out-right-tod {
+  from { transform: translateX(0) scale(1); opacity: 1; }
+  to { transform: translateX(100%) scale(0.95); opacity: 0; }
+}
+.animate-slide-in-right-tod {
+  animation: slide-in-right-tod 0.2s ease-out forwards;
+}
+.animate-slide-out-right-tod {
+  animation: slide-out-right-tod 0.2s ease-out forwards;
+}
