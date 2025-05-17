@@ -1,10 +1,11 @@
 
 "use client";
-import React, { useEffect, useState } from 'react'; // Added React import
+import React, { useEffect, useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { HolographicPanel, HolographicButton } from '@/components/game/shared/HolographicPanel';
+import { HolographicButton } from '@/components/game/shared/HolographicPanel'; // Keep for button
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Zap } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export function WelcomeScreen() {
   const { setOnboardingStep } = useAppContext();
@@ -13,26 +14,26 @@ export function WelcomeScreen() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowContent(true);
-    }, 500);
+    }, 1500); // Increased duration to 1.5 seconds
     return () => clearTimeout(timer);
   }, []);
 
   if (!showContent) {
-    // This HolographicPanel is for the "Establishing Secure Connection..."
-    // Its parent 'main' in page.tsx is flex, items-center, justify-center, so this panel will be centered.
     return (
-        <HolographicPanel className="w-full max-w-md p-4 md:p-6 flex flex-col items-center justify-center">
-          <div className="flex flex-col items-center text-center">
-            <Zap className="w-24 h-24 text-primary animate-pulse icon-glow" />
-            <p className="mt-4 text-xl font-orbitron holographic-text">Establishing Secure Connection...</p>
-          </div>
-        </HolographicPanel>
+      // This div will be centered by its parent <main> in page.tsx
+      <div className="flex flex-col items-center justify-center text-center">
+        <Zap className="w-24 h-24 text-primary animate-pulse icon-glow" />
+        <p className="mt-4 text-xl font-orbitron holographic-text">Establishing Secure Connection...</p>
+      </div>
     );
   }
 
   return (
-    <HolographicPanel
-      className="w-full max-w-2xl p-4 md:p-6 flex flex-col flex-grow h-0 overflow-hidden" // Added flex-grow and h-0
+    <div 
+      className={cn(
+        "w-full max-w-2xl p-4 md:p-6 flex flex-col flex-grow h-0 overflow-hidden",
+        "holographic-panel" // Apply holographic panel styling to the root
+      )}
     >
       <h1 className="text-3xl md:text-4xl font-orbitron mb-4 text-center holographic-text flex-shrink-0">
         Welcome Agent
@@ -60,6 +61,6 @@ export function WelcomeScreen() {
       >
         Proceed
       </HolographicButton>
-    </HolographicPanel>
+    </div>
   );
 }
