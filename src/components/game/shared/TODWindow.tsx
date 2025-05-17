@@ -5,7 +5,7 @@ import React from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { HolographicPanel } from './HolographicPanel';
-import type { Theme } from '@/contexts/ThemeContext'; // Import Theme type
+import type { Theme } from '@/contexts/ThemeContext'; 
 
 interface TODWindowProps {
   isOpen: boolean;
@@ -13,7 +13,7 @@ interface TODWindowProps {
   title: string;
   children: React.ReactNode;
   size?: 'default' | 'large';
-  explicitTheme?: Theme; // New prop to receive the theme name
+  explicitTheme?: Theme; 
 }
 
 export function TODWindow({ isOpen, onClose, title, children, size = 'default', explicitTheme }: TODWindowProps) {
@@ -25,26 +25,23 @@ export function TODWindow({ isOpen, onClose, title, children, size = 'default', 
   }
   console.log('[TODWindow] Rendering with isOpen true. Title:', title, "Explicit Theme:", explicitTheme);
 
-  // Apply the theme class directly to the outermost div of the TODWindow
-  const windowThemeClass = explicitTheme ? `theme-${explicitTheme}` : '';
+  const windowThemeClass = explicitTheme ? `theme-${explicitTheme}` : 'theme-terminal-green';
 
   return (
     <div
       className={cn(
         "fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm",
-        isOpen ? "animate-slide-in-right-tod" : "animate-slide-out-right-tod", // Animation classes
-        windowThemeClass // Apply the explicit theme class here
+        isOpen ? "animate-slide-in-right-tod" : "animate-slide-out-right-tod", 
+        windowThemeClass 
       )}
       onClick={onClose}
     >
       <HolographicPanel
-        // Keying the HolographicPanel with explicitTheme ensures it re-renders if the theme name changes
         key={explicitTheme || 'default-theme'} 
         className={cn(
           "relative m-4 flex flex-col z-[10000]",
           "w-[calc(100vw-80px)] max-w-[600px]",
           "h-[calc(100vh-100px)] max-h-[600px]",
-          // No explicit theme class needed here if parent has it, but it doesn't hurt if HolographicPanel adapts
         )}
         onClick={(e) => e.stopPropagation()}
       >
@@ -58,8 +55,15 @@ export function TODWindow({ isOpen, onClose, title, children, size = 'default', 
           </button>
         </div>
 
-        {/* THEME TEST DIV - To be removed after testing */}
-        <div className="p-2 my-2 bg-primary text-primary-foreground border-2 border-accent">
+        {/* THEME TEST DIV - Now uses direct inline styles with CSS variables */}
+        <div
+          className="p-2 my-2 border-2"
+          style={{
+            backgroundColor: 'hsl(var(--primary-hsl))',
+            color: 'hsl(var(--primary-foreground-hsl))',
+            borderColor: 'hsl(var(--accent-hsl))',
+          }}
+        >
           THEME TEST DIV (Should be Faction Colored)
         </div>
         {/* END THEME TEST DIV */}
@@ -71,4 +75,3 @@ export function TODWindow({ isOpen, onClose, title, children, size = 'default', 
     </div>
   );
 }
-

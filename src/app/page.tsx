@@ -123,14 +123,14 @@ export default function HomePage() {
 
       const maxPossibleScrollLeft = (sectionComponents.length - 1) * clientWidth;
 
-      if (currentScrollLeft <= 5) { // Adjust threshold for smoother loop
+      if (currentScrollLeft <= 5) { 
          todContainerRef.current.scrollLeft = (sectionComponents.length - 2) * clientWidth - 5;
       }
-      else if (currentScrollLeft >= maxPossibleScrollLeft - 5) { // Adjust threshold
+      else if (currentScrollLeft >= maxPossibleScrollLeft - 5) { 
         todContainerRef.current.scrollLeft = clientWidth + 5;
       }
     }
-  }, [sectionComponents.length]); // parallaxOffset removed as it's set inside
+  }, [sectionComponents.length]); 
 
   useEffect(() => {
     const container = todContainerRef.current;
@@ -139,7 +139,7 @@ export default function HomePage() {
       const setInitialScroll = () => {
         if (container.clientWidth > 0 && !initialScrollSetRef.current) {
           const sectionWidth = container.clientWidth;
-          const initialScrollPosition = sectionWidth; // Start on the first "actual" AgentSection
+          const initialScrollPosition = sectionWidth; 
           container.scrollLeft = initialScrollPosition;
           setParallaxOffset(initialScrollPosition);
           console.log("Initial scroll set to:", initialScrollPosition);
@@ -178,11 +178,11 @@ export default function HomePage() {
           <ParallaxBackground parallaxOffset={0} />
           <div className="animate-pulse text-2xl font-orbitron holographic-text">LOADING INTERFACE...</div>
            <TODWindow
-            key={`${faction}-${themeVersion}-loading-${isTODWindowOpen}`} // faction from AppContext
+            key={`${faction}-${themeVersion}-loading-${isTODWindowOpen}`} 
             isOpen={isTODWindowOpen}
             onClose={closeTODWindow}
             title={todWindowTitle}
-            explicitTheme={currentTheme} // Pass currentTheme for direct application
+            explicitTheme={currentTheme} 
           >
             {todWindowContent}
           </TODWindow>
@@ -197,7 +197,7 @@ export default function HomePage() {
         case 'welcome':
           return <WelcomeScreen />;
         case 'factionChoice':
-          return <FactionChoiceScreen setShowAuthPrompt={setShowAuthPrompt} />;
+          return <FactionChoiceScreen />;
         case 'fingerprint':
           return <FingerprintScannerScreen />;
         default:
@@ -210,11 +210,11 @@ export default function HomePage() {
         {renderOnboarding()}
         {showAuthPrompt && <AuthPromptModal onClose={() => setShowAuthPrompt(false)} />}
         <TODWindow
-          key={`${faction}-${themeVersion}-onboarding-${isTODWindowOpen}-${onboardingStep}`} // faction from AppContext
+          key={`${faction}-${themeVersion}-onboarding-${isTODWindowOpen}-${onboardingStep}`} 
           isOpen={isTODWindowOpen}
           onClose={closeTODWindow}
           title={todWindowTitle}
-          explicitTheme={currentTheme} // Pass currentTheme for direct application
+          explicitTheme={currentTheme} 
         >
           {todWindowContent}
         </TODWindow>
@@ -226,27 +226,30 @@ export default function HomePage() {
   console.log('HomePage rendering. AppContext faction for TODWindow key:', faction);
   console.log('HomePage rendering. Current ThemeContext theme for TODWindow key:', currentTheme);
   console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key:', themeVersion);
+  // New Diagnostic Log
+  console.log('HomePage rendering. TODWindow props: explicitTheme=', currentTheme, 'key=', `${faction}-${themeVersion}-tod-${isTODWindowOpen}`);
+
 
   return (
     <main className="relative h-screen w-screen"> 
       <ParallaxBackground parallaxOffset={parallaxOffset} />
 
       <div
-        className="parallax-layer z-[5] opacity-30" // Increased opacity slightly for accent grid
+        className="parallax-layer z-[5] opacity-30" 
         style={{
-          transform: `translateX(-${parallaxOffset * 0.5}px)`, // Slower parallax scroll
-          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`, // Adjust width calculation
+          transform: `translateX(-${parallaxOffset * 0.5}px)`, 
+          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`, 
           backgroundImage: `
             repeating-linear-gradient(
               45deg,
-              hsl(var(--accent-hsl) / 0.2), /* Using accent color with reduced opacity */
+              hsl(var(--accent-hsl) / 0.2), 
               hsl(var(--accent-hsl) / 0.2) 1px,
               transparent 1px,
               transparent 60px
             ),
             repeating-linear-gradient(
               -45deg,
-              hsl(var(--accent-hsl) / 0.2), /* Using accent color with reduced opacity */
+              hsl(var(--accent-hsl) / 0.2), 
               hsl(var(--accent-hsl) / 0.2) 1px,
               transparent 1px,
               transparent 60px
@@ -260,10 +263,10 @@ export default function HomePage() {
         ref={todContainerRef}
         className={cn(
             "tod-scroll-container absolute inset-0 z-10 scrollbar-hide",
-            playBootAnimation && "animate-slide-up-from-bottom" // Boot-up animation
+            playBootAnimation && "animate-slide-up-from-bottom" 
         )}
         style={{
-          WebkitOverflowScrolling: 'touch', // For smoother scrolling on iOS
+          WebkitOverflowScrolling: 'touch', 
         }}
       >
         {sectionComponents.map((SectionComponentInstance) => (
@@ -277,16 +280,14 @@ export default function HomePage() {
       </div>
 
       <TODWindow
-        key={`${faction}-${themeVersion}-tod-${isTODWindowOpen}`} // faction from AppContext
+        key={`${faction}-${themeVersion}-tod-${isTODWindowOpen}`} 
         isOpen={isTODWindowOpen}
         onClose={closeTODWindow}
         title={todWindowTitle}
-        explicitTheme={currentTheme} // Pass currentTheme for direct application
+        explicitTheme={currentTheme} 
       >
         {todWindowContent}
       </TODWindow>
     </main>
   );
 }
-
-    
