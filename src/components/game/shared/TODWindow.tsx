@@ -5,8 +5,7 @@ import React from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Theme } from '@/contexts/ThemeContext';
-// HolographicPanel import is not used in this simplified test version
-// import { HolographicPanel } from './HolographicPanel'; 
+import { HolographicPanel } from './HolographicPanel';
 
 interface TODWindowProps {
   isOpen: boolean;
@@ -15,87 +14,57 @@ interface TODWindowProps {
   children: React.ReactNode;
   size?: 'default' | 'large';
   explicitTheme?: Theme;
-  // themeVersion is not directly used by this simplified version if HolographicPanel isn't keyed internally
+  // themeVersion is passed from AppContext via HomePage for keying HolographicPanel
+  themeVersion?: number;
 }
 
-export function TODWindow({ isOpen, onClose, title, children, size = 'default', explicitTheme }: TODWindowProps) {
-  // console.log('[TODWindow] Component function executing. isOpen:', isOpen, "Title:", title, "Explicit Theme:", explicitTheme);
+export function TODWindow({ isOpen, onClose, title, children, size = 'default', explicitTheme, themeVersion }: TODWindowProps) {
+  const windowThemeClass = explicitTheme ? `theme-${explicitTheme}` : 'theme-terminal-green';
 
   if (!isOpen) {
-    // console.log('[TODWindow] Rendering null because isOpen is false.');
     return null;
   }
-  // console.log('[TODWindow] Rendering with isOpen true. Title:', title, "Explicit Theme:", explicitTheme);
-
-  const windowThemeClass = explicitTheme ? `theme-${explicitTheme}` : 'theme-terminal-green';
 
   return (
     <div
       className={cn(
         "fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm",
-        "animate-slide-in-right-tod",
-        windowThemeClass // Apply theme class to the main overlay div
+        "animate-slide-in-right-tod", // Ensure this animation is defined for opening
+        // windowThemeClass // Apply theme class to the main overlay div for font/cascade if needed
       )}
-      onClick={onClose}
+      onClick={onClose} // Click on backdrop to close
     >
-      {/* This div acts as the visual panel, HolographicPanel is removed for this test */}
-      <div 
-        className={cn( 
-          "relative m-4 flex flex-col z-[10000] p-4 md:p-6 border rounded-lg shadow-lg",
+      <HolographicPanel
+        key={explicitTheme ? `${explicitTheme}-${themeVersion}` : `default-${themeVersion}`} // Re-key HolographicPanel on theme change
+        className={cn(
+          "relative m-4 flex flex-col z-[10000]",
           "w-[calc(100vw-80px)] max-w-[600px]",
           "h-[calc(100vh-100px)] max-h-[600px]",
-          // Apply theme class directly to this panel for testing variable override
-          windowThemeClass 
+          // No explicit theme class here; HolographicPanel will apply it based on its prop
         )}
-        onClick={(e) => e.stopPropagation()} // Prevent backdrop click when clicking on this panel
+        onClick={(e) => e.stopPropagation()} // Prevent backdrop click when clicking on panel
+        explicitTheme={explicitTheme} // Pass the theme to HolographicPanel
       >
         <div className={cn(
             "flex-shrink-0 flex items-center justify-between pb-2 mb-2 border-b",
-            "border-current" // Should pick up themed text color via cascade
+            "border-current" // Should pick up themed text color via cascade if parent has themed text
           )}
         >
-          <h2 className={cn("text-xl font-orbitron text-foreground")}> {/* text-foreground should be themed */}
+          <h2 className={cn("text-xl font-orbitron text-foreground")}> {/* text-foreground should be themed by HolographicPanel's theme */}
             {title}
           </h2>
           <button
-            onClick={onClose} // onClose is already passed to parent div, but this is more specific
+            onClick={onClose}
             className={cn("p-1 text-muted-foreground hover:text-foreground")}
           >
             <X className="w-5 h-5" />
           </button>
         </div>
-
-        {/* Test Div 1: Tailwind Utility */}
-        <div
-          className={cn(
-            "p-2 my-1 border-2 bg-primary text-primary-foreground border-accent",
-             windowThemeClass // Apply theme class directly to test div
-          )}
-        >
-          TEST DIV (Tailwind bg-primary)
-        </div>
-
-        {/* Test Div 2: Inline Style with CSS Variables */}
-        <div
-          className={cn(
-            "p-2 my-1 border-2",
-            windowThemeClass // Apply theme class directly to test div
-          )}
-          style={{
-            backgroundColor: 'hsl(var(--primary-hsl))',
-            color: 'hsl(var(--primary-foreground-hsl))',
-            borderColor: `var(--${explicitTheme || 'terminal-green'}-debug-color, orange)`,
-            borderWidth: '5px',
-            borderStyle: 'solid'
-          }}
-        >
-          TEST DIV (Inline Style var(--primary))
-        </div>
         
-        <div className="flex-grow min-h-0 h-[calc(100%-10rem)] overflow-y-auto scrollbar-hide"> {/* Adjusted height for test divs + title */}
+        <div className="flex-grow min-h-0 h-[calc(100%-4rem)] overflow-y-auto scrollbar-hide">
            {children}
         </div>
-      </div>
+      </HolographicPanel>
     </div>
   );
 }
