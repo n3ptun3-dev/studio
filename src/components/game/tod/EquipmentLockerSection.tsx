@@ -2,58 +2,64 @@
 "use client";
 
 import React from 'react';
-import { HolographicPanel, HolographicButton } from '@/components/game/shared/HolographicPanel';
+import { HolographicButton, HolographicPanel } from '@/components/game/shared/HolographicPanel';
 import { useAppContext } from '@/contexts/AppContext';
 import { useTheme, type Theme } from '@/contexts/ThemeContext';
-import { Palette } from 'lucide-react'; // Using Palette icon for theme switching
+import { Palette } from 'lucide-react'; 
 
 interface SectionProps {
   parallaxOffset: number;
 }
 
 export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
-  const { openTODWindow, closeTODWindow } = useAppContext();
-  const { setTheme, theme: currentGlobalTheme } = useTheme();
+  const { openTODWindow } = useAppContext(); 
+  const { setTheme, theme: currentGlobalTheme, themeVersion } = useTheme(); // Get themeVersion
 
   const ThemeSwitcher = () => {
-    const themes: { name: string; themeKey: Theme; bgColor: string; textColor: string; borderColor: string; }[] = [
-      { name: "Terminal Green", themeKey: "terminal-green", bgColor: "bg-green-700/80 hover:bg-green-600/90", textColor: "text-green-200", borderColor: "border-green-500" },
-      { name: "Cyphers Blue", themeKey: "cyphers", bgColor: "bg-blue-700/80 hover:bg-blue-600/90", textColor: "text-blue-200", borderColor: "border-blue-500" },
-      { name: "Shadows Red", themeKey: "shadows", bgColor: "bg-red-700/80 hover:bg-red-600/90", textColor: "text-red-200", borderColor: "border-red-500" },
+    const themes: { name: string; themeKey: Theme; }[] = [
+      { name: "Terminal Green", themeKey: "terminal-green" },
+      { name: "Cyphers Blue", themeKey: "cyphers" },
+      { name: "Shadows Red", themeKey: "shadows" },
     ];
 
     return (
       <div className="p-4 flex flex-col space-y-3 font-rajdhani">
-        <p className="text-muted-foreground text-sm text-center holographic-text">Select a theme to apply globally for testing:</p>
+        <p className="text-muted-foreground text-sm text-center holographic-text">Select a theme to apply globally:</p>
         {themes.map((item) => (
-          <button
+          <HolographicButton
             key={item.themeKey}
-            className={`p-3 rounded-md text-center font-semibold transition-all border-2 ${item.borderColor} ${item.bgColor} ${item.textColor}`}
+            className="p-3 text-center font-semibold transition-all w-full"
             onClick={() => {
               setTheme(item.themeKey);
-              // Optionally close the window, or let the user close it manually
-              // closeTODWindow(); 
             }}
+            // The button itself should be themed according to the window it's in
+            // The window (TODWindow > HolographicPanel) is keyed by currentGlobalTheme + themeVersion
+            // So, the button should also reflect this.
+            explicitTheme={currentGlobalTheme} 
           >
             {item.name}
-          </button>
+          </HolographicButton>
         ))}
       </div>
     );
   };
 
   const handleOpenThemeSwitcher = () => {
+    // The theme override window itself should also be themed according to the current global theme
     openTODWindow(
       "TOD Theme Override",
-      <ThemeSwitcher />,
-      { showCloseButton: true } // Allow closing this utility window
+      <ThemeSwitcher />, // The content for the window
+      { showCloseButton: true } 
     );
   };
 
   return (
     <div className="flex items-center justify-center p-4 md:p-6 h-full">
-      <HolographicPanel className="w-full h-full max-w-4xl flex flex-col items-center justify-center relative">
-        <div className="absolute top-4 right-4 z-10"> {/* Ensure button is above other content */}
+      <HolographicPanel 
+        className="w-full h-full max-w-4xl flex flex-col items-center justify-center relative"
+        explicitTheme={currentGlobalTheme} 
+      >
+        <div className="absolute top-4 right-4 z-10">
           <HolographicButton
             onClick={handleOpenThemeSwitcher}
             className="!p-2" 
@@ -72,4 +78,5 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
     </div>
   );
 }
+
     
