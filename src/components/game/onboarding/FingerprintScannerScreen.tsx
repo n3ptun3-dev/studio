@@ -8,7 +8,7 @@ import { HolographicPanel } from '@/components/game/shared/HolographicPanel';
 import { useTheme, type Theme } from '@/contexts/ThemeContext';
 
 export function FingerprintScannerScreen() {
-  const { setOnboardingStep } = useAppContext();
+  const { setOnboardingStep, faction } = useAppContext();
   const { theme: currentGlobalTheme, themeVersion } = useTheme();
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
@@ -67,22 +67,22 @@ export function FingerprintScannerScreen() {
 
   return (
     <HolographicPanel
-      className="w-full max-w-md text-center p-6 flex flex-col items-center justify-center min-h-[400px] mx-auto"
+      className="w-full max-w-md text-center p-6 flex flex-col items-center flex-grow h-0 overflow-hidden"
       explicitTheme={currentGlobalTheme}
       key={`fingerprint-panel-${currentGlobalTheme}-${themeVersion}-${accessGranted}`}
     >
       {accessGranted ? (
-        <>
+        <div className="flex flex-col items-center justify-center flex-grow w-full">
           <h2 className="text-3xl font-orbitron holographic-text text-green-400">Access Granted</h2>
           <p className="text-lg text-muted-foreground mt-2">Initializing Spi Vs Spi TOD...</p>
-          <Fingerprint className="w-24 h-24 mx-auto text-green-400 mt-8 icon-glow" />
-        </>
+          <Fingerprint className="w-24 h-24 mx-auto text-green-400 mt-auto mb-4 icon-glow" />
+        </div>
       ) : (
-        <>
+        <div className="flex flex-col items-center justify-center flex-grow w-full">
           <h2 className="text-2xl font-orbitron mb-6 holographic-text">Spi Vs Spi: Biometric Authentication</h2>
           <p className="text-muted-foreground mb-8">Press and Hold to Authenticate.</p>
           <div
-            className="relative w-48 h-48 mx-auto rounded-full border-2 border-primary flex items-center justify-center cursor-pointer select-none touch-none"
+            className="relative w-48 h-48 mx-auto rounded-full border-2 border-primary flex items-center justify-center cursor-pointer select-none touch-none mt-auto mb-4"
             onMouseDown={startScan}
             onTouchStart={(e) => { e.preventDefault(); startScan(); }}
             onMouseUp={cancelScan}
@@ -121,7 +121,7 @@ export function FingerprintScannerScreen() {
               />
             </svg>
           </div>
-        </>
+        </div>
       )}
     </HolographicPanel>
   );
