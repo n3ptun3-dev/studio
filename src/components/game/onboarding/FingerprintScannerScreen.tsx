@@ -5,11 +5,11 @@ import { useAppContext } from '@/contexts/AppContext';
 import { Fingerprint } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { HolographicPanel } from '@/components/game/shared/HolographicPanel';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme, type Theme } from '@/contexts/ThemeContext';
 
 export function FingerprintScannerScreen() {
-  const { setOnboardingStep, faction } = useAppContext();
-  const { theme: currentGlobalTheme } = useTheme(); // Get current global theme
+  const { setOnboardingStep } = useAppContext();
+  const { theme: currentGlobalTheme, themeVersion } = useTheme(); // Get current global theme and version
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [accessGranted, setAccessGranted] = useState(false);
@@ -19,14 +19,14 @@ export function FingerprintScannerScreen() {
   const SCAN_DURATION = 1000; // 1 second
 
   const startScan = () => {
-    if (accessGranted) return; // Prevent re-scan if already granted
+    if (accessGranted || isScanning) return; 
     setIsScanning(true);
     setScanProgress(0);
 
     if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
     progressIntervalRef.current = setInterval(() => {
       setScanProgress(prev => {
-        const next = prev + 100 / (SCAN_DURATION / 50); // Update every 50ms
+        const next = prev + 100 / (SCAN_DURATION / 50); 
         if (next >= 100) {
           clearInterval(progressIntervalRef.current!);
           return 100;
@@ -42,7 +42,7 @@ export function FingerprintScannerScreen() {
   };
 
   const cancelScan = () => {
-    if (accessGranted) return; // Don't cancel if already granted
+    if (accessGranted || !isScanning) return; 
     setIsScanning(false);
     setScanProgress(0);
     if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
@@ -55,23 +55,24 @@ export function FingerprintScannerScreen() {
     if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
     setTimeout(() => {
       setOnboardingStep('tod');
-    }, 1500); // Show "Access Granted" for a bit
+    }, 1500); 
   };
 
   useEffect(() => {
-    return () => { // Cleanup timeouts on unmount
+    return () => { 
       if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
       if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
     };
   }, []);
 
-  // Determine the explicit theme to pass to HolographicPanel based on current global theme
-  const explicitThemeForPanel = currentGlobalTheme;
-
   if (accessGranted) {
     return (
       <div className="flex flex-col flex-grow items-center justify-center">
-        <HolographicPanel className="text-center p-8" explicitTheme={explicitThemeForPanel}>
+        <HolographicPanel 
+          className="text-center p-8" 
+          explicitTheme={currentGlobalTheme}
+          key={`access-granted-${currentGlobalTheme}-${themeVersion}`} // Ensure re-render on theme change
+        >
           <Fingerprint className="w-24 h-24 mx-auto text-green-400 mb-4 icon-glow" />
           <h2 className="text-3xl font-orbitron holographic-text text-green-400">Access Granted</h2>
           <p className="text-lg text-muted-foreground mt-2">Initializing Spi Vs Spi TOD...</p>
@@ -82,17 +83,21 @@ export function FingerprintScannerScreen() {
 
   return (
     <div className="flex flex-col flex-grow items-center justify-center">
-      <HolographicPanel className="text-center p-8" explicitTheme={explicitThemeForPanel}>
+      <HolographicPanel 
+        className="text-center p-8" 
+        explicitTheme={currentGlobalTheme}
+        key={`scanner-${currentGlobalTheme}-${themeVersion}`} // Ensure re-render on theme change
+      >
         <h2 className="text-2xl font-orbitron mb-6 holographic-text">Spi Vs Spi: Biometric Authentication</h2>
         <p className="text-muted-foreground mb-8">Press and Hold to Authenticate.</p>
         
         <div 
-          className="relative w-48 h-48 mx-auto rounded-full border-2 border-primary flex items-center justify-center cursor-pointer select-none"
+          className="relative w-48 h-48 mx-auto rounded-full border-2 border-primary flex items-center justify-center cursor-pointer select-none touch-none"
           onMouseDown={startScan}
-          onTouchStart={startScan}
+          onTouchStart={(e) => { e.preventDefault(); startScan(); }} // Prevent default for touch to avoid scrolling/zoom
           onMouseUp={cancelScan}
-          onTouchEnd={cancelScan}
-          onMouseLeave={cancelScan} // If mouse leaves while pressed
+          onTouchEnd={(e) => { e.preventDefault(); cancelScan(); }}
+          onMouseLeave={cancelScan} 
         >
           <Fingerprint 
             className={cn(
@@ -108,7 +113,6 @@ export function FingerprintScannerScreen() {
               />
             </div>
           )}
-          {/* Progress Ring */}
           <svg className="absolute inset-0 w-full h-full" viewBox="0 0 36 36">
             <path
               className="text-transparent"
@@ -127,11 +131,10 @@ export function FingerprintScannerScreen() {
               fill="none"
               strokeWidth="2"
               strokeLinecap="round"
-              transform = "rotate(-90 18 18)"
+              style={{ transform: 'rotate(-90deg)', transformOrigin: '18px 18px' }}
             />
           </svg>
         </div>
-        {/* "Scanning..." text removed */}
       </HolographicPanel>
     </div>
   );
