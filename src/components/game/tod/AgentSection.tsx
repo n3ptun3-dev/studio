@@ -1,25 +1,16 @@
-
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { HolographicButton } from '@/components/game/shared/HolographicPanel';
-import { HolographicInput } from '@/components/game/shared/HolographicPanel';
 import { Progress } from "@/components/ui/progress";
 import { Fingerprint, Settings, BookOpen, Info, Power } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { XP_THRESHOLDS } from '@/lib/constants';
-import { useTheme, type Theme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
-type PadScreenView = 'dossier' | 'intel' | 'settings';
-
-interface SectionProps {
-  parallaxOffset: number;
-}
-
-const PEEK_AMOUNT = 20; 
-const PAD_BUTTON_PANEL_HEIGHT = 60;
+const PEEK_AMOUNT = 20; // Height of the visible part of the PAD screen when "off"
 
 const AgentDossierView = () => {
   const { playerSpyName, playerPiName, faction, playerStats, setFaction: setAppFaction, addMessage } = useAppContext();
@@ -28,7 +19,7 @@ const AgentDossierView = () => {
   const handleFactionChange = () => {
     let newFaction = faction === 'Cyphers' ? 'Shadows' : 'Cyphers';
     if (faction === 'Observer') {
-        newFaction = 'Cyphers'; 
+        newFaction = 'Cyphers';
         addMessage({ type: 'system', text: `Faction allegiance protocols engaged. Defaulting to Cyphers.` });
     }
     setAppFaction(newFaction);
@@ -159,16 +150,24 @@ const SettingsView = () => {
   );
 };
 
+type PadScreenView = 'dossier' | 'intel' | 'settings';
+
+interface SectionProps {
+  parallaxOffset: number;
+}
+
 export function AgentSection({ parallaxOffset }: SectionProps) {
   const { playerSpyName, faction, playerStats } = useAppContext();
+  const { theme: currentTheme } = useTheme();
+
   const [isPadUp, setIsPadUp] = useState(false);
   const [padScreenView, setPadScreenView] = useState<PadScreenView>('dossier');
-  const { theme: currentTheme } = useTheme();
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const topContentRef = useRef<HTMLDivElement>(null);
   const thePadRef = useRef<HTMLDivElement>(null);
   const padButtonPanelRef = useRef<HTMLDivElement>(null);
+  // const padScreenContentWrapperRef = useRef<HTMLDivElement>(null); // Keep if needed for height calculations
 
   const [transferTimer, setTransferTimer] = useState(0);
   const [isTransferWindowOpen, setIsTransferWindowOpen] = useState(false);
@@ -197,18 +196,19 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
     const buttonPanelRect = padButtonPanelRef.current.getBoundingClientRect();
     const scrollContainerRect = scrollContainerRef.current.getBoundingClientRect();
     
-    const shouldBeUp = buttonPanelRect.top <= scrollContainerRect.top + 5; 
+    // isPadUp is true if the top of the button panel is at or very near the top of the scroll container viewport
+    const shouldBeUp = buttonPanelRect.top <= scrollContainerRect.top + 5; // 5px tolerance
 
     if (shouldBeUp !== isPadUp) {
       setIsPadUp(shouldBeUp);
     }
-  }, [isPadUp]); 
+  }, [isPadUp]);
 
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (container) {
       container.addEventListener('scroll', handleScroll);
-      handleScroll(); 
+      handleScroll(); // Initial check
       return () => container.removeEventListener('scroll', handleScroll);
     }
   }, [handleScroll]);
@@ -217,14 +217,15 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
     if (!scrollContainerRef.current || !thePadRef.current || !padButtonPanelRef.current) return;
 
     if (!isPadUp) {
-      // Scroll so the PAD Button Panel is at the top of the viewport
-      padButtonPanelRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Scroll PAD (specifically its button panel) to the top of the scroll container
+      // We want thePadRef itself to be at the top of the scrollContainer viewport
+      const targetScrollTop = thePadRef.current.offsetTop;
+      scrollContainerRef.current.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
     } else {
-      // Scroll the entire AgentSection to its top
+      // Scroll AgentSection to top
       scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [isPadUp]);
-
 
   const currentLevelXp = XP_THRESHOLDS[playerStats.level] || 0;
   const nextLevelXpTarget = XP_THRESHOLDS[playerStats.level + 1] || (XP_THRESHOLDS[playerStats.level] + (XP_THRESHOLDS[1] - XP_THRESHOLDS[0] || 100));
@@ -242,15 +243,15 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
   };
   
   const padDynamicStyle: React.CSSProperties = isPadUp
-    ? { minHeight: '100vh' } 
-    : { minHeight: 'auto' };
+    ? { minHeight: '100vh' } // When up, PAD tries to fill viewport height relative to scroll container
+    : { minHeight: 'auto' }; // When down, natural height (button panel + peek)
 
   return (
     <div ref={scrollContainerRef} className="relative flex flex-col h-full overflow-y-auto scrollbar-hide">
       {/* Top Content Area (Title + Stats) */}
-      <div ref={topContentRef} className="flex flex-col flex-shrink-0"> {/* REMOVED flex-grow */}
-        {/* Title Area - This will use flex-grow to take space above Stats Area */}
-        <div className="flex-grow flex flex-col items-center justify-center pt-4 md:pt-2 pb-2 text-center relative">
+      <div ref={topContentRef} className="flex flex-col flex-shrink-0"> {/* No flex-grow here */}
+        {/* Title Area - Uses flex-grow to push Stats down WITHIN topContentRef */}
+        <div className="flex-grow flex flex-col items-center justify-center pt-4 md:pt-2 pb-2 text-center relative overflow-hidden">
           <div className="absolute inset-0 flex items-center justify-center -z-10 opacity-10">
             <Fingerprint className="w-48 h-48 md:w-64 md:h-64 text-primary" />
           </div>
@@ -291,8 +292,8 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
         ref={thePadRef}
         style={padDynamicStyle}
         className={cn(
-          "w-[90%] mx-auto flex flex-col flex-shrink-0 shadow-lg mt-4",
-          "bg-pad-backing backdrop-blur-sm pad-gloss-effect rounded-t-lg border-t border-l border-r border-white/10" 
+          "w-[90%] mx-auto flex flex-col flex-shrink-0 shadow-lg mt-4", // Base structure
+          "bg-pad-backing backdrop-blur-sm pad-gloss-effect rounded-t-lg border-t border-l border-r border-white/10" // Styling
         )}
       >
         {/* PAD Button Panel */}
@@ -300,7 +301,7 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
           ref={padButtonPanelRef}
           className={cn(
             "h-[60px] flex-shrink-0 flex items-center justify-between px-4 border-b border-white/5 rounded-t-lg",
-            isPadUp ? "bg-pad-backing" : "" // Keep background consistent if sticky/up
+            "bg-pad-backing" // Ensures button panel has matching background
           )}
         >
           {isPadUp ? (
@@ -328,18 +329,18 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
 
         {/* PAD Screen Area */}
         <div
+          // ref={padScreenContentWrapperRef} // Ref might not be needed here now
           className={cn(
-            "flex-grow min-h-0", 
-            "pad-screen-grid bg-accent/10 border border-primary/20 rounded-b-md m-2"
+            "flex-grow min-h-0" // Allows ScrollArea to fill this space
           )}
         >
           {isPadUp ? (
-            <ScrollArea className="h-full w-full">
+            <ScrollArea className="h-full w-full pad-screen-grid bg-accent/10 border border-primary/20 rounded-b-md m-2">
               {renderPadScreenContent()}
             </ScrollArea>
           ) : (
-            <div className={`h-[${PEEK_AMOUNT}px]`}>
-              {/* Empty peek view */}
+            // Peek view: Shows a bit of the grid
+            <div className={`h-[${PEEK_AMOUNT}px] pad-screen-grid bg-accent/10 border border-primary/20 rounded-b-md m-2`}>
             </div>
           )}
         </div>
@@ -347,5 +348,3 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
     </div>
   );
 }
-
-    
