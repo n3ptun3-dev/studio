@@ -9,16 +9,16 @@ import { Wifi } from 'lucide-react'; // Changed from Zap to Wifi
 import { cn } from '@/lib/utils';
 
 export function WelcomeScreen() {
-  const { setOnboardingStep, isLoading: isAppLoading, isTODWindowOpen } = useAppContext();
+  const { setOnboardingStep } = useAppContext();
   const [showContent, setShowContent] = useState(false);
 
   useEffect(() => {
-    console.log('[WelcomeScreen] Mounted/Updated. isTODWindowOpen:', isTODWindowOpen, 'isAppLoading:', isAppLoading);
+    // console.log('[WelcomeScreen] Mounted/Updated. isTODWindowOpen:', isTODWindowOpen, 'isAppLoading:', isAppLoading);
     const timer = setTimeout(() => {
       setShowContent(true);
     }, 2000); // Extended to 2000ms
     return () => clearTimeout(timer);
-  }, []); // Removed dependencies to ensure timer runs once on mount
+  }, []);
 
   if (!showContent) {
     // "Establishing Secure Connection..." state - centered
@@ -30,17 +30,18 @@ export function WelcomeScreen() {
     );
   }
 
-  // Main content state
-  // HolographicPanel uses flex-grow and h-0 to fill space given by page.tsx's main container
   return (
-    <HolographicPanel className="w-full max-w-2xl p-4 md:p-6 flex flex-col flex-grow h-0 overflow-hidden">
+    <HolographicPanel
+      className="w-full max-w-2xl mx-auto p-4 md:p-6 flex flex-col flex-grow h-0 overflow-hidden"
+      explicitTheme="terminal-green"
+    >
       <h1 className="text-3xl md:text-4xl font-orbitron mb-2 text-center holographic-text flex-shrink-0">
         Welcome Agent
       </h1>
       <h2 className="text-xl font-orbitron mb-3 text-center holographic-text text-primary flex-shrink-0">
         Mission Briefing:
       </h2>
-      <ScrollArea className="flex-grow min-h-0 mb-4"> {/* flex-grow and min-h-0 are key */}
+      <ScrollArea className="flex-grow min-h-0 mb-6">
         <div className="space-y-2 text-muted-foreground font-rajdhani pr-2">
           <p>- The Pi Network is now the backbone of a decentralized digital identity system globally.</p>
           <p>- Within this system, two clandestine factions have formed: <span className="font-semibold text-foreground">The Cyphers</span> and <span className="font-semibold text-foreground">The Shadows</span>. You must join one of these factions.</p>
@@ -50,10 +51,10 @@ export function WelcomeScreen() {
         </div>
       </ScrollArea>
       <HolographicButton
-        id="proceed-button" // Added id for clarity
-        className="w-full text-lg py-3 mt-auto flex-shrink-0" // mt-auto pushes to bottom
+        id="proceed-button"
+        className="w-full text-lg py-3 mt-auto flex-shrink-0"
         onClick={() => {
-          console.log('[WelcomeScreen] "Proceed" button clicked!');
+          // console.log('[WelcomeScreen] "Proceed" button clicked!');
           setOnboardingStep('factionChoice');
         }}
       >
