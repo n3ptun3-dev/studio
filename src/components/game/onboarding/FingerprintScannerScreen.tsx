@@ -71,27 +71,38 @@ export function FingerprintScannerScreen() {
       explicitTheme={currentGlobalTheme}
       key={`fingerprint-panel-${currentGlobalTheme}-${themeVersion}-${accessGranted}`}
     >
-      {/* Inner wrapper to manage flex distribution */}
+      {/* Inner wrapper to manage flex distribution and ensure consistent height */}
       <div className="flex flex-col items-center w-full flex-grow">
         {accessGranted ? (
           <>
-            <div className="flex-shrink-0"> {/* Top content block */}
+            {/* Top content block for "Access Granted" */}
+            <div className="flex-shrink-0"> 
               <h2 className="text-3xl font-orbitron holographic-text text-green-400">Access Granted</h2>
               <p className="text-lg text-muted-foreground mt-2">Initializing Spi Vs Spi TOD...</p>
             </div>
             <div className="flex-grow" /> {/* Spacer */}
-            <div className="flex-shrink-0"> {/* Bottom graphic block */}
-              <Fingerprint className="w-24 h-24 mx-auto text-green-400 icon-glow" />
+            {/* Bottom graphic block for "Access Granted" - matches scanning state structure */}
+            <div className="flex-shrink-0"> 
+              <div
+                className="relative w-48 h-48 mx-auto rounded-full border-2 border-green-500 flex items-center justify-center"
+                // Using border-green-500 for a solid green border
+              >
+                <Fingerprint
+                  className="w-24 h-24 text-green-400 icon-glow"
+                />
+              </div>
             </div>
           </>
         ) : (
           <>
-            <div className="flex-shrink-0"> {/* Top content block */}
+            {/* Top content block for "Scanning" */}
+            <div className="flex-shrink-0"> 
               <h2 className="text-2xl font-orbitron mb-6 holographic-text">Spi Vs Spi: Biometric Authentication</h2>
               <p className="text-muted-foreground mb-8">Press and Hold to Authenticate.</p>
             </div>
             <div className="flex-grow" /> {/* Spacer */}
-            <div className="flex-shrink-0"> {/* Bottom graphic block */}
+            {/* Bottom graphic block for "Scanning" */}
+            <div className="flex-shrink-0"> 
               <div
                 className="relative w-48 h-48 mx-auto rounded-full border-2 border-primary flex items-center justify-center cursor-pointer select-none touch-none"
                 onMouseDown={startScan}
@@ -116,10 +127,12 @@ export function FingerprintScannerScreen() {
                 )}
                 <svg className="absolute inset-0 w-full h-full" viewBox="0 0 36 36">
                   <path
-                    className="text-transparent"
+                    className="text-transparent" // Background track for the progress
                     d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                     fill="none"
                     strokeWidth="2"
+                    stroke="hsl(var(--border-hsl))" // Use a subtle border color for the track
+                    strokeOpacity="0.3"
                   />
                   <path
                     className={cn("transition-all duration-150", isScanning ? "text-accent" : "text-primary", "icon-glow")}
