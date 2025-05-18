@@ -32,10 +32,10 @@ export default function HomePage() {
     todWindowTitle,
     todWindowContent,
     closeTODWindow,
-    todWindowOptions, // Destructure todWindowOptions
+    todWindowOptions,
   } = useAppContext();
 
-  const { theme: currentTheme, themeVersion } = useTheme(); // ThemeContext theme
+  const { theme: currentTheme, themeVersion } = useTheme();
 
   // Log values for debugging theme propagation
   console.log('HomePage rendering, isTODWindowOpen:', isTODWindowOpen);
@@ -61,17 +61,16 @@ export default function HomePage() {
     if (onboardingStep === 'tod' && isClientMounted) {
       const timer = setTimeout(() => {
         setPlayBootAnimation(true);
-      }, 50); 
+      }, 50);
       return () => clearTimeout(timer);
     } else if (onboardingStep !== 'tod') {
-      setPlayBootAnimation(false); 
+      setPlayBootAnimation(false);
     }
   }, [isAuthenticated, onboardingStep, setOnboardingStep, isClientMounted]);
 
 
   // AI Welcome Message Effect
  useEffect(() => {
-    // Only run if TOD is the current step, client is mounted, not already loading, no TOD window is open, and boot animation should play
     if (onboardingStep !== 'tod' || !isClientMounted || isAppLoading || isTODWindowOpen || !playBootAnimation) return;
 
     setIsLoading(true);
@@ -87,10 +86,10 @@ export default function HomePage() {
     } else {
       const welcomeInput: WelcomeMessageInput = {
         playerName: playerSpyName || "Agent",
-        faction: faction, 
+        faction: faction,
         elintReserves: playerStats.elintReserves,
-        networkActivity: "Medium", 
-        vaultDefenses: "Holding", 
+        networkActivity: "Medium",
+        vaultDefenses: "Holding",
       };
       generateWelcomeMessage(welcomeInput)
         .then(response => {
@@ -111,7 +110,7 @@ export default function HomePage() {
     <ControlCenterSection key="control-center-actual" parallaxOffset={parallaxOffset} />,
     <ScannerSection key="scanner-actual" parallaxOffset={parallaxOffset} />,
     <EquipmentLockerSection key="equipment-locker-actual" parallaxOffset={parallaxOffset} />,
-    <VaultSection key="vault-actual" parallaxOffset={parallaxOffset} />, 
+    <VaultSection key="vault-actual" parallaxOffset={parallaxOffset} />,
     <AgentSection key="agent-clone-end" parallaxOffset={parallaxOffset} />,
   ], [parallaxOffset]);
 
@@ -125,25 +124,26 @@ export default function HomePage() {
       setParallaxOffset(currentScrollLeft);
 
       const totalContentWidthForLooping = (sectionComponents.length - 2) * clientWidth;
-      
-      if (currentScrollLeft >= totalContentWidthForLooping + clientWidth - 5) {
-          todContainerRef.current.scrollLeft = clientWidth + (currentScrollLeft - (totalContentWidthForLooping + clientWidth));
-      } else if (currentScrollLeft <= 5) {
+      const maxPossibleScrollLeft = (sectionComponents.length - 1) * clientWidth;
+
+      if (currentScrollLeft >= maxPossibleScrollLeft - 5) { // Near the very end of the last clone
+          todContainerRef.current.scrollLeft = clientWidth + (currentScrollLeft - maxPossibleScrollLeft);
+      } else if (currentScrollLeft <= 5) { // Near the very start of the first clone
           todContainerRef.current.scrollLeft = totalContentWidthForLooping + currentScrollLeft;
       }
     }
-  }, [sectionComponents.length]); 
+  }, [sectionComponents.length]);
 
   useEffect(() => {
     const container = todContainerRef.current;
-    if (onboardingStep === 'tod' && !isAppLoading && isClientMounted && container && playBootAnimation) {
+    if (onboardingStep === 'tod' && !isAppLoading && isClientMounted && playBootAnimation && container) {
       const setInitialScroll = () => {
         if (todContainerRef.current && todContainerRef.current.clientWidth > 0 && !initialScrollSetRef.current) {
           const sectionWidth = todContainerRef.current.clientWidth;
-          const targetSectionIndex = 1; 
+          const targetSectionIndex = 1; // AgentSection is at index 1
           const initialScrollPosition = sectionWidth * targetSectionIndex;
-          
-          console.log(`Attempting initial scroll: TargetIndex=${targetSectionIndex}, Width=${sectionWidth}, ScrollTo=${initialScrollPosition} (Should be AgentSection)`);
+
+          console.log(`Attempting initial scroll: TargetIndex=${targetSectionIndex}, Width=${sectionWidth}, ScrollTo=${initialScrollPosition}`);
           todContainerRef.current.scrollLeft = initialScrollPosition;
           setParallaxOffset(initialScrollPosition);
           initialScrollSetRef.current = true;
@@ -152,8 +152,8 @@ export default function HomePage() {
            console.warn("Initial scroll: clientWidth is 0. Layout might not be stable for scroll calc.");
         }
       };
-      
-      requestAnimationFrame(setInitialScroll);
+
+      requestAnimationFrame(setInitialScroll); // Ensure layout is stable
 
       container.addEventListener('scroll', handleScroll, { passive: true });
       return () => {
@@ -174,7 +174,7 @@ export default function HomePage() {
   if (!isClientMounted) {
     return (
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6">
-        <ParallaxBackground />
+        <ParallaxBackground parallaxOffset={0} />
         <div className="animate-pulse text-2xl font-orbitron holographic-text">INITIALIZING TOD...</div>
       </main>
     );
@@ -183,7 +183,7 @@ export default function HomePage() {
   if (isAppLoading && onboardingStep !== 'tod') {
     return (
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6">
-        <ParallaxBackground />
+        <ParallaxBackground parallaxOffset={0} />
         <div className="animate-pulse text-2xl font-orbitron holographic-text">LOADING INTERFACE...</div>
         <TODWindow
           key={`${faction}-${themeVersion}-loading-${isTODWindowOpen}`}
@@ -210,20 +210,20 @@ export default function HomePage() {
           return <FactionChoiceScreen />;
         case 'fingerprint':
           return <FingerprintScannerScreen />;
-        default: 
+        default:
           return <div className="animate-pulse text-2xl font-orbitron holographic-text">LOADING NEXT STEP...</div>;
       }
     };
     return (
-      <main className="relative flex flex-col items-stretch justify-start min-h-screen bg-background text-foreground p-4 sm:p-6 overflow-y-auto">
-        <ParallaxBackground />
+      <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6 overflow-y-auto">
+        <ParallaxBackground parallaxOffset={0} />
         {renderOnboarding()}
         <TODWindow
           key={`${faction}-${themeVersion}-${onboardingStep}-${isTODWindowOpen}`}
           isOpen={isTODWindowOpen}
           onClose={closeTODWindow}
           title={todWindowTitle}
-          explicitTheme={currentTheme} 
+          explicitTheme={currentTheme}
           themeVersion={themeVersion}
           showCloseButton={todWindowOptions.showCloseButton !== undefined ? todWindowOptions.showCloseButton : true}
         >
@@ -235,9 +235,9 @@ export default function HomePage() {
 
   // Main TOD view
   return (
-    <main className="relative h-screen w-screen overflow-hidden"> 
-      <ParallaxBackground />
-      
+    <main className="relative h-screen w-screen overflow-hidden">
+      <ParallaxBackground parallaxOffset={parallaxOffset} />
+
       <div
         className="parallax-layer z-[5] opacity-20"
         style={{
@@ -266,7 +266,7 @@ export default function HomePage() {
           ref={todContainerRef}
           className={cn(
             "tod-scroll-container absolute inset-0 z-10 scrollbar-hide",
-            "animate-slide-up-from-bottom" 
+            "animate-slide-up-from-bottom"
           )}
           style={{
             WebkitOverflowScrolling: 'touch',
@@ -282,13 +282,13 @@ export default function HomePage() {
           ))}
         </div>
       )}
-      
+
       <TODWindow
         key={`${faction}-${themeVersion}-tod-${isTODWindowOpen}`}
         isOpen={isTODWindowOpen}
         onClose={closeTODWindow}
         title={todWindowTitle}
-        explicitTheme={currentTheme} 
+        explicitTheme={currentTheme}
         themeVersion={themeVersion}
         showCloseButton={todWindowOptions.showCloseButton !== undefined ? todWindowOptions.showCloseButton : true}
       >
@@ -297,4 +297,3 @@ export default function HomePage() {
     </main>
   );
 }
-

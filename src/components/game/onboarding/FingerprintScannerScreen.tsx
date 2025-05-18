@@ -16,7 +16,7 @@ export function FingerprintScannerScreen() {
   const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const SCAN_DURATION = 1000; 
+  const SCAN_DURATION = 1000;
 
   const startScan = () => {
     if (accessGranted || isScanning) return;
@@ -67,15 +67,15 @@ export function FingerprintScannerScreen() {
 
   return (
     <HolographicPanel
-      className="w-full max-w-md text-center p-6 flex flex-col items-center justify-center flex-grow h-0" // Use flex-grow and h-0
+      className="w-full max-w-md text-center p-6 flex flex-col items-center justify-center min-h-[400px] mx-auto"
       explicitTheme={currentGlobalTheme}
-      key={`fingerprint-panel-wrapper-${currentGlobalTheme}-${themeVersion}-${accessGranted}`}
+      key={`fingerprint-panel-${currentGlobalTheme}-${themeVersion}-${accessGranted}`}
     >
       {accessGranted ? (
         <>
           <h2 className="text-3xl font-orbitron holographic-text text-green-400">Access Granted</h2>
           <p className="text-lg text-muted-foreground mt-2">Initializing Spi Vs Spi TOD...</p>
-          <Fingerprint className="w-24 h-24 mx-auto text-green-400 mt-8 icon-glow" /> 
+          <Fingerprint className="w-24 h-24 mx-auto text-green-400 mt-8 icon-glow" />
         </>
       ) : (
         <>
@@ -87,7 +87,7 @@ export function FingerprintScannerScreen() {
             onTouchStart={(e) => { e.preventDefault(); startScan(); }}
             onMouseUp={cancelScan}
             onTouchEnd={(e) => { e.preventDefault(); cancelScan(); }}
-            onMouseLeave={cancelScan} 
+            onMouseLeave={cancelScan}
           >
             <Fingerprint
               className={cn(
@@ -126,4 +126,3 @@ export function FingerprintScannerScreen() {
     </HolographicPanel>
   );
 }
-
