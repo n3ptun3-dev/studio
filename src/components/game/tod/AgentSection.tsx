@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { HolographicButton } from '@/components/game/shared/HolographicPanel';
+import { HolographicButton } from '@/components/game/shared/HolographicPanel'; // Renamed for clarity if it's just the button
 import { Progress } from "@/components/ui/progress";
 import { Fingerprint, Settings, BookOpen, Info, Power } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -20,7 +20,7 @@ const AgentDossierView = () => {
   const handleFactionChange = () => {
     let newFaction = faction === 'Cyphers' ? 'Shadows' : 'Cyphers';
     if (faction === 'Observer') {
-        newFaction = 'Cyphers';
+        newFaction = 'Cyphers'; // Default to Cyphers if switching from Observer
         addMessage({ type: 'system', text: `Observer protocol overridden. Faction allegiance protocols engaged. Defaulting to Cyphers.` });
     } else {
         addMessage({ type: 'system', text: `Faction allegiance protocols updated to: ${newFaction}. Coordinating with HQ.` });
@@ -29,7 +29,7 @@ const AgentDossierView = () => {
   };
 
   const currentLevelXpForDossier = XP_THRESHOLDS[playerStats.level] || 0;
-  const nextLevelXpTargetForDossier = XP_THRESHOLDS[playerStats.level + 1] || (XP_THRESHOLDS[XP_THRESHOLDS.length -1] + (XP_THRESHOLDS[1] - XP_THRESHOLDS[0] || 100)); // Ensure max level has a target
+  const nextLevelXpTargetForDossier = XP_THRESHOLDS[playerStats.level + 1] || (XP_THRESHOLDS[XP_THRESHOLDS.length -1] + (XP_THRESHOLDS[1] - XP_THRESHOLDS[0] || 100));
   const xpForCurrentLevelInDossier = playerStats.xp - currentLevelXpForDossier;
   const xpToNextLevelSpanInDossier = nextLevelXpTargetForDossier - currentLevelXpForDossier;
   const xpProgressForDossier = xpToNextLevelSpanInDossier > 0 ? Math.max(0, Math.min(100, (xpForCurrentLevelInDossier / xpToNextLevelSpanInDossier) * 100)) : 100;
@@ -91,6 +91,7 @@ const AgentDossierView = () => {
 const IntelFilesView = () => {
   const { openTODWindow } = useAppContext();
   const { theme: currentTheme } = useTheme();
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   const categories = [
     { id: "briefing", title: "Briefing", heading: "Current Situation & Objectives", content: "Placeholder content for Briefing: Overview of the current game state, active global events, and primary objectives for agents." },
@@ -104,16 +105,21 @@ const IntelFilesView = () => {
     { id: "handbook", title: "Agent Handbook", heading: "Glossary", content: "Placeholder for Agent Handbook: A glossary of common terms, acronyms, and spy jargon used within the Elint Heist universe." },
   ];
 
-  const handleCategorySelect = (category: (typeof categories[0])) => {
-    openTODWindow(
-      category.title,
-      <div className="font-rajdhani">
-        <h4 className="text-lg font-orbitron mb-2 holographic-text">{category.heading}</h4>
-        <p className="text-muted-foreground whitespace-pre-line">{category.content}</p>
-      </div>,
-      { showCloseButton: true }
+  const selectedCategoryData = categories.find(cat => cat.id === activeCategory);
+
+  if (activeCategory && selectedCategoryData) {
+    return (
+      <div className="p-3 animate-slide-in-right">
+        <HolographicButton onClick={() => setActiveCategory(null)} className="mb-4 !py-1 !px-2 text-xs" explicitTheme={currentTheme}>
+          &larr; Back to Intel Files
+        </HolographicButton>
+        <h4 className="text-lg font-orbitron mb-2 holographic-text">{selectedCategoryData.heading}</h4>
+        <ScrollArea className="h-[calc(100%_-_4rem)]"> {/* Adjust height based on back button */}
+            <p className="text-muted-foreground whitespace-pre-line font-rajdhani pr-2">{selectedCategoryData.content}</p>
+        </ScrollArea>
+      </div>
     );
-  };
+  }
 
   return (
     <ScrollArea className="h-full p-3">
@@ -125,7 +131,7 @@ const IntelFilesView = () => {
           <li key={cat.id}>
             <HolographicButton
               className="w-full justify-start text-left !bg-transparent hover:!bg-primary/10 !py-1.5"
-              onClick={() => handleCategorySelect(cat)}
+              onClick={() => setActiveCategory(cat.id)}
               explicitTheme={currentTheme}
             >
               {cat.title}
@@ -197,44 +203,38 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
 
   const handleScroll = useCallback(() => {
     if (!padButtonPanelRef.current || !scrollContainerRef.current) return;
-    const padButtonPanelRect = padButtonPanelRef.current.getBoundingClientRect();
-    // Check if PAD button panel's top is at or above viewport top (or a small tolerance)
-    if (padButtonPanelRect.top <= 5) { 
+    const panelButtonTop = padButtonPanelRef.current.getBoundingClientRect().top;
+    const viewportTop = scrollContainerRef.current.getBoundingClientRect().top;
+
+    if (panelButtonTop <= viewportTop + 5) { // 5px tolerance
       if (!isPadUp) setIsPadUp(true);
     } else {
       if (isPadUp) setIsPadUp(false);
     }
-  }, [isPadUp]); // isPadUp dependency is correct here
+  }, [isPadUp]);
 
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (container) {
       container.addEventListener('scroll', handleScroll, { passive: true });
-      // Initial check in case PAD starts at the top
-      handleScroll(); 
       return () => container.removeEventListener('scroll', handleScroll);
     }
   }, [handleScroll]);
 
   const handlePowerClick = useCallback(() => {
     if (!scrollContainerRef.current || !thePadRef.current) return;
+    
+    const currentlyTurningOn = !isPadUp;
+    setIsPadUp(currentlyTurningOn); // Set state immediately
 
-    if (!isPadUp) { // If PAD is down, turn it ON (scroll PAD to top)
-      setIsPadUp(true); // Set state first
-      requestAnimationFrame(() => { // Ensure DOM has updated with new PAD height before scrolling
-        if (thePadRef.current) {
-          thePadRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      });
-    } else { // If PAD is up, turn it OFF (scroll section to top)
-      setIsPadUp(false); // Set state first
-      requestAnimationFrame(() => { // Ensure DOM has updated
-        if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-      });
-    }
-  }, [isPadUp]);
+    requestAnimationFrame(() => {
+      if (currentlyTurningOn && thePadRef.current) {
+        thePadRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else if (!currentlyTurningOn && scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+  }, [isPadUp]); // isPadUp is the main dependency
 
   const currentLevelXp = XP_THRESHOLDS[playerStats.level] || 0;
   const nextLevelXpTarget = XP_THRESHOLDS[playerStats.level + 1] || (XP_THRESHOLDS[XP_THRESHOLDS.length -1] + (XP_THRESHOLDS[1] - XP_THRESHOLDS[0] || 100));
@@ -252,12 +252,12 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
   };
   
   const padDynamicStyle: React.CSSProperties = isPadUp ?
-    { minHeight: '100vh' } : // When ON, PAD should fill viewport height
-    { minHeight: 'auto' };   // When OFF, its height is determined by button panel + peek amount
+    { minHeight: '100vh' } : 
+    { minHeight: 'auto' };
 
   return (
     <div ref={scrollContainerRef} className="relative flex flex-col h-full overflow-y-auto scrollbar-hide">
-      {/* Top Content Area (Title + Stats) - This area should push the PAD down initially */}
+      {/* Top Content Area (Title + Stats) */}
       <div ref={topContentRef} className="flex flex-col flex-grow flex-shrink-0">
         {/* Title Area - Expands to fill space above stats */}
         <div
@@ -305,7 +305,7 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
         style={padDynamicStyle}
         className={cn(
           "w-[90%] mx-auto flex flex-col mt-4 flex-shrink-0 shadow-lg",
-          "bg-pad-backing backdrop-blur-sm pad-gloss-effect rounded-t-lg border-t border-l border-r border-white/10" // All styling here
+          "bg-pad-backing backdrop-blur-sm pad-gloss-effect rounded-t-lg border-t border-l border-r border-white/10"
         )}
       >
         {/* PAD Button Panel */}
@@ -313,7 +313,7 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
           ref={padButtonPanelRef}
           className={cn(
             "h-[60px] flex-shrink-0 flex items-center justify-between px-4 border-b border-white/5 rounded-t-lg",
-            "bg-pad-backing" // Ensure button panel has consistent background
+            "bg-pad-backing" 
           )}
         >
           {isPadUp ? (
@@ -343,7 +343,7 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
         <div
           ref={padScreenContentWrapperRef}
           className={cn(
-            "flex-grow min-h-0" // Allows ScrollArea to fill this space
+            "flex-grow min-h-0", 
           )}
         >
           {isPadUp ? (
@@ -360,5 +360,6 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
     </div>
   );
 }
-
       
+
+    
