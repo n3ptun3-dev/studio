@@ -9,7 +9,7 @@ import { useTheme, type Theme } from '@/contexts/ThemeContext';
 
 export function FingerprintScannerScreen() {
   const { setOnboardingStep } = useAppContext();
-  const { theme: currentGlobalTheme, themeVersion } = useTheme(); // Get current global theme and version
+  const { theme: currentGlobalTheme, themeVersion } = useTheme();
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [accessGranted, setAccessGranted] = useState(false);
@@ -19,14 +19,14 @@ export function FingerprintScannerScreen() {
   const SCAN_DURATION = 1000; // 1 second
 
   const startScan = () => {
-    if (accessGranted || isScanning) return; 
+    if (accessGranted || isScanning) return;
     setIsScanning(true);
     setScanProgress(0);
 
     if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
     progressIntervalRef.current = setInterval(() => {
       setScanProgress(prev => {
-        const next = prev + 100 / (SCAN_DURATION / 50); 
+        const next = prev + 100 / (SCAN_DURATION / 50);
         if (next >= 100) {
           clearInterval(progressIntervalRef.current!);
           return 100;
@@ -34,7 +34,7 @@ export function FingerprintScannerScreen() {
         return next;
       });
     }, 50);
-    
+
     if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
     scanTimeoutRef.current = setTimeout(() => {
       handleScanSuccess();
@@ -42,7 +42,7 @@ export function FingerprintScannerScreen() {
   };
 
   const cancelScan = () => {
-    if (accessGranted || !isScanning) return; 
+    if (accessGranted || !isScanning) return;
     setIsScanning(false);
     setScanProgress(0);
     if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
@@ -55,11 +55,11 @@ export function FingerprintScannerScreen() {
     if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
     setTimeout(() => {
       setOnboardingStep('tod');
-    }, 1500); 
+    }, 1500);
   };
 
   useEffect(() => {
-    return () => { 
+    return () => {
       if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
       if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
     };
@@ -67,75 +67,71 @@ export function FingerprintScannerScreen() {
 
   if (accessGranted) {
     return (
-      <div className="flex flex-col flex-grow items-center justify-center">
-        <HolographicPanel 
-          className="text-center p-8" 
-          explicitTheme={currentGlobalTheme}
-          key={`access-granted-${currentGlobalTheme}-${themeVersion}`} // Ensure re-render on theme change
-        >
-          <Fingerprint className="w-24 h-24 mx-auto text-green-400 mb-4 icon-glow" />
-          <h2 className="text-3xl font-orbitron holographic-text text-green-400">Access Granted</h2>
-          <p className="text-lg text-muted-foreground mt-2">Initializing Spi Vs Spi TOD...</p>
-        </HolographicPanel>
-      </div>
+      <HolographicPanel
+        className="w-full max-w-md text-center p-8 flex flex-col justify-center items-center min-h-[350px]"
+        explicitTheme={currentGlobalTheme}
+        key={`access-granted-${currentGlobalTheme}-${themeVersion}`}
+      >
+        <Fingerprint className="w-24 h-24 mx-auto text-green-400 mb-4 icon-glow" />
+        <h2 className="text-3xl font-orbitron holographic-text text-green-400">Access Granted</h2>
+        <p className="text-lg text-muted-foreground mt-2">Initializing Spi Vs Spi TOD...</p>
+      </HolographicPanel>
     );
   }
 
   return (
-    <div className="flex flex-col flex-grow items-center justify-center">
-      <HolographicPanel 
-        className="text-center p-8" 
-        explicitTheme={currentGlobalTheme}
-        key={`scanner-${currentGlobalTheme}-${themeVersion}`} // Ensure re-render on theme change
+    <HolographicPanel
+      className="w-full max-w-md text-center p-8 flex flex-col justify-center items-center min-h-[350px]"
+      explicitTheme={currentGlobalTheme}
+      key={`scanner-${currentGlobalTheme}-${themeVersion}`}
+    >
+      <h2 className="text-2xl font-orbitron mb-6 holographic-text">Spi Vs Spi: Biometric Authentication</h2>
+      <p className="text-muted-foreground mb-8">Press and Hold to Authenticate.</p>
+
+      <div
+        className="relative w-48 h-48 mx-auto rounded-full border-2 border-primary flex items-center justify-center cursor-pointer select-none touch-none"
+        onMouseDown={startScan}
+        onTouchStart={(e) => { e.preventDefault(); startScan(); }}
+        onMouseUp={cancelScan}
+        onTouchEnd={(e) => { e.preventDefault(); cancelScan(); }}
+        onMouseLeave={cancelScan}
       >
-        <h2 className="text-2xl font-orbitron mb-6 holographic-text">Spi Vs Spi: Biometric Authentication</h2>
-        <p className="text-muted-foreground mb-8">Press and Hold to Authenticate.</p>
-        
-        <div 
-          className="relative w-48 h-48 mx-auto rounded-full border-2 border-primary flex items-center justify-center cursor-pointer select-none touch-none"
-          onMouseDown={startScan}
-          onTouchStart={(e) => { e.preventDefault(); startScan(); }} // Prevent default for touch to avoid scrolling/zoom
-          onMouseUp={cancelScan}
-          onTouchEnd={(e) => { e.preventDefault(); cancelScan(); }}
-          onMouseLeave={cancelScan} 
-        >
-          <Fingerprint 
-            className={cn(
-              "w-24 h-24 text-primary transition-colors duration-300 icon-glow",
-              isScanning && "text-accent animate-pulse"
-            )} 
-          />
-          {isScanning && (
-            <div className="absolute inset-0 overflow-hidden rounded-full">
-              <div 
-                className="absolute top-0 left-0 h-full w-full bg-primary opacity-30 animate-holographic-scan"
-                style={{ transform: `translateY(${-100 + scanProgress}%)` }}
-              />
-            </div>
+        <Fingerprint
+          className={cn(
+            "w-24 h-24 text-primary transition-colors duration-300 icon-glow",
+            isScanning && "text-accent animate-pulse"
           )}
-          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 36 36">
-            <path
-              className="text-transparent"
-              d="M18 2.0845
-                a 15.9155 15.9155 0 0 1 0 31.831
-                a 15.9155 15.9155 0 0 1 0 -31.831"
-              fill="none"
-              strokeWidth="2"
+        />
+        {isScanning && (
+          <div className="absolute inset-0 overflow-hidden rounded-full">
+            <div
+              className="absolute top-0 left-0 h-full w-full bg-primary opacity-30 animate-holographic-scan"
+              style={{ transform: `translateY(${-100 + scanProgress}%)` }}
             />
-            <path
-              className="text-primary icon-glow"
-              strokeDasharray={`${scanProgress}, 100`}
-              d="M18 2.0845
-                a 15.9155 15.9155 0 0 1 0 31.831
-                a 15.9155 15.9155 0 0 1 0 -31.831"
-              fill="none"
-              strokeWidth="2"
-              strokeLinecap="round"
-              style={{ transform: 'rotate(-90deg)', transformOrigin: '18px 18px' }}
-            />
-          </svg>
-        </div>
-      </HolographicPanel>
-    </div>
+          </div>
+        )}
+        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 36 36">
+          <path
+            className="text-transparent"
+            d="M18 2.0845
+              a 15.9155 15.9155 0 0 1 0 31.831
+              a 15.9155 15.9155 0 0 1 0 -31.831"
+            fill="none"
+            strokeWidth="2"
+          />
+          <path
+            className="text-primary icon-glow"
+            strokeDasharray={`${scanProgress}, 100`}
+            d="M18 2.0845
+              a 15.9155 15.9155 0 0 1 0 31.831
+              a 15.9155 15.9155 0 0 1 0 -31.831"
+            fill="none"
+            strokeWidth="2"
+            strokeLinecap="round"
+            style={{ transform: 'rotate(-90deg)', transformOrigin: '18px 18px' }}
+          />
+        </svg>
+      </div>
+    </HolographicPanel>
   );
 }
