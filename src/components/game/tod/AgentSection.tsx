@@ -20,7 +20,7 @@ const AgentDossierView = () => {
   const handleFactionChange = () => {
     let newFaction = faction === 'Cyphers' ? 'Shadows' : 'Cyphers';
     if (faction === 'Observer') {
-        newFaction = 'Cyphers'; // Default to Cyphers if Observer tries to change
+        newFaction = 'Cyphers';
         addMessage({ type: 'system', text: `Observer protocol overridden. Faction allegiance protocols engaged. Defaulting to Cyphers.` });
     } else {
         addMessage({ type: 'system', text: `Faction allegiance protocols updated to: ${newFaction}. Coordinating with HQ.` });
@@ -29,7 +29,7 @@ const AgentDossierView = () => {
   };
 
   const currentLevelXpForDossier = XP_THRESHOLDS[playerStats.level] || 0;
-  const nextLevelXpTargetForDossier = XP_THRESHOLDS[playerStats.level + 1] || (XP_THRESHOLDS[playerStats.level] + (XP_THRESHOLDS[1] - XP_THRESHOLDS[0] || 100));
+  const nextLevelXpTargetForDossier = XP_THRESHOLDS[playerStats.level + 1] || (XP_THRESHOLDS[XP_THRESHOLDS.length -1] + (XP_THRESHOLDS[1] - XP_THRESHOLDS[0] || 100)); // Ensure max level has a target
   const xpForCurrentLevelInDossier = playerStats.xp - currentLevelXpForDossier;
   const xpToNextLevelSpanInDossier = nextLevelXpTargetForDossier - currentLevelXpForDossier;
   const xpProgressForDossier = xpToNextLevelSpanInDossier > 0 ? Math.max(0, Math.min(100, (xpForCurrentLevelInDossier / xpToNextLevelSpanInDossier) * 100)) : 100;
@@ -54,7 +54,7 @@ const AgentDossierView = () => {
           <p className="font-semibold text-muted-foreground">Stats & Performance:</p>
           <p>Level: {playerStats.level}</p>
           <Progress value={xpProgressForDossier} className="w-full h-1.5 mt-1 bg-primary/20 [&>div]:bg-primary" />
-          <p className="text-xs text-muted-foreground">{playerStats.xp} / {nextLevelXpTargetForDossier === Infinity || !XP_THRESHOLDS[playerStats.level + 1] ? 'MAX' : XP_THRESHOLDS[playerStats.level + 1]} XP</p>
+          <p className="text-xs text-muted-foreground">{playerStats.xp} / {XP_THRESHOLDS[playerStats.level + 1] ? XP_THRESHOLDS[playerStats.level + 1] : 'MAX'} XP</p>
         </div>
         <div>
           <p className="font-semibold text-muted-foreground">Infiltration Stats:</p>
@@ -167,7 +167,7 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const topContentRef = useRef<HTMLDivElement>(null);
-  const titleAreaContentRef = useRef<HTMLDivElement>(null); // For Title Area within topContentRef
+  const titleAreaContentRef = useRef<HTMLDivElement>(null);
   const statsAreaRef = useRef<HTMLDivElement>(null);
   const thePadRef = useRef<HTMLDivElement>(null);
   const padButtonPanelRef = useRef<HTMLDivElement>(null);
@@ -197,39 +197,47 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
 
   const handleScroll = useCallback(() => {
     if (!padButtonPanelRef.current || !scrollContainerRef.current) return;
-
-    const padButtonPanelTop = padButtonPanelRef.current.getBoundingClientRect().top;
-    const scrollContainerTop = scrollContainerRef.current.getBoundingClientRect().top;
-    
-    const shouldBeUp = padButtonPanelTop <= scrollContainerTop + 5; // 5px tolerance for top of viewport
-
-    if (shouldBeUp !== isPadUp) {
-      setIsPadUp(shouldBeUp);
+    const padButtonPanelRect = padButtonPanelRef.current.getBoundingClientRect();
+    // Check if PAD button panel's top is at or above viewport top (or a small tolerance)
+    if (padButtonPanelRect.top <= 5) { 
+      if (!isPadUp) setIsPadUp(true);
+    } else {
+      if (isPadUp) setIsPadUp(false);
     }
   }, [isPadUp]); // isPadUp dependency is correct here
 
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (container) {
-      container.addEventListener('scroll', handleScroll);
-      handleScroll(); // Initial check
+      container.addEventListener('scroll', handleScroll, { passive: true });
+      // Initial check in case PAD starts at the top
+      handleScroll(); 
       return () => container.removeEventListener('scroll', handleScroll);
     }
   }, [handleScroll]);
 
   const handlePowerClick = useCallback(() => {
-    if (!scrollContainerRef.current || !thePadRef.current || !padButtonPanelRef.current) return;
+    if (!scrollContainerRef.current || !thePadRef.current) return;
 
-    if (!isPadUp) { // If PAD is down, scroll it to the top
-      thePadRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } else { // If PAD is up, scroll the whole section to the top
-      scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    if (!isPadUp) { // If PAD is down, turn it ON (scroll PAD to top)
+      setIsPadUp(true); // Set state first
+      requestAnimationFrame(() => { // Ensure DOM has updated with new PAD height before scrolling
+        if (thePadRef.current) {
+          thePadRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    } else { // If PAD is up, turn it OFF (scroll section to top)
+      setIsPadUp(false); // Set state first
+      requestAnimationFrame(() => { // Ensure DOM has updated
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      });
     }
-    // isPadUp will be updated by the scroll handler
-  }, [isPadUp]); // isPadUp dependency
+  }, [isPadUp]);
 
   const currentLevelXp = XP_THRESHOLDS[playerStats.level] || 0;
-  const nextLevelXpTarget = XP_THRESHOLDS[playerStats.level + 1] || (XP_THRESHOLDS[playerStats.level] + (XP_THRESHOLDS[1] - XP_THRESHOLDS[0] || 100));
+  const nextLevelXpTarget = XP_THRESHOLDS[playerStats.level + 1] || (XP_THRESHOLDS[XP_THRESHOLDS.length -1] + (XP_THRESHOLDS[1] - XP_THRESHOLDS[0] || 100));
   const xpForCurrentLevel = playerStats.xp - currentLevelXp;
   const xpToNextLevelSpan = nextLevelXpTarget - currentLevelXp;
   const xpProgress = xpToNextLevelSpan > 0 ? Math.max(0, Math.min(100, (xpForCurrentLevel / xpToNextLevelSpan) * 100)) : 100;
@@ -243,14 +251,14 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
     }
   };
   
-  const padDynamicStyle: React.CSSProperties = {
-    minHeight: isPadUp ? '100vh' : 'auto', // PAD fills viewport when "on"
-  };
+  const padDynamicStyle: React.CSSProperties = isPadUp ?
+    { minHeight: '100vh' } : // When ON, PAD should fill viewport height
+    { minHeight: 'auto' };   // When OFF, its height is determined by button panel + peek amount
 
   return (
     <div ref={scrollContainerRef} className="relative flex flex-col h-full overflow-y-auto scrollbar-hide">
-      {/* Top Content Area (Title + Stats) - This area is pushed down by the PAD initially */}
-      <div ref={topContentRef} className="flex flex-col flex-grow flex-shrink-0"> {/* flex-grow pushes PAD down */}
+      {/* Top Content Area (Title + Stats) - This area should push the PAD down initially */}
+      <div ref={topContentRef} className="flex flex-col flex-grow flex-shrink-0">
         {/* Title Area - Expands to fill space above stats */}
         <div
           ref={titleAreaContentRef}
@@ -268,7 +276,7 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
           <div className="w-full max-w-md mx-auto">
             <p className="text-sm text-muted-foreground">Agent Rank: {playerStats.level}</p>
             <Progress value={xpProgress} className="w-full h-2 mt-1 bg-primary/20 [&>div]:bg-primary" />
-            <p className="text-xs text-muted-foreground">{playerStats.xp} / {nextLevelXpTarget === Infinity || !XP_THRESHOLDS[playerStats.level + 1] ? 'MAX' : XP_THRESHOLDS[playerStats.level + 1]} XP</p>
+            <p className="text-xs text-muted-foreground">{playerStats.xp} / {XP_THRESHOLDS[playerStats.level + 1] ? XP_THRESHOLDS[playerStats.level + 1] : 'MAX'} XP</p>
           </div>
           <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-3 text-sm w-full max-w-md mx-auto font-rajdhani">
             <div>
@@ -297,7 +305,7 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
         style={padDynamicStyle}
         className={cn(
           "w-[90%] mx-auto flex flex-col mt-4 flex-shrink-0 shadow-lg",
-          "bg-pad-backing backdrop-blur-sm pad-gloss-effect rounded-t-lg border-t border-l border-r border-white/10"
+          "bg-pad-backing backdrop-blur-sm pad-gloss-effect rounded-t-lg border-t border-l border-r border-white/10" // All styling here
         )}
       >
         {/* PAD Button Panel */}
@@ -305,7 +313,7 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
           ref={padButtonPanelRef}
           className={cn(
             "h-[60px] flex-shrink-0 flex items-center justify-between px-4 border-b border-white/5 rounded-t-lg",
-            "bg-pad-backing" 
+            "bg-pad-backing" // Ensure button panel has consistent background
           )}
         >
           {isPadUp ? (
@@ -344,6 +352,7 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
             </ScrollArea>
           ) : (
             <div className={`h-[${PEEK_AMOUNT}px] pad-screen-grid bg-accent/10 border border-primary/20 rounded-b-md m-2`}>
+              {/* Peek content or just empty grid */}
             </div>
           )}
         </div>
@@ -351,3 +360,5 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
     </div>
   );
 }
+
+      
