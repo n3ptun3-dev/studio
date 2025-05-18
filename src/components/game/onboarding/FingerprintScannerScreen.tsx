@@ -65,77 +65,70 @@ export function FingerprintScannerScreen() {
     };
   }, []);
 
-  // Key for the HolographicPanel to ensure it re-renders if the theme changes while it's visible
   const panelKey = `fingerprint-panel-${currentGlobalTheme}-${themeVersion}`;
-
-  if (accessGranted) {
-    return (
-      <HolographicPanel
-        className="w-full max-w-md text-center p-8 flex flex-col justify-center items-center min-h-[350px]"
-        explicitTheme={currentGlobalTheme}
-        key={`${panelKey}-granted`}
-      >
-        <Fingerprint className="w-24 h-24 mx-auto text-green-400 mb-4 icon-glow" />
-        <h2 className="text-3xl font-orbitron holographic-text text-green-400">Access Granted</h2>
-        <p className="text-lg text-muted-foreground mt-2">Initializing Spi Vs Spi TOD...</p>
-      </HolographicPanel>
-    );
-  }
 
   return (
     <HolographicPanel
-      className="w-full max-w-md text-center p-8 flex flex-col justify-center items-center min-h-[350px]"
+      className="w-full max-w-md text-center p-6 flex flex-col items-center" // p-6 for consistent internal padding
       explicitTheme={currentGlobalTheme}
-      key={`${panelKey}-scanning`}
+      key={`${panelKey}-${accessGranted ? 'granted' : 'scanning'}`}
     >
-      <h2 className="text-2xl font-orbitron mb-6 holographic-text">Spi Vs Spi: Biometric Authentication</h2>
-      <p className="text-muted-foreground mb-8">Press and Hold to Authenticate.</p>
-
-      <div
-        className="relative w-48 h-48 mx-auto rounded-full border-2 border-primary flex items-center justify-center cursor-pointer select-none touch-none"
-        onMouseDown={startScan}
-        onTouchStart={(e) => { e.preventDefault(); startScan(); }}
-        onMouseUp={cancelScan}
-        onTouchEnd={(e) => { e.preventDefault(); cancelScan(); }}
-        onMouseLeave={cancelScan} // Added to cancel scan if mouse leaves the button area
-      >
-        <Fingerprint
-          className={cn(
-            "w-24 h-24 text-primary transition-colors duration-300 icon-glow",
-            isScanning && "text-accent animate-pulse"
-          )}
-        />
-        {isScanning && (
-          <div className="absolute inset-0 overflow-hidden rounded-full">
-            <div
-              className="absolute top-0 left-0 h-full w-full bg-primary opacity-30 animate-holographic-scan"
-              style={{ transform: `translateY(${-100 + scanProgress}%)` }}
-            />
+      {accessGranted ? (
+        <>
+          <div className="flex-grow flex flex-col justify-center items-center"> {/* Centers content above icon */}
+            <h2 className="text-3xl font-orbitron holographic-text text-green-400">Access Granted</h2>
+            <p className="text-lg text-muted-foreground mt-2">Initializing Spi Vs Spi TOD...</p>
           </div>
-        )}
-        {/* Progress Ring SVG */}
-        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 36 36">
-          <path
-            className="text-transparent" // Background circle (transparent or very faint)
-            d="M18 2.0845
-              a 15.9155 15.9155 0 0 1 0 31.831
-              a 15.9155 15.9155 0 0 1 0 -31.831"
-            fill="none"
-            strokeWidth="2" // Adjust stroke width as needed
-          />
-          <path
-            className={cn("transition-all duration-150", isScanning ? "text-accent" : "text-primary", "icon-glow")}
-            strokeDasharray={`${scanProgress}, 100`}
-            d="M18 2.0845
-              a 15.9155 15.9155 0 0 1 0 31.831
-              a 15.9155 15.9155 0 0 1 0 -31.831"
-            fill="none"
-            strokeWidth="2" // Adjust stroke width
-            strokeLinecap="round"
-            style={{ transform: 'rotate(-90deg)', transformOrigin: '18px 18px' }}
-          />
-        </svg>
-      </div>
+          <Fingerprint className="w-24 h-24 mx-auto text-green-400 mt-auto mb-4 icon-glow" /> {/* mt-auto pushes to bottom of flex space */}
+        </>
+      ) : (
+        <>
+          <div className="flex-grow flex flex-col justify-center items-center"> {/* Centers content above scanner */}
+            <h2 className="text-2xl font-orbitron mb-6 holographic-text">Spi Vs Spi: Biometric Authentication</h2>
+            <p className="text-muted-foreground mb-8">Press and Hold to Authenticate.</p>
+          </div>
+          <div
+            className="relative w-48 h-48 mx-auto rounded-full border-2 border-primary flex items-center justify-center cursor-pointer select-none touch-none mt-auto mb-4"
+            onMouseDown={startScan}
+            onTouchStart={(e) => { e.preventDefault(); startScan(); }}
+            onMouseUp={cancelScan}
+            onTouchEnd={(e) => { e.preventDefault(); cancelScan(); }}
+            onMouseLeave={cancelScan} 
+          >
+            <Fingerprint
+              className={cn(
+                "w-24 h-24 text-primary transition-colors duration-300 icon-glow",
+                isScanning && "text-accent animate-pulse"
+              )}
+            />
+            {isScanning && (
+              <div className="absolute inset-0 overflow-hidden rounded-full">
+                <div
+                  className="absolute top-0 left-0 h-full w-full bg-primary opacity-30 animate-holographic-scan"
+                  style={{ transform: `translateY(${-100 + scanProgress}%)` }}
+                />
+              </div>
+            )}
+            <svg className="absolute inset-0 w-full h-full" viewBox="0 0 36 36">
+              <path
+                className="text-transparent"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                fill="none"
+                strokeWidth="2"
+              />
+              <path
+                className={cn("transition-all duration-150", isScanning ? "text-accent" : "text-primary", "icon-glow")}
+                strokeDasharray={`${scanProgress}, 100`}
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                fill="none"
+                strokeWidth="2"
+                strokeLinecap="round"
+                style={{ transform: 'rotate(-90deg)', transformOrigin: '18px 18px' }}
+              />
+            </svg>
+          </div>
+        </>
+      )}
     </HolographicPanel>
   );
 }
