@@ -2,13 +2,15 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useAppContext } from '@/contexts/AppContext';
+import { useAppContext }
+  from '@/contexts/AppContext';
 import { HolographicButton } from '@/components/game/shared/HolographicPanel';
 import { Progress } from "@/components/ui/progress";
 import { Fingerprint, Settings, BookOpen, Info, Power } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { XP_THRESHOLDS } from '@/lib/constants';
+import { useTheme, type Faction as AppFactionType, type Theme } from '@/contexts/ThemeContext';
 
 type PadScreenView = 'dossier' | 'intel' | 'settings';
 
@@ -17,36 +19,31 @@ interface SectionProps {
 }
 
 const PEEK_AMOUNT = 20; // How much of the PAD screen peeks out when "off"
+const PAD_BUTTON_PANEL_HEIGHT = 60; 
 
-// -------- PAD Content Views --------
 const AgentDossierView = () => {
-  const { playerSpyName, playerPiName, faction, playerStats, setFaction: setAppFaction, addMessage, openTODWindow } = useAppContext();
-  const { theme } = useTheme(); // Get current theme
+  const { playerSpyName, playerPiName, faction, playerStats, setFaction: setAppFaction, addMessage } = useAppContext();
+  const { theme: currentTheme } = useTheme();
 
   const handleFactionChange = () => {
-    // This is a placeholder for a more complex faction change UI/process
-    // For now, it just toggles between Cyphers and Shadows if one of them is active
-    let newFaction: Faction = faction;
+    let newFaction: AppFactionType = faction as AppFactionType;
     if (faction === 'Cyphers') {
-      newFaction = 'Shadows';
+      newFaction = 'Shadows' as AppFactionType;
     } else if (faction === 'Shadows') {
-      newFaction = 'Cyphers';
+      newFaction = 'Cyphers' as AppFactionType;
     } else {
-      // If Observer or other, default to Cyphers or show selection
-      // For simplicity here, let's set it to Cyphers if it's Observer
-      newFaction = 'Cyphers';
-      addMessage({type: 'system', text: `Faction allegiance protocols engaged. Defaulting to Cyphers.`});
+      newFaction = 'Cyphers' as AppFactionType;
+      addMessage({ type: 'system', text: `Faction allegiance protocols engaged. Defaulting to Cyphers.` });
     }
     setAppFaction(newFaction);
-    addMessage({type: 'system', text: `Faction allegiance protocols updated to: ${newFaction}. Coordinating with HQ.`});
+    addMessage({ type: 'system', text: `Faction allegiance protocols updated to: ${newFaction}. Coordinating with HQ.` });
   };
-  
+
   const currentLevelXpForDossier = XP_THRESHOLDS[playerStats.level] || 0;
   const nextLevelXpTargetForDossier = XP_THRESHOLDS[playerStats.level + 1] || (XP_THRESHOLDS[playerStats.level] + (XP_THRESHOLDS[1] - XP_THRESHOLDS[0] || 100));
   const xpForCurrentLevelInDossier = playerStats.xp - currentLevelXpForDossier;
   const xpToNextLevelSpanInDossier = nextLevelXpTargetForDossier - currentLevelXpForDossier;
   const xpProgressForDossier = xpToNextLevelSpanInDossier > 0 ? Math.max(0, Math.min(100, (xpForCurrentLevelInDossier / xpToNextLevelSpanInDossier) * 100)) : 100;
-
 
   return (
     <ScrollArea className="h-full p-3">
@@ -55,22 +52,22 @@ const AgentDossierView = () => {
         <div>
           <p className="font-semibold text-muted-foreground">Agent Identification:</p>
           <p>Code Name: <span className="text-lg text-primary font-semibold">{playerSpyName || "Recruit"}</span></p>
-          <p>Real Name: <span className="text-primary">{playerPiName ? `${playerPiName.substring(0,3)}***${playerPiName.slice(-2)}` : "CLASSIFIED"}</span></p>
+          <p>Pi Name: <span className="text-primary">{playerPiName ? `${playerPiName.substring(0, 3)}***${playerPiName.slice(-2)}` : "CLASSIFIED"}</span></p>
           <p>Agent ID: <span className="text-primary">UID-{playerPiName || "UNKNOWN"}</span></p>
         </div>
         <div>
           <p className="font-semibold text-muted-foreground">Faction Details:</p>
           <p>Current Faction: <span className={`font-semibold cursor-pointer ${faction === 'Cyphers' ? 'text-blue-400 hover:text-blue-300' : faction === 'Shadows' ? 'text-red-400 hover:text-red-300' : 'text-gray-400 hover:text-gray-300'}`} onClick={handleFactionChange}>{faction}</span></p>
-          <p className="text-xs text-muted-foreground">Faction History: [Placeholder - Requires data storage]</p>
+          <p className="text-xs text-muted-foreground">Faction History: [Placeholder]</p>
           <p className="text-xs text-muted-foreground">Joined: [Date Placeholder]</p>
         </div>
         <div>
           <p className="font-semibold text-muted-foreground">Stats & Performance:</p>
           <p>Level: {playerStats.level}</p>
           <Progress value={xpProgressForDossier} className="w-full h-1.5 mt-1 bg-primary/20 [&>div]:bg-primary" />
-          <p className="text-xs text-muted-foreground">{playerStats.xp} / {nextLevelXpTargetForDossier === Infinity || !XP_THRESHOLDS[playerStats.level+1] ? 'MAX' : XP_THRESHOLDS[playerStats.level + 1]} XP</p>
+          <p className="text-xs text-muted-foreground">{playerStats.xp} / {nextLevelXpTargetForDossier === Infinity || !XP_THRESHOLDS[playerStats.level + 1] ? 'MAX' : XP_THRESHOLDS[playerStats.level + 1]} XP</p>
         </div>
-         <div>
+        <div>
           <p className="font-semibold text-muted-foreground">Infiltration Stats:</p>
           <p>Successful Vault Infiltrations: {playerStats.successfulVaultInfiltrations}</p>
           <p>Successful Lock Infiltrations: {playerStats.successfulLockInfiltrations}</p>
@@ -104,7 +101,7 @@ const AgentDossierView = () => {
 
 const IntelFilesView = () => {
   const { openTODWindow } = useAppContext();
-  const { theme: currentTheme } = useTheme(); // Get current theme
+  const { theme: currentTheme } = useTheme();
 
   const categories = [
     { id: "briefing", title: "Briefing", heading: "Current Situation & Objectives", content: "Placeholder content for Briefing: Overview of the current game state, active global events, and primary objectives for agents." },
@@ -152,7 +149,7 @@ const IntelFilesView = () => {
 };
 
 const SettingsView = () => {
-  const { theme: currentTheme } = useTheme(); // Get current theme
+  const { theme: currentTheme } = useTheme();
   return (
     <ScrollArea className="h-full p-3 font-rajdhani">
       <h3 className="text-xl font-orbitron mb-4 holographic-text">Settings</h3>
@@ -166,29 +163,23 @@ const SettingsView = () => {
   );
 };
 
-import { useTheme, type Faction, type Theme } from '@/contexts/ThemeContext'; // Ensure Theme is imported
-
-// -------- Main AgentSection Component --------
 export function AgentSection({ parallaxOffset }: SectionProps) {
   const { playerSpyName, faction, playerStats } = useAppContext();
   const [isPadUp, setIsPadUp] = useState(false);
   const [padScreenView, setPadScreenView] = useState<PadScreenView>('dossier');
-  
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const topContentRef = useRef<HTMLDivElement>(null); // For initial layout push
-  const titleAreaRef = useRef<HTMLDivElement>(null); // For Player Name & Faction
-  const statsAreaRef = useRef<HTMLDivElement>(null); // For Stats
-  const thePadRef = useRef<HTMLDivElement>(null); // The entire PAD (button panel + screen)
-  const padButtonPanelRef = useRef<HTMLDivElement>(null); // PAD's button panel (sticky part)
-  const padScreenContentWrapperRef = useRef<HTMLDivElement>(null); // Wrapper for PAD screen content
+  const { theme: currentTheme } = useTheme();
 
-  // Transfer Timer Logic (remains the same)
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const topContentRef = useRef<HTMLDivElement>(null);
+  const padButtonPanelRef = useRef<HTMLDivElement>(null);
+  const thePadRef = useRef<HTMLDivElement>(null);
+
   const [transferTimer, setTransferTimer] = useState(0);
   const [isTransferWindowOpen, setIsTransferWindowOpen] = useState(false);
 
   useEffect(() => {
-    const cycleDuration = 4 * 60 * 60; 
-    const openDuration = 1 * 60 * 60; 
+    const cycleDuration = 4 * 60 * 60;
+    const openDuration = 1 * 60 * 60;
     const updateTimer = () => {
       const now = Math.floor(Date.now() / 1000);
       const cycleProgress = now % cycleDuration;
@@ -207,12 +198,11 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
 
   const handleScroll = useCallback(() => {
     if (!padButtonPanelRef.current || !scrollContainerRef.current) return;
-
     const padButtonPanelRect = padButtonPanelRef.current.getBoundingClientRect();
     const scrollContainerRect = scrollContainerRef.current.getBoundingClientRect();
     
-    // PAD is considered "up" if its button panel's top is at or very near the scroll container's top
-    const shouldBeUp = padButtonPanelRect.top <= scrollContainerRect.top + 5; 
+    // Check if the top of the PAD button panel is at or very near the scroll container's top
+    const shouldBeUp = padButtonPanelRect.top <= scrollContainerRect.top + 5; // 5px tolerance
 
     if (shouldBeUp !== isPadUp) {
       setIsPadUp(shouldBeUp);
@@ -223,17 +213,16 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
     const container = scrollContainerRef.current;
     if (container) {
       container.addEventListener('scroll', handleScroll);
-      handleScroll(); // Initial check
+      handleScroll(); 
       return () => container.removeEventListener('scroll', handleScroll);
     }
   }, [handleScroll]);
 
   const handlePowerClick = useCallback(() => {
-    if (!scrollContainerRef.current || !padButtonPanelRef.current) return;
-
-    if (!isPadUp) { // If PAD is down/mid, scroll it so its button panel aligns with top of scroll container
-      padButtonPanelRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } else { // If PAD is up, scroll to the very top of the AgentSection
+    if (!scrollContainerRef.current || !thePadRef.current) return;
+    if (!isPadUp) {
+      thePadRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
       scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [isPadUp]);
@@ -245,38 +234,37 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
   const xpProgress = xpToNextLevelSpan > 0 ? Math.max(0, Math.min(100, (xpForCurrentLevel / xpToNextLevelSpan) * 100)) : 100;
 
   const renderPadScreenContent = () => {
-    switch(padScreenView) {
+    switch (padScreenView) {
       case 'dossier': return <AgentDossierView />;
       case 'intel': return <IntelFilesView />;
       case 'settings': return <SettingsView />;
       default: return <AgentDossierView />;
     }
   };
-  
-  const { theme: currentTheme } = useTheme(); // Get current theme for explicit prop
+
+  const padDynamicStyle: React.CSSProperties = isPadUp
+    ? { minHeight: '100vh' } // When PAD is up, it should fill the viewport height
+    : { minHeight: 'auto' }; // When PAD is down, its height is natural (button panel + peek)
 
   return (
     <div ref={scrollContainerRef} className="relative flex flex-col h-full overflow-y-auto scrollbar-hide">
-      {/* Top Content Area (Title + Stats) - This uses flex-grow to push PAD down */}
-      <div ref={topContentRef} className="flex flex-col flex-grow">
+      {/* Top Content Area (Title + Stats) */}
+      <div ref={topContentRef} className="flex flex-col flex-grow flex-shrink-0"> {/* flex-grow pushes PAD down */}
         {/* Title Area */}
-        <div 
-          ref={titleAreaRef}
-          className="flex-grow flex flex-col items-center justify-center pt-4 md:pt-2 pb-2 text-center relative" 
-        >
+        <div className="flex-grow flex flex-col items-center justify-center pt-4 md:pt-2 pb-2 text-center relative">
           <div className="absolute inset-0 flex items-center justify-center -z-10 opacity-10">
-              <Fingerprint className="w-48 h-48 md:w-64 md:h-64 text-primary" />
+            <Fingerprint className="w-48 h-48 md:w-64 md:h-64 text-primary" />
           </div>
           <h1 className="text-3xl md:text-4xl font-orbitron holographic-text">{playerSpyName || "Agent"}</h1>
           <p className={`text-lg font-semibold ${faction === 'Cyphers' ? 'text-blue-400' : faction === 'Shadows' ? 'text-red-400' : 'text-gray-400'}`}>{faction}</p>
         </div>
 
         {/* Stats Area */}
-        <div ref={statsAreaRef} className="flex-shrink-0 text-center pt-2 pb-4 px-2">
+        <div className="flex-shrink-0 text-center pt-2 pb-4 px-2">
           <div className="w-full max-w-md mx-auto">
             <p className="text-sm text-muted-foreground">Agent Rank: {playerStats.level}</p>
             <Progress value={xpProgress} className="w-full h-2 mt-1 bg-primary/20 [&>div]:bg-primary" />
-            <p className="text-xs text-muted-foreground">{playerStats.xp} / {nextLevelXpTarget === Infinity || !XP_THRESHOLDS[playerStats.level+1] ? 'MAX' : XP_THRESHOLDS[playerStats.level + 1]} XP</p>
+            <p className="text-xs text-muted-foreground">{playerStats.xp} / {nextLevelXpTarget === Infinity || !XP_THRESHOLDS[playerStats.level + 1] ? 'MAX' : XP_THRESHOLDS[playerStats.level + 1]} XP</p>
           </div>
           <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-3 text-sm w-full max-w-md mx-auto font-rajdhani">
             <div>
@@ -300,18 +288,18 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
       </div>
 
       {/* The PAD */}
-      <div 
+      <div
         ref={thePadRef}
+        style={padDynamicStyle}
         className={cn(
-          "w-[90%] mx-auto flex flex-col flex-shrink-0 shadow-lg mt-4", // Ensure mt-4 is there for spacing from stats
-          "bg-pad-backing backdrop-blur-sm pad-gloss-effect rounded-t-lg border-t border-l border-r border-white/10",
-          isPadUp && "min-h-full" // Attempt to fill parent (scrollContainerRef) when up
+          "w-[90%] mx-auto flex flex-col flex-shrink-0 shadow-lg mt-4", // Added mt-4 for spacing
+          "bg-pad-backing backdrop-blur-sm pad-gloss-effect rounded-t-lg border-t border-l border-r border-white/10"
         )}
       >
-        {/* PAD Button Panel - Sticky within scrollContainerRef */}
+        {/* PAD Button Panel */}
         <div
           ref={padButtonPanelRef}
-          className="h-[60px] flex-shrink-0 flex items-center justify-between px-4 border-b border-white/5 sticky top-0 z-10 bg-pad-backing rounded-t-lg"
+          className="h-[60px] flex-shrink-0 flex items-center justify-between px-4 border-b border-white/5 bg-pad-backing rounded-t-lg"
         >
           {isPadUp ? (
             <div className="flex-grow flex justify-center gap-4">
@@ -337,11 +325,9 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
         </div>
 
         {/* PAD Screen Area */}
-        <div 
-          ref={padScreenContentWrapperRef} 
+        <div
           className={cn(
-            "flex-grow min-h-0", // Allows this div to take space within the PAD flex column
-            "pad-screen-grid bg-accent/10 border border-primary/20 rounded-b-md m-2" // Consistent styling
+            "flex-grow min-h-0 pad-screen-grid bg-accent/10 border border-primary/20 rounded-b-md m-2"
           )}
         >
           {isPadUp ? (
@@ -350,7 +336,7 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
             </ScrollArea>
           ) : (
             <div className={`h-[${PEEK_AMOUNT}px]`}>
-              {/* Empty peek view or subtle graphic, ensures grid is visible */}
+              {/* Empty peek view or subtle graphic */}
             </div>
           )}
         </div>
@@ -358,4 +344,3 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
     </div>
   );
 }
-
