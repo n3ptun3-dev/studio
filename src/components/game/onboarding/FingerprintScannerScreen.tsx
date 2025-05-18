@@ -65,30 +65,24 @@ export function FingerprintScannerScreen() {
     };
   }, []);
 
-  const panelKey = `fingerprint-panel-${currentGlobalTheme}-${themeVersion}`;
-
   return (
     <HolographicPanel
-      className="w-full max-w-md text-center p-6 flex flex-col items-center" // p-6 for consistent internal padding
+      className="w-full max-w-md text-center p-6 flex flex-col items-center justify-center min-h-[400px]" // Consistent min-height and centering
       explicitTheme={currentGlobalTheme}
-      key={`${panelKey}-${accessGranted ? 'granted' : 'scanning'}`}
+      key={`fingerprint-panel-wrapper-${currentGlobalTheme}-${themeVersion}-${accessGranted}`}
     >
       {accessGranted ? (
         <>
-          <div className="flex-grow flex flex-col justify-center items-center"> {/* Centers content above icon */}
-            <h2 className="text-3xl font-orbitron holographic-text text-green-400">Access Granted</h2>
-            <p className="text-lg text-muted-foreground mt-2">Initializing Spi Vs Spi TOD...</p>
-          </div>
-          <Fingerprint className="w-24 h-24 mx-auto text-green-400 mt-auto mb-4 icon-glow" /> {/* mt-auto pushes to bottom of flex space */}
+          <h2 className="text-3xl font-orbitron holographic-text text-green-400">Access Granted</h2>
+          <p className="text-lg text-muted-foreground mt-2">Initializing Spi Vs Spi TOD...</p>
+          <Fingerprint className="w-24 h-24 mx-auto text-green-400 mt-8 icon-glow" /> 
         </>
       ) : (
         <>
-          <div className="flex-grow flex flex-col justify-center items-center"> {/* Centers content above scanner */}
-            <h2 className="text-2xl font-orbitron mb-6 holographic-text">Spi Vs Spi: Biometric Authentication</h2>
-            <p className="text-muted-foreground mb-8">Press and Hold to Authenticate.</p>
-          </div>
+          <h2 className="text-2xl font-orbitron mb-6 holographic-text">Spi Vs Spi: Biometric Authentication</h2>
+          <p className="text-muted-foreground mb-8">Press and Hold to Authenticate.</p>
           <div
-            className="relative w-48 h-48 mx-auto rounded-full border-2 border-primary flex items-center justify-center cursor-pointer select-none touch-none mt-auto mb-4"
+            className="relative w-48 h-48 mx-auto rounded-full border-2 border-primary flex items-center justify-center cursor-pointer select-none touch-none"
             onMouseDown={startScan}
             onTouchStart={(e) => { e.preventDefault(); startScan(); }}
             onMouseUp={cancelScan}
