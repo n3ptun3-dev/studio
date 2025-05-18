@@ -32,7 +32,7 @@ export default function HomePage() {
     todWindowTitle,
     todWindowContent,
     closeTODWindow,
-    todWindowOptions,
+    todWindowOptions, // Destructure todWindowOptions
   } = useAppContext();
 
   const { theme: currentTheme, themeVersion } = useTheme(); // ThemeContext theme
@@ -56,22 +56,22 @@ export default function HomePage() {
 
   useEffect(() => {
     if (isAuthenticated && onboardingStep !== 'tod' && onboardingStep !== 'fingerprint') {
-      setOnboardingStep('fingerprint'); // Or 'tod' if fingerprint is part of TOD boot
+      setOnboardingStep('fingerprint');
     }
     if (onboardingStep === 'tod' && isClientMounted) {
-      // Delay setting playBootAnimation to true to allow initial render to settle
       const timer = setTimeout(() => {
         setPlayBootAnimation(true);
-      }, 50); // Small delay, adjust as needed
+      }, 50); 
       return () => clearTimeout(timer);
     } else if (onboardingStep !== 'tod') {
-      setPlayBootAnimation(false); // Reset animation if navigating away from TOD
+      setPlayBootAnimation(false); 
     }
   }, [isAuthenticated, onboardingStep, setOnboardingStep, isClientMounted]);
 
 
   // AI Welcome Message Effect
  useEffect(() => {
+    // Only run if TOD is the current step, client is mounted, not already loading, no TOD window is open, and boot animation should play
     if (onboardingStep !== 'tod' || !isClientMounted || isAppLoading || isTODWindowOpen || !playBootAnimation) return;
 
     setIsLoading(true);
@@ -87,10 +87,10 @@ export default function HomePage() {
     } else {
       const welcomeInput: WelcomeMessageInput = {
         playerName: playerSpyName || "Agent",
-        faction: faction, // Use AppContext faction
+        faction: faction, 
         elintReserves: playerStats.elintReserves,
-        networkActivity: "Medium", // Placeholder
-        vaultDefenses: "Holding", // Placeholder
+        networkActivity: "Medium", 
+        vaultDefenses: "Holding", 
       };
       generateWelcomeMessage(welcomeInput)
         .then(response => {
@@ -102,7 +102,7 @@ export default function HomePage() {
         })
         .finally(() => setIsLoading(false));
     }
-  }, [onboardingStep, isClientMounted, playerSpyName, faction, playerStats.xp, playerStats.elintReserves, playerStats.level, addMessage, setIsLoading, isAppLoading, isTODWindowOpen, playBootAnimation]);
+  }, [onboardingStep, isClientMounted, playerSpyName, faction, playerStats, addMessage, setIsLoading, isAppLoading, isTODWindowOpen, playBootAnimation]);
 
 
   const sectionComponents = React.useMemo(() => [
@@ -111,7 +111,7 @@ export default function HomePage() {
     <ControlCenterSection key="control-center-actual" parallaxOffset={parallaxOffset} />,
     <ScannerSection key="scanner-actual" parallaxOffset={parallaxOffset} />,
     <EquipmentLockerSection key="equipment-locker-actual" parallaxOffset={parallaxOffset} />,
-    <VaultSection key="vault-actual" parallaxOffset={parallaxOffset} />, // The "real" Vault
+    <VaultSection key="vault-actual" parallaxOffset={parallaxOffset} />, 
     <AgentSection key="agent-clone-end" parallaxOffset={parallaxOffset} />,
   ], [parallaxOffset]);
 
@@ -125,14 +125,14 @@ export default function HomePage() {
       setParallaxOffset(currentScrollLeft);
 
       const totalContentWidthForLooping = (sectionComponents.length - 2) * clientWidth;
-
+      
       if (currentScrollLeft >= totalContentWidthForLooping + clientWidth - 5) {
-        todContainerRef.current.scrollLeft = clientWidth + (currentScrollLeft - (totalContentWidthForLooping + clientWidth));
+          todContainerRef.current.scrollLeft = clientWidth + (currentScrollLeft - (totalContentWidthForLooping + clientWidth));
       } else if (currentScrollLeft <= 5) {
-        todContainerRef.current.scrollLeft = totalContentWidthForLooping + currentScrollLeft;
+          todContainerRef.current.scrollLeft = totalContentWidthForLooping + currentScrollLeft;
       }
     }
-  }, [sectionComponents.length]); // parallaxOffset removed as it's set, not read
+  }, [sectionComponents.length]); 
 
   useEffect(() => {
     const container = todContainerRef.current;
@@ -140,14 +140,14 @@ export default function HomePage() {
       const setInitialScroll = () => {
         if (todContainerRef.current && todContainerRef.current.clientWidth > 0 && !initialScrollSetRef.current) {
           const sectionWidth = todContainerRef.current.clientWidth;
-          const targetSectionIndex = 1; // AgentSection is at index 1 (0-indexed)
+          const targetSectionIndex = 1; 
           const initialScrollPosition = sectionWidth * targetSectionIndex;
           
           console.log(`Attempting initial scroll: TargetIndex=${targetSectionIndex}, Width=${sectionWidth}, ScrollTo=${initialScrollPosition} (Should be AgentSection)`);
           todContainerRef.current.scrollLeft = initialScrollPosition;
-          setParallaxOffset(initialScrollPosition); // Set initial parallax based on this
+          setParallaxOffset(initialScrollPosition);
           initialScrollSetRef.current = true;
-          console.log(`Initial scroll DONE. todContainerRef.current.scrollLeft = ${todContainerRef.current.scrollLeft}`);
+          console.log(`Initial scroll DONE. todContainerRef.current.scrollLeft = ${todContainerRef.current.scrollLeft}. Initial scroll set ref: ${initialScrollSetRef.current}`);
         } else if (todContainerRef.current && todContainerRef.current.clientWidth === 0 && !initialScrollSetRef.current) {
            console.warn("Initial scroll: clientWidth is 0. Layout might not be stable for scroll calc.");
         }
@@ -164,11 +164,17 @@ export default function HomePage() {
     }
   }, [onboardingStep, isAppLoading, isClientMounted, playBootAnimation, handleScroll]);
 
+
+  console.log('HomePage rendering. AppContext faction for TODWindow key:', faction);
+  console.log('HomePage rendering. Current ThemeContext theme for TODWindow key:', currentTheme);
+  console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key:', themeVersion);
+
+
   // Loading States
   if (!isClientMounted) {
     return (
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6">
-        <ParallaxBackground parallaxOffset={0} />
+        <ParallaxBackground />
         <div className="animate-pulse text-2xl font-orbitron holographic-text">INITIALIZING TOD...</div>
       </main>
     );
@@ -177,7 +183,7 @@ export default function HomePage() {
   if (isAppLoading && onboardingStep !== 'tod') {
     return (
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6">
-        <ParallaxBackground parallaxOffset={0} />
+        <ParallaxBackground />
         <div className="animate-pulse text-2xl font-orbitron holographic-text">LOADING INTERFACE...</div>
         <TODWindow
           key={`${faction}-${themeVersion}-loading-${isTODWindowOpen}`}
@@ -204,13 +210,13 @@ export default function HomePage() {
           return <FactionChoiceScreen />;
         case 'fingerprint':
           return <FingerprintScannerScreen />;
-        default: // Should not happen if flow is correct
+        default: 
           return <div className="animate-pulse text-2xl font-orbitron holographic-text">LOADING NEXT STEP...</div>;
       }
     };
     return (
       <main className="relative flex flex-col items-stretch justify-start min-h-screen bg-background text-foreground p-4 sm:p-6 overflow-y-auto">
-        <ParallaxBackground parallaxOffset={0} />
+        <ParallaxBackground />
         {renderOnboarding()}
         <TODWindow
           key={`${faction}-${themeVersion}-${onboardingStep}-${isTODWindowOpen}`}
@@ -230,13 +236,13 @@ export default function HomePage() {
   // Main TOD view
   return (
     <main className="relative h-screen w-screen overflow-hidden"> 
-      <ParallaxBackground parallaxOffset={parallaxOffset} />
+      <ParallaxBackground />
       
       <div
-        className="parallax-layer z-[5] opacity-30"
+        className="parallax-layer z-[5] opacity-20"
         style={{
           transform: `translateX(-${parallaxOffset * 0.5}px)`,
-          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`, // Adjust width for parallax
+          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`,
           backgroundImage: `
             repeating-linear-gradient(
               45deg,

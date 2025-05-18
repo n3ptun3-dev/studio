@@ -16,7 +16,7 @@ export function FingerprintScannerScreen() {
   const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const SCAN_DURATION = 1000; // 1 second
+  const SCAN_DURATION = 1000; 
 
   const startScan = () => {
     if (accessGranted || isScanning) return;
@@ -67,7 +67,7 @@ export function FingerprintScannerScreen() {
 
   return (
     <HolographicPanel
-      className="w-full max-w-md text-center p-6 flex flex-col items-center justify-center min-h-[400px]" // Consistent min-height and centering
+      className="w-full max-w-md text-center p-6 flex flex-col items-center justify-center flex-grow h-0" // Use flex-grow and h-0
       explicitTheme={currentGlobalTheme}
       key={`fingerprint-panel-wrapper-${currentGlobalTheme}-${themeVersion}-${accessGranted}`}
     >
@@ -126,3 +126,4 @@ export function FingerprintScannerScreen() {
     </HolographicPanel>
   );
 }
+
