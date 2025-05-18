@@ -15,6 +15,7 @@ interface SectionProps {
   parallaxOffset: number;
 }
 
+type PadScreenView = 'dossier' | 'intel' | 'settings';
 const PEEK_AMOUNT = 20; // How much of the PAD screen peeks out when "off"
 
 // -------- PAD Content Views --------
@@ -25,7 +26,6 @@ const AgentDossierView = () => {
   const handleFactionChange = () => {
     const newFaction = faction === 'Cyphers' ? 'Shadows' : 'Cyphers';
     setAppFaction(newFaction);
-    // Theme change will be handled by ThemeUpdater based on AppContext.faction
     addMessage({type: 'system', text: `Faction allegiance protocols updated to: ${newFaction}. Coordinating with HQ.`});
   };
 
@@ -109,7 +109,7 @@ const IntelFilesView = () => {
 
   const handleCategorySelect = (category: (typeof categories[0])) => {
     setCurrentCategory(category.id);
-    openTODWindow(category.title, 
+    openTODWindow(category.title,
       <div className="font-rajdhani">
         <h4 className="text-lg font-orbitron mb-2 holographic-text">{category.heading}</h4>
         <p className="text-muted-foreground whitespace-pre-line">{category.content}</p>
@@ -158,19 +158,18 @@ const SettingsView = () => (
 // -------- Main AgentSection Component --------
 export function AgentSection({ parallaxOffset }: SectionProps) {
   const { playerSpyName, faction, playerStats } = useAppContext();
+  const { theme: currentTheme } = useTheme();
   const [isPadUp, setIsPadUp] = useState(false);
   const [padScreenView, setPadScreenView] = useState<PadScreenView>('dossier');
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const stickyHeaderRef = useRef<HTMLDivElement>(null); 
   const padButtonPanelRef = useRef<HTMLDivElement>(null); 
   const thePadRef = useRef<HTMLDivElement>(null); 
 
-  const [stickyHeaderHeight, setStickyHeaderHeight] = useState(0);
-  
   const [transferTimer, setTransferTimer] = useState(0);
   const [isTransferWindowOpen, setIsTransferWindowOpen] = useState(false);
 
+  // Timer for ELINT transfer window
   useEffect(() => {
     const cycleDuration = 4 * 60 * 60; 
     const openDuration = 1 * 60 * 60; 
@@ -190,61 +189,48 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    const measureHeader = () => {
-      if (stickyHeaderRef.current) {
-        setStickyHeaderHeight(stickyHeaderRef.current.offsetHeight);
-      }
-    };
-    measureHeader(); // Initial measure
-    // Re-measure on resize or if faction/spyName changes (as they affect header content)
-    window.addEventListener('resize', measureHeader);
-    return () => window.removeEventListener('resize', measureHeader);
-  }, [playerSpyName, faction]); // Dependencies that might change header height
-
+  // Scroll listener to determine if PAD is "up"
   useEffect(() => {
     const container = scrollContainerRef.current;
-    const buttonPanel = padButtonPanelRef.current;
-    const stickyHeader = stickyHeaderRef.current;
+    const padButtonPanel = padButtonPanelRef.current;
 
-    if (!container || !buttonPanel || !stickyHeader) return;
+    if (!container || !padButtonPanel) return;
 
     const handleScroll = () => {
-      const buttonPanelRect = buttonPanel.getBoundingClientRect();
-      const stickyHeaderBottom = stickyHeader.getBoundingClientRect().bottom;
-      
-      // isPadUp is true if the top of the button panel is at or above the bottom of the sticky header
-      const shouldBeUp = buttonPanelRect.top <= stickyHeaderBottom + 1; // 1px tolerance
+      if (!padButtonPanelRef.current) return; // Guard against null ref if component unmounts quickly
+      const padButtonPanelRect = padButtonPanelRef.current.getBoundingClientRect();
+      // PAD is "up" if its button panel's top edge is at or above the viewport top (or a few pixels below)
+      const shouldBeUp = padButtonPanelRect.top <= 5; // 5px tolerance for slight overscroll
       if (shouldBeUp !== isPadUp) {
         setIsPadUp(shouldBeUp);
       }
     };
 
     container.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll(); // Initial check
+    // Initial check
+    requestAnimationFrame(handleScroll); 
+    
     return () => {
       if (container) {
         container.removeEventListener('scroll', handleScroll);
       }
     };
-  }, [isPadUp, stickyHeaderHeight]); // Rerun if isPadUp or stickyHeaderHeight changes
+  }, [isPadUp]); // isPadUp is a dependency
 
+  // Power button click handler
   const handlePowerClick = useCallback(() => {
     const container = scrollContainerRef.current;
     const padElement = thePadRef.current;
-    const stickyHeader = stickyHeaderRef.current;
 
-    if (!container || !padElement || !stickyHeader) return;
+    if (!container || !padElement) return;
 
-    if (!isPadUp) { 
-      // Scroll to bring the top of the PAD just below the sticky header
-      const targetScrollTop = padElement.offsetTop - stickyHeader.offsetHeight;
-      container.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
-    } else { 
-      // Scroll to the very top of the section, PAD will be "below the fold"
+    if (!isPadUp) { // If PAD is down, scroll it so its top aligns with the scroll container's top
+      padElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else { // If PAD is up, scroll to the very top of the AgentSection
       container.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  }, [isPadUp]); // stickyHeaderHeight removed as it's read from stickyHeader.current.offsetHeight
+    // The isPadUp state will be updated by the scroll listener effect
+  }, [isPadUp]);
 
   const currentLevelXp = XP_THRESHOLDS[playerStats.level] || 0;
   const nextLevelXpTarget = XP_THRESHOLDS[playerStats.level + 1] || (currentLevelXp + (XP_THRESHOLDS[1] - XP_THRESHOLDS[0] || 100));
@@ -261,25 +247,21 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
     }
   };
 
-  // Calculate dynamic height for PAD screen area when PAD is "up"
-  const padScreenAreaHeight = isPadUp && stickyHeaderHeight > 0 
-    ? `calc(100vh - ${stickyHeaderHeight}px - 60px - 1rem)` // 100vh - stickyHeader - padButtonPanelHeight - m-2(0.5rem*2)
-    : `${PEEK_AMOUNT}px`;
-
   return (
     <div ref={scrollContainerRef} className="relative flex flex-col h-full overflow-y-auto scrollbar-hide">
-      {/* Sticky Header: Title + Stats */}
-      <div ref={stickyHeaderRef} className="sticky top-0 flex-shrink-0 z-20 bg-background/80 backdrop-blur-sm">
+      {/* Top Content Area (Title + Stats) */}
+      <div className="flex flex-col flex-grow"> {/* This outer div helps TitleArea fill space */}
         {/* Title Area */}
-        <div className="pt-4 md:pt-2 pb-2 text-center relative">
+        <div className="flex-grow flex flex-col items-center justify-center pt-4 md:pt-2 pb-2 text-center relative min-h-[40vh]"> {/* min-h to ensure it takes significant initial space */}
           <div className="absolute inset-0 flex items-center justify-center -z-10 opacity-50">
             <Fingerprint className="w-48 h-48 md:w-64 md:h-64 text-primary/10" />
           </div>
           <h1 className="text-3xl md:text-4xl font-orbitron holographic-text">{playerSpyName || "Agent"}</h1>
           <p className={`text-lg font-semibold ${faction === 'Cyphers' ? 'text-blue-400' : faction === 'Shadows' ? 'text-red-400' : 'text-gray-400'}`}>{faction}</p>
         </div>
+
         {/* Stats Area */}
-        <div className="text-center pt-2 pb-4 px-2">
+        <div className="flex-shrink-0 text-center pt-2 pb-4 px-2"> {/* Stats area takes its natural height */}
           <div className="w-full max-w-md mx-auto">
             <p className="text-sm text-muted-foreground">Agent Rank: {playerStats.level}</p>
             <Progress value={xpProgress} className="w-full h-2 mt-1 bg-primary/20 [&>div]:bg-primary" />
@@ -306,11 +288,12 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
         </div>
       </div>
 
-      {/* The PAD (Scrollable Content, but its position is controlled by overall scroll) */}
+      {/* The PAD */}
       <div 
         ref={thePadRef}
         className={cn(
-          "w-[90%] mx-auto flex flex-col bg-pad-backing backdrop-blur-sm pad-gloss-effect rounded-t-lg border-t border-l border-r border-white/10 shadow-lg mt-4 flex-shrink-0"
+          "w-[90%] mx-auto flex flex-col bg-pad-backing backdrop-blur-sm pad-gloss-effect rounded-t-lg border-t border-l border-r border-white/10 shadow-lg mt-4 flex-shrink-0", // mt-4 for initial spacing from stats
+          isPadUp && "min-h-[calc(100vh)]" // When up, PAD tries to fill viewport. Adjust if a top banner should remain.
         )}
       >
         {/* PAD Button Panel */}
@@ -345,25 +328,32 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
         <div className={cn(
             "flex-grow min-h-0 overflow-hidden", // flex-grow to take space within the PAD
           )}
-          style={{ height: isPadUp ? padScreenAreaHeight : `${PEEK_AMOUNT}px` }} // Dynamic height
         >
           <div 
             className={cn(
               "pad-screen-grid bg-accent/10 border border-primary/20 rounded-b-md m-2",
-              isPadUp ? "h-full" : `h-[${PEEK_AMOUNT}px]` // Ensure it fills the dynamically set parent height or peek height
+              isPadUp ? "h-full" : `h-[${PEEK_AMOUNT}px]` 
             )}
           >
-            {isPadUp && (
+            {isPadUp ? (
               <ScrollArea className="h-full w-full">
                 {renderPadScreenContent()}
               </ScrollArea>
+            ) : (
+                 <div className="h-full flex items-center justify-center text-muted-foreground/30 text-xs italic">
+                    {/* Intentionally blank or subtle for peek */}
+                 </div>
             )}
           </div>
         </div>
       </div>
-      {/* Spacer to ensure scrollability to bring PAD to top if needed and view its bottom border */}
-      <div className="h-[60vh] flex-shrink-0"></div> 
+      {/* Spacer at the very bottom to ensure the last bit of the PAD (when closed) can be scrolled into view properly if content above is very short.
+          Also helps ensure the PAD can scroll fully to the top when opened.
+      */}
+      <div className="h-[100vh] flex-shrink-0 pointer-events-none"></div>
+
     </div>
   );
 }
-          
+
+      
