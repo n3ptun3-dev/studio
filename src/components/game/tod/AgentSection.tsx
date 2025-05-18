@@ -183,8 +183,8 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
   const [isTransferWindowOpen, setIsTransferWindowOpen] = useState(false);
 
   useEffect(() => {
-    const cycleDuration = 4 * 60 * 60;
-    const openDuration = 1 * 60 * 60;
+    const cycleDuration = 4 * 60 * 60; // 4 hours
+    const openDuration = 1 * 60 * 60; // 1 hour
     const updateTimer = () => {
       const now = Math.floor(Date.now() / 1000);
       const cycleProgress = now % cycleDuration;
@@ -203,10 +203,10 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
 
   const handleScroll = useCallback(() => {
     if (!padButtonPanelRef.current || !scrollContainerRef.current) return;
-    
     const padButtonPanelRect = padButtonPanelRef.current.getBoundingClientRect();
-    // Use a fixed threshold from the top of the viewport for simplicity
-    if (padButtonPanelRect.top <= 5) { // 5px tolerance from viewport top
+    
+    // Check if PAD button panel is at or near the top of the viewport
+    if (padButtonPanelRect.top <= 5) { // 5px tolerance
       if (!isPadUp) setIsPadUp(true);
     } else {
       if (isPadUp) setIsPadUp(false);
@@ -217,24 +217,23 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
     const container = scrollContainerRef.current;
     if (container) {
       container.addEventListener('scroll', handleScroll);
-      return () => container.removeEventListener('scroll', handleScroll);
+      return () => {
+        if (container) { // Check container exists before removing listener
+          container.removeEventListener('scroll', handleScroll);
+        }
+      };
     }
   }, [handleScroll]);
 
   const handlePowerClick = useCallback(() => {
-    const currentlyTurningOn = !isPadUp;
-    setIsPadUp(currentlyTurningOn); 
+    const turningOn = !isPadUp;
+    setIsPadUp(turningOn);
 
     requestAnimationFrame(() => {
-      if (scrollContainerRef.current && thePadRef.current) {
-        if (currentlyTurningOn) {
-          scrollContainerRef.current.scrollTo({
-            top: thePadRef.current.offsetTop, 
-            behavior: 'smooth'
-          });
-        } else {
-          scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-        }
+      if (turningOn) {
+        thePadRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else { 
+        scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
       }
     });
   }, [isPadUp]);
@@ -260,9 +259,10 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
 
   return (
     <div ref={scrollContainerRef} className="relative flex flex-col h-full overflow-y-auto scrollbar-hide">
-      {/* Top Content Area (Title + Stats) - No flex-grow, natural height */}
+      
+      {/* Top Content Area (Title + Stats) - Natural height, no flex-grow here */}
       <div ref={topContentRef} className="flex flex-col flex-shrink-0">
-        {/* Title Area - flex-grow within topContentRef to push Stats down */}
+        {/* Title Area - flex-grow makes it take space WITHIN topContentRef, above Stats */}
         <div
           ref={titleAreaContentRef}
           className="flex-grow flex flex-col items-center justify-center pt-4 md:pt-2 pb-2 text-center relative overflow-hidden"
@@ -274,7 +274,7 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
           <p className={`text-lg font-semibold ${faction === 'Cyphers' ? 'text-blue-400' : faction === 'Shadows' ? 'text-red-400' : 'text-gray-400'}`}>{faction}</p>
         </div>
 
-        {/* Stats Area - Normal flow below Title Area */}
+        {/* Stats Area - Normal flow below Title Area, within topContentRef */}
         <div ref={statsAreaRef} className="flex-shrink-0 text-center pt-2 pb-4 px-2">
           <div className="w-full max-w-md mx-auto">
             <p className="text-sm text-muted-foreground">Agent Rank: {playerStats.level}</p>
@@ -302,13 +302,13 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
         </div>
       </div>
 
-      {/* The PAD - Flows normally after Top Content Area */}
+      {/* The PAD - Flows normally after Top Content Area, within scrollContainerRef */}
       <div
         ref={thePadRef}
         style={padDynamicStyle}
         className={cn(
-          "w-[90%] mx-auto flex flex-col mt-4 flex-shrink-0 shadow-lg", // Base
-          "bg-pad-backing backdrop-blur-sm pad-gloss-effect rounded-t-lg border-t border-l border-r border-white/10" // Styling classes
+          "w-[90%] mx-auto flex flex-col mt-4 flex-shrink-0 shadow-lg",
+          "bg-pad-backing backdrop-blur-sm pad-gloss-effect rounded-t-lg border-t border-l border-r border-white/10"
         )}
       >
         {/* PAD Button Panel */}
@@ -346,7 +346,7 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
         <div
           ref={padScreenContentWrapperRef}
           className={cn(
-            "flex-grow min-h-0", 
+            "flex-grow min-h-0", // This allows the ScrollArea to fill its height
           )}
         >
           {isPadUp ? (
@@ -363,5 +363,4 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
     </div>
   );
 }
-
     
