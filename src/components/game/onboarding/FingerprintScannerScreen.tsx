@@ -75,7 +75,7 @@ export function FingerprintScannerScreen() {
         <div className="flex flex-col items-center justify-center flex-grow w-full">
           <h2 className="text-3xl font-orbitron holographic-text text-green-400">Access Granted</h2>
           <p className="text-lg text-muted-foreground mt-2">Initializing Spi Vs Spi TOD...</p>
-          <Fingerprint className="w-24 h-24 mx-auto text-green-400 mt-auto mb-4 icon-glow" />
+          <Fingerprint className="w-24 h-24 mx-auto text-green-400 mt-auto mb-5 icon-glow" />
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center flex-grow w-full">
