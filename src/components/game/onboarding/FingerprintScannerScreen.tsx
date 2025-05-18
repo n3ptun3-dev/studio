@@ -65,12 +65,15 @@ export function FingerprintScannerScreen() {
     };
   }, []);
 
+  // Key for the HolographicPanel to ensure it re-renders if the theme changes while it's visible
+  const panelKey = `fingerprint-panel-${currentGlobalTheme}-${themeVersion}`;
+
   if (accessGranted) {
     return (
       <HolographicPanel
         className="w-full max-w-md text-center p-8 flex flex-col justify-center items-center min-h-[350px]"
         explicitTheme={currentGlobalTheme}
-        key={`access-granted-${currentGlobalTheme}-${themeVersion}`}
+        key={`${panelKey}-granted`}
       >
         <Fingerprint className="w-24 h-24 mx-auto text-green-400 mb-4 icon-glow" />
         <h2 className="text-3xl font-orbitron holographic-text text-green-400">Access Granted</h2>
@@ -83,7 +86,7 @@ export function FingerprintScannerScreen() {
     <HolographicPanel
       className="w-full max-w-md text-center p-8 flex flex-col justify-center items-center min-h-[350px]"
       explicitTheme={currentGlobalTheme}
-      key={`scanner-${currentGlobalTheme}-${themeVersion}`}
+      key={`${panelKey}-scanning`}
     >
       <h2 className="text-2xl font-orbitron mb-6 holographic-text">Spi Vs Spi: Biometric Authentication</h2>
       <p className="text-muted-foreground mb-8">Press and Hold to Authenticate.</p>
@@ -94,7 +97,7 @@ export function FingerprintScannerScreen() {
         onTouchStart={(e) => { e.preventDefault(); startScan(); }}
         onMouseUp={cancelScan}
         onTouchEnd={(e) => { e.preventDefault(); cancelScan(); }}
-        onMouseLeave={cancelScan}
+        onMouseLeave={cancelScan} // Added to cancel scan if mouse leaves the button area
       >
         <Fingerprint
           className={cn(
@@ -110,23 +113,24 @@ export function FingerprintScannerScreen() {
             />
           </div>
         )}
+        {/* Progress Ring SVG */}
         <svg className="absolute inset-0 w-full h-full" viewBox="0 0 36 36">
           <path
-            className="text-transparent"
+            className="text-transparent" // Background circle (transparent or very faint)
             d="M18 2.0845
               a 15.9155 15.9155 0 0 1 0 31.831
               a 15.9155 15.9155 0 0 1 0 -31.831"
             fill="none"
-            strokeWidth="2"
+            strokeWidth="2" // Adjust stroke width as needed
           />
           <path
-            className="text-primary icon-glow"
+            className={cn("transition-all duration-150", isScanning ? "text-accent" : "text-primary", "icon-glow")}
             strokeDasharray={`${scanProgress}, 100`}
             d="M18 2.0845
               a 15.9155 15.9155 0 0 1 0 31.831
               a 15.9155 15.9155 0 0 1 0 -31.831"
             fill="none"
-            strokeWidth="2"
+            strokeWidth="2" // Adjust stroke width
             strokeLinecap="round"
             style={{ transform: 'rotate(-90deg)', transformOrigin: '18px 18px' }}
           />
