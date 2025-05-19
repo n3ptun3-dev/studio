@@ -3,13 +3,13 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { HolographicButton } from '@/components/game/shared/HolographicPanel'; // Corrected import
+import { HolographicButton } from '@/components/game/shared/HolographicPanel';
 import { Progress } from "@/components/ui/progress";
 import { Fingerprint, Settings, BookOpen, Info, Power } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { XP_THRESHOLDS } from '@/lib/constants';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/contexts/ThemeContext'; // For active button theming
 
 const PEEK_AMOUNT = 20; // Height of the visible part of the PAD screen when "off"
 
@@ -170,21 +170,19 @@ interface SectionProps {
 
 export function AgentSection({ parallaxOffset }: SectionProps) {
   const { playerSpyName, faction, playerStats } = useAppContext();
-  const { theme: currentTheme } = useTheme(); // For active button theming
+  const { theme: currentTheme } = useTheme();
 
   const [isPadUp, setIsPadUp] = useState(false);
   const [padScreenView, setPadScreenView] = useState<PadScreenView>('dossier');
-  
   const [padButtonPanelHeight, setPadButtonPanelHeight] = useState(60); // Initial estimate
   const [padPeekPlusButtonHeight, setPadPeekPlusButtonHeight] = useState(padButtonPanelHeight + PEEK_AMOUNT);
 
-  const topContentRef = useRef<HTMLDivElement>(null);
   const titleAreaContentRef = useRef<HTMLDivElement>(null);
   const statsAreaRef = useRef<HTMLDivElement>(null);
+  const topContentRef = useRef<HTMLDivElement>(null);
   const thePadRef = useRef<HTMLDivElement>(null);
   const padButtonPanelRef = useRef<HTMLDivElement>(null);
   
-  // Measure PAD Button Panel height
   useEffect(() => {
     if (padButtonPanelRef.current) {
       const measuredHeight = padButtonPanelRef.current.offsetHeight;
@@ -192,13 +190,11 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
         setPadButtonPanelHeight(measuredHeight);
       }
     }
-  }, [isPadUp, padButtonPanelHeight]); // Re-check if isPadUp changes, as content might change
+  }, [padButtonPanelHeight]); 
 
-  // Update peek total height when button panel height is known
   useEffect(() => {
     setPadPeekPlusButtonHeight(padButtonPanelHeight + PEEK_AMOUNT);
   }, [padButtonPanelHeight]);
-
 
   const handlePowerClick = useCallback(() => {
     setIsPadUp(prev => !prev);
@@ -223,21 +219,14 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
     top: isPadUp ? '0px' : `calc(100% - ${padPeekPlusButtonHeight}px)`,
     height: isPadUp ? '100%' : `${padPeekPlusButtonHeight}px`,
   };
-  
-  // DEBUG INLINE STYLES FOR PAD
-  const debugPadInlineStyle: React.CSSProperties = {
-    backgroundColor: 'lime',
-    border: '5px solid orange',
-    borderRadius: '10px',
-  };
 
   return (
-    // AgentSection Root: Full height, overflow hidden, relative for absolute PAD.
+    // AgentSection Root: No internal scroll, relative for absolute PAD.
     <div className="relative h-full overflow-hidden">
       {/* Static Background Layer (Title + Stats) - Fills AgentSection, behind the PAD */}
       <div 
         ref={topContentRef}
-        className="absolute inset-0 flex flex-col z-10 pointer-events-none" // pointer-events-none so PAD is interactive
+        className="absolute inset-0 flex flex-col z-10 pointer-events-none" 
       >
         {/* Title Area - Expands to fill space above Stats Area */}
         <div 
@@ -280,18 +269,18 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
                 </p>
             </div>
         </div>
-        {/* Invisible Spacer to reserve space at the bottom of the static content layer for the PAD's button panel */}
+        {/* Invisible Spacer to reserve space for the PAD's button panel when PAD is 'off' */}
         <div style={{ height: `${padPeekPlusButtonHeight}px` }} className="flex-shrink-0"></div>
       </div>
 
       {/* The PAD - Absolutely positioned, slides up/down over the static background content */}
       <div
         ref={thePadRef}
-        style={{ ...padDynamicStyle, ...debugPadInlineStyle }} // APPLYING DEBUG STYLE HERE
+        style={padDynamicStyle}
         className={cn(
           "absolute inset-x-0 w-[90%] mx-auto flex flex-col shadow-lg z-20",
-          // "pad-main-container rounded-lg border backdrop-blur-sm pad-gloss-effect", // Original classes temporarily commented out for debug
-          "pad-gloss-effect", // Keep gloss to see if it still applies
+          "bg-[var(--pad-background-color)] border border-[var(--pad-border-color)] rounded-lg", // Using arbitrary values for bg and border
+          "backdrop-blur-sm pad-gloss-effect",
           "transition-all duration-500 ease-in-out" 
         )}
       >
@@ -299,8 +288,8 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
         <div
           ref={padButtonPanelRef}
           className={cn(
-            "h-[60px] flex-shrink-0 flex items-center justify-between px-4 border-b",
-            "pad-button-panel-style rounded-t-lg" // Uses CSS vars for background and border-bottom
+            "h-[60px] flex-shrink-0 flex items-center justify-between px-4",
+            "bg-[var(--pad-background-color)] border-b border-[var(--pad-button-panel-separator-color)] rounded-t-lg"
           )}
         >
           {isPadUp ? (
@@ -346,23 +335,21 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
           </HolographicButton>
         </div>
 
-        {/* PAD Screen Area Wrapper - This gets the PAD's main background via pad-screen-wrapper-style */}
+        {/* PAD Screen Area Wrapper - This gets the PAD's main background via bg-[var(--pad-background-color)] and bottom rounding */}
         <div 
           className={cn(
             "flex-grow min-h-0", 
-            "pad-screen-wrapper-style rounded-b-lg" // For background and bottom rounding
+            "bg-[var(--pad-background-color)] rounded-b-lg"
             )}
         >
           {/* Conditional rendering of screen content or peek area */}
           {isPadUp ? (
-             // This div is the one that gets the inset grid style AND the margin
              <div className="h-full w-full pad-screen-grid bg-accent/10 border border-primary/20 rounded-md m-2">
                 <ScrollArea className="h-full w-full"> 
                     {renderPadScreenContent()}
                 </ScrollArea>
              </div>
           ) : (
-            // Peek of the screen when PAD is off
             <div 
               className={cn(
                 "pad-screen-grid bg-accent/10 border border-primary/20 rounded-b-md m-2 opacity-50",
