@@ -16,12 +16,12 @@ const PEEK_AMOUNT = 20; // Height of the visible part of the PAD screen when "of
 // --- PAD Screen Views ---
 const AgentDossierView = () => {
   const { playerSpyName, playerPiName, faction, playerStats, setFaction: setAppFaction, addMessage } = useAppContext();
-  const { theme: currentTheme } = useTheme(); // For HolographicButton explicitTheme
+  const { theme: currentTheme } = useTheme();
 
   const handleFactionChange = () => {
     let newFaction = faction === 'Cyphers' ? 'Shadows' : 'Cyphers';
     if (faction === 'Observer') {
-        newFaction = 'Cyphers'; // Default to Cyphers if Observer overrides
+        newFaction = 'Cyphers'; 
         addMessage({ type: 'system', text: `Observer protocol overridden. Faction allegiance protocols engaged. Defaulting to Cyphers.` });
     } else {
         addMessage({ type: 'system', text: `Faction allegiance protocols updated to: ${newFaction}. Coordinating with HQ.` });
@@ -169,43 +169,46 @@ interface SectionProps {
 }
 
 export function AgentSection({ parallaxOffset }: SectionProps) {
-  const { playerSpyName, faction, playerStats } = useAppContext();
-  const { theme: currentTheme } = useTheme();
+  const { playerSpyName, faction, playerStats, isTODWindowOpen } = useAppContext();
+  const { theme: currentTheme, themeVersion } = useTheme();
 
   const [isPadUp, setIsPadUp] = useState(false);
   const [padScreenView, setPadScreenView] = useState<PadScreenView>('dossier');
-  const [padButtonPanelHeight, setPadButtonPanelHeight] = useState(60); // Default estimate for button panel
+  const [padButtonPanelHeight, setPadButtonPanelHeight] = useState(60); 
   const [padPeekPlusButtonHeight, setPadPeekPlusButtonHeight] = useState(padButtonPanelHeight + PEEK_AMOUNT);
-
-  // Refs for elements
-  const topContentRef = useRef<HTMLDivElement>(null);      // Contains Title and Stats
-  const titleAreaContentRef = useRef<HTMLDivElement>(null); // For Title Area within topContentRef
-  const statsAreaRef = useRef<HTMLDivElement>(null);       // For Stats Area within topContentRef
-  const thePadRef = useRef<HTMLDivElement>(null);          // For the absolutely positioned PAD
+  
   const padButtonPanelRef = useRef<HTMLDivElement>(null);
+  // const topContentRef = useRef<HTMLDivElement>(null); // Not strictly needed for layout if PAD is absolute
+  // const titleAreaContentRef = useRef<HTMLDivElement>(null); // Not strictly needed
+  // const statsAreaRef = useRef<HTMLDivElement>(null); // Not strictly needed
+  const thePadRef = useRef<HTMLDivElement>(null);
 
-  // Measure PAD Button Panel height on mount
   useEffect(() => {
     if (padButtonPanelRef.current) {
       const measuredHeight = padButtonPanelRef.current.offsetHeight;
-      if (measuredHeight > 0 && measuredHeight !== padButtonPanelHeight) {
+      if (measuredHeight > 0) {
         setPadButtonPanelHeight(measuredHeight);
       }
     }
-  }, []); // Run once on mount
+  }, []);
 
-  // Update peek height when button panel height changes
   useEffect(() => {
     setPadPeekPlusButtonHeight(padButtonPanelHeight + PEEK_AMOUNT);
   }, [padButtonPanelHeight]);
+
+  // Auto-close PAD if TODWindow opens (e.g. from another section)
+   useEffect(() => {
+    if (isTODWindowOpen && isPadUp) {
+      setIsPadUp(false);
+    }
+  }, [isTODWindowOpen, isPadUp]);
 
   const handlePowerClick = useCallback(() => {
     setIsPadUp(prev => !prev);
   }, []);
 
-  // Calculate XP progress for display
   const currentLevelXp = XP_THRESHOLDS[playerStats.level] || 0;
-  const nextLevelXpTarget = XP_THRESHOLDS[playerStats.level + 1] || (XP_THRESHOLDS[XP_THRESHOLDS.length -1] + (XP_THRESHOLDS[XP_THRESHOLDS.length - 1] - XP_THRESHOLDS[XP_THRESHOLDS.length - 2] || 100)); // Fallback for max level
+  const nextLevelXpTarget = XP_THRESHOLDS[playerStats.level + 1] || (XP_THRESHOLDS[XP_THRESHOLDS.length -1] + (XP_THRESHOLDS[XP_THRESHOLDS.length - 1] - XP_THRESHOLDS[XP_THRESHOLDS.length - 2] || 100));
   const xpForCurrentLevel = playerStats.xp - currentLevelXp;
   const xpToNextLevelSpan = nextLevelXpTarget - currentLevelXp;
   const xpProgress = xpToNextLevelSpan > 0 ? Math.max(0, Math.min(100, (xpForCurrentLevel / xpToNextLevelSpan) * 100)) : 100;
@@ -219,23 +222,22 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
     }
   };
   
-  // Dynamic styling for the PAD based on its state
   const padDynamicStyle: React.CSSProperties = {
     top: isPadUp ? '0px' : `calc(100% - ${padPeekPlusButtonHeight}px)`,
     height: isPadUp ? '100%' : `${padPeekPlusButtonHeight}px`,
   };
 
   return (
-    // AgentSection Root: full height, overflow hidden (PAD handles its own scroll)
+    // AgentSection Root: Full height, overflow hidden (PAD handles its own scroll for content)
     <div className="relative h-full overflow-hidden">
-      {/* Static Background Layer (Title + Stats) - Fills AgentSection, PAD slides over this */}
+      {/* Static Background Layer (Title + Stats) - Fills AgentSection */}
       <div 
-        ref={topContentRef} 
+        // ref={topContentRef} // Not directly manipulated for layout in this absolute model
         className="absolute inset-0 flex flex-col z-10 pointer-events-none" 
       >
         {/* Title Area - Expands to fill space above Stats Area */}
         <div 
-          ref={titleAreaContentRef} 
+          // ref={titleAreaContentRef} // Not directly manipulated
           className="flex-grow flex flex-col items-center justify-center pt-4 md:pt-2 pb-2 text-center relative overflow-hidden"
         >
             <div className="absolute inset-0 flex items-center justify-center -z-10 opacity-10">
@@ -246,7 +248,10 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
         </div>
 
         {/* Stats Area - Sits at the bottom of the topContentRef */}
-        <div ref={statsAreaRef} className="flex-shrink-0 text-center pt-2 pb-4 px-2">
+        <div 
+          // ref={statsAreaRef} // Not directly manipulated
+          className="flex-shrink-0 text-center pt-2 pb-4 px-2"
+        >
             <div className="w-full max-w-md mx-auto">
                 <p className="text-sm text-muted-foreground">Agent Rank: {playerStats.level}</p>
                 <Progress value={xpProgress} className="w-full h-2 mt-1 bg-primary/20 [&>div]:bg-primary" />
@@ -271,7 +276,7 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
                 </p>
             </div>
         </div>
-        {/* Invisible Spacer to reserve space at the bottom of topContentRef for PAD button panel when PAD is off */}
+        {/* Invisible Spacer to reserve space for PAD button panel when PAD is off */}
         <div style={{ height: `${padPeekPlusButtonHeight}px` }} className="flex-shrink-0"></div>
       </div>
 
@@ -281,8 +286,8 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
         style={padDynamicStyle}
         className={cn(
           "absolute inset-x-0 w-[90%] mx-auto flex flex-col shadow-lg z-20",
-          "transition-all duration-500 ease-in-out", // For slide animation
-          "pad-main-container rounded-lg border backdrop-blur-sm pad-gloss-effect" 
+          "pad-main-container rounded-lg border backdrop-blur-sm pad-gloss-effect", 
+          "transition-all duration-500 ease-in-out" 
         )}
       >
         {/* PAD Button Panel */}
@@ -340,17 +345,22 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
         <div 
           className={cn(
             "flex-grow min-h-0", 
-            "pad-screen-wrapper-style rounded-b-lg" // For background and bottom rounding
+            "pad-screen-wrapper-style rounded-b-lg" 
             )}
         >
           {isPadUp ? (
-            <ScrollArea className="h-full w-full pad-screen-grid bg-accent/10 border border-primary/20 rounded-md m-2">
-              {renderPadScreenContent()}
-            </ScrollArea>
+             <ScrollArea className="h-full w-full pad-screen-grid bg-accent/10 border border-primary/20 rounded-md m-2">
+                {renderPadScreenContent()}
+             </ScrollArea>
           ) : (
             // Peek of the screen when PAD is off
-            <div className={`h-[${PEEK_AMOUNT}px] pad-screen-grid bg-accent/10 border border-primary/20 rounded-b-lg m-2 opacity-50`}>
-              {/* Intentionally empty or can have a subtle graphic indicating "off screen" */}
+            <div 
+              className={cn(
+                "pad-screen-grid bg-accent/10 border border-primary/20 rounded-b-lg m-2 opacity-50",
+                `h-[${PEEK_AMOUNT}px]`
+              )}
+            >
+              {/* Intentionally empty */}
             </div>
           )}
         </div>

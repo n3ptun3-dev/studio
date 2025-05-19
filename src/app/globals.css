@@ -28,8 +28,8 @@
     --border-hsl: 130 60% 35%;
     --input-hsl: 130 30% 25%;
     --ring-hsl: 130 70% 50%;
-    --hologram-glow-color-hsl: 130 90% 55%;
-    /* PAD specific HSLs for terminal-green */
+    --hologram-glow-color-hsl: 130 90% 55%; /* Specific HSL for glow */
+    /* PAD specific HSLs (will also be set by JS from themeHSLValues) */
     --pad-bg-hsl: var(--card-hsl); /* Or specific, e.g., 130 20% 6% */
     --pad-border-hsl: var(--border-hsl);
     --pad-button-panel-separator-hsl: var(--border-hsl);
@@ -59,7 +59,7 @@
     
     /* Holographic variables (also overridden by JS on :root) */
     --hologram-panel-bg: hsla(var(--card-hsl), 0.6);
-    --hologram-panel-border: hsl(var(--border-hsl)); /* Use theme border */
+    --hologram-panel-border: hsl(var(--border-hsl)); 
     --hologram-glow-color: hsl(var(--hologram-glow-color-hsl));
     --hologram-base-text-color: hsl(var(--foreground-hsl));
     --hologram-button-bg: hsl(var(--primary-hsl));
@@ -99,7 +99,7 @@
     --input-hsl: 210 40% 15%;
     --ring-hsl: 204 100% 55%;
     --hologram-glow-color-hsl: 204 100% 50%;
-    /* PAD specific HSLs for cyphers */
+    /* PAD specific HSLs (will also be set by JS from themeHSLValues) */
     --pad-bg-hsl: var(--card-hsl);
     --pad-border-hsl: var(--border-hsl);
     --pad-button-panel-separator-hsl: var(--border-hsl);
@@ -128,7 +128,7 @@
     --input-hsl: 0 40% 15%;
     --ring-hsl: 0 100% 55%;
     --hologram-glow-color-hsl: 0 100% 40%;
-    /* PAD specific HSLs for shadows */
+    /* PAD specific HSLs (will also be set by JS from themeHSLValues) */
     --pad-bg-hsl: var(--card-hsl);
     --pad-border-hsl: var(--border-hsl);
     --pad-button-panel-separator-hsl: var(--border-hsl);
@@ -157,7 +157,7 @@
     --input-hsl: 220 20% 25%;
     --ring-hsl: 220 60% 55%;
     --hologram-glow-color-hsl: 220 70% 60%;
-    /* PAD specific HSLs for neutral */
+    /* PAD specific HSLs (will also be set by JS from themeHSLValues) */
     --pad-bg-hsl: var(--card-hsl);
     --pad-border-hsl: var(--border-hsl);
     --pad-button-panel-separator-hsl: var(--border-hsl);
@@ -244,7 +244,7 @@
   border-color: var(--hologram-panel-border); 
   border-width: 1px; 
   border-style: solid; 
-  border-radius: 0.5rem; 
+  border-radius: 0.5rem; /* Equivalent to Tailwind's rounded-lg with default radius */
   box-shadow: 0 0 15px var(--hologram-glow-color), inset 0 0 10px var(--hologram-glow-color);
   @apply p-4 md:p-6;
 }
@@ -304,18 +304,18 @@
 
 /* New PAD specific styling using variables set on :root by JS */
 .pad-main-container {
-  background-color: var(--pad-background-color); /* e.g., hsla(var(--pad-bg-hsl), 0.75) */
-  border-color: var(--pad-border-color);     /* e.g., hsl(var(--pad-border-hsl)) */
+  background-color: var(--pad-background-color) !important; /* e.g., hsla(var(--pad-bg-hsl), 0.75) */
+  border-color: var(--pad-border-color) !important;     /* e.g., hsl(var(--pad-border-hsl)) */
   /* Tailwind's `border` class will provide border-width: 1px; */
 }
 
 .pad-button-panel-style {
-  background-color: var(--pad-background-color); /* Match main PAD bg */
-  border-bottom-color: var(--pad-button-panel-separator-color); /* e.g., hsla(var(--pad-button-panel-separator-hsl), 0.5) */
+  background-color: var(--pad-background-color) !important; /* Match main PAD bg */
+  border-bottom-color: var(--pad-button-panel-separator-color) !important; /* e.g., hsla(var(--pad-button-panel-separator-hsl), 0.5) */
 }
 
 .pad-screen-wrapper-style {
-  background-color: var(--pad-background-color); /* Match main PAD bg */
+  background-color: var(--pad-background-color) !important; /* Match main PAD bg */
 }
 
 
