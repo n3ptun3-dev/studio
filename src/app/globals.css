@@ -434,4 +434,10 @@
   animation: slide-out-right-tod 0.3s ease-out forwards; 
 }
 
+.debug-pad-override {
+  background-color: purple !important;
+  border: 5px solid yellow !important;
+  border-radius: 15px !important;
+}
     
+
