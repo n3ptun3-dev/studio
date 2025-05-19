@@ -163,6 +163,7 @@
   /* Composite color variables (used by Tailwind & components) */
   /* These will be overridden by JS on :root's inline style for dynamic themes */
  :root {
+    /* Core Theme Colors - Base values from --*-hsl set by JS */
     --background: hsl(var(--background-hsl));
     --foreground: hsl(var(--foreground-hsl));
     --card: hsl(var(--card-hsl));
@@ -183,19 +184,18 @@
     --input: hsl(var(--input-hsl));
     --ring: hsl(var(--ring-hsl));
     
-    /* Holographic variables (also overridden by JS on :root) */
-    --hologram-panel-bg: hsla(var(--hologram-panel-bg-hsl, var(--card-hsl)), 0.6);
-    --hologram-panel-border: hsl(var(--hologram-panel-border-hsl, var(--border-hsl))); 
-    --hologram-glow-color: hsl(var(--hologram-glow-color-hsl, var(--accent-hsl)));
-    --hologram-base-text-color: hsl(var(--hologram-base-text-color-hsl, var(--foreground-hsl)));
-    --hologram-button-bg: hsl(var(--hologram-button-bg-hsl, var(--primary-hsl)));
-    --hologram-button-text: hsl(var(--hologram-button-text-hsl, var(--primary-foreground-hsl)));
+    /* Holographic Variables - Base values from --hologram-*-hsl set by JS */
+    --hologram-panel-bg: hsla(var(--hologram-panel-bg-hsl), 0.6);
+    --hologram-panel-border: hsl(var(--hologram-panel-border-hsl)); 
+    --hologram-glow-color: hsl(var(--hologram-glow-color-hsl));
+    --hologram-base-text-color: hsl(var(--hologram-base-text-color-hsl));
+    --hologram-button-bg: hsl(var(--hologram-button-bg-hsl));
+    --hologram-button-text: hsl(var(--hologram-button-text-hsl));
 
-    /* PAD specific colors (set by JS on :root's inline style using --pad-*-hsl vars) */
+    /* PAD Specific Colors - Base values from --pad-*-hsl set by JS */
     --pad-background-color: hsla(var(--pad-bg-hsl), 0.85); 
     --pad-border-color: hsl(var(--pad-border-hsl)); 
     --pad-button-panel-separator-color: hsla(var(--pad-button-panel-separator-hsl), 0.5);
-
 
     /* Item Level Colors HSL (remain globally available) */
     --level-1-color-hsl: 0 100% 50%; /* Red */
@@ -307,7 +307,6 @@
   border-color: hsl(var(--primary-hsl)) !important;
   box-shadow: 0 0 10px hsl(var(--primary-hsl)), inset 0 0 8px hsl(var(--primary-hsl)) !important;
 }
-
 
 .holographic-input {
   @apply bg-transparent border border-input text-foreground rounded-md px-3 py-2;
@@ -449,5 +448,3 @@
 .animate-slide-out-right-tod {
   animation: slide-out-right-tod 0.3s ease-out forwards; 
 }
-    
-

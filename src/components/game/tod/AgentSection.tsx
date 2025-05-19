@@ -176,22 +176,25 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
   const [padScreenView, setPadScreenView] = useState<PadScreenView>('dossier');
   const [padButtonPanelHeight, setPadButtonPanelHeight] = useState(60); 
   const [padPeekPlusButtonHeight, setPadPeekPlusButtonHeight] = useState(padButtonPanelHeight + PEEK_AMOUNT);
-
+  
+  // Refs for DOM elements
   const topContentRef = useRef<HTMLDivElement>(null);
   const titleAreaContentRef = useRef<HTMLDivElement>(null);
   const statsAreaRef = useRef<HTMLDivElement>(null);
   const thePadRef = useRef<HTMLDivElement>(null);
   const padButtonPanelRef = useRef<HTMLDivElement>(null);
-  
+
+  // Measure PAD Button Panel height
   useEffect(() => {
     if (padButtonPanelRef.current) {
       const measuredHeight = padButtonPanelRef.current.offsetHeight;
-      if (measuredHeight > 0 && measuredHeight !== padButtonPanelHeight) {
+      if (measuredHeight > 0) { // Ensure measuredHeight is positive
         setPadButtonPanelHeight(measuredHeight);
       }
     }
-  }, [padButtonPanelHeight]);
+  }, []); // Run once on mount
 
+  // Update peek+button height when button panel height is known
   useEffect(() => {
     setPadPeekPlusButtonHeight(padButtonPanelHeight + PEEK_AMOUNT);
   }, [padButtonPanelHeight]);
@@ -218,76 +221,98 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
   const padDynamicStyle: React.CSSProperties = {
     top: isPadUp ? '0px' : `calc(100% - ${padPeekPlusButtonHeight}px)`,
     height: isPadUp ? '100%' : `${padPeekPlusButtonHeight}px`,
+    // Core PAD appearance via inline styles referencing CSS variables from :root
+    backgroundColor: `var(--pad-background-color)`,
+    borderColor: `var(--pad-border-color)`,
+    borderRadius: '0.5rem', // Matches Tailwind rounded-lg
+    borderWidth: '1px',
+    borderStyle: 'solid',
   };
 
-  return (
-    <div className="relative h-full overflow-hidden"> {/* AgentSection Root */}
-      {/* Static Background Layer (Title + Stats) */}
-      <div
-        ref={topContentRef}
-        className="absolute inset-0 flex flex-col z-10 pointer-events-none" 
-      >
-        <div 
-            ref={titleAreaContentRef}
-            className="flex-grow flex flex-col items-center justify-center pt-4 md:pt-2 pb-2 text-center relative overflow-hidden"
-        >
-            <div className="absolute inset-0 flex items-center justify-center -z-10 opacity-10">
-                <Fingerprint className="w-48 h-48 md:w-64 md:h-64 text-primary" />
-            </div>
-            <h1 className="text-3xl md:text-4xl font-orbitron holographic-text">{playerSpyName || "Agent"}</h1>
-            <p className={`text-lg font-semibold ${faction === 'Cyphers' ? 'text-blue-400' : faction === 'Shadows' ? 'text-red-400' : 'text-gray-400'}`}>{faction}</p>
-        </div>
+   const padButtonPanelStyle: React.CSSProperties = {
+    backgroundColor: `var(--pad-background-color)`,
+    borderBottomColor: `var(--pad-button-panel-separator-color)`,
+    borderBottomWidth: '1px',
+    borderBottomStyle: 'solid',
+  };
 
-        <div
-          ref={statsAreaRef}
-          className="flex-shrink-0 text-center pt-2 pb-4 px-2"
-        >
-          <div className="w-full max-w-md mx-auto">
-            <p className="text-sm text-muted-foreground">Agent Rank: {playerStats.level}</p>
-            <Progress value={xpProgress} className="w-full h-2 mt-1 bg-primary/20 [&>div]:bg-primary" />
-            <p className="text-xs text-muted-foreground">{playerStats.xp} / {nextLevelXpTarget} XP</p>
-          </div>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-3 text-sm w-full max-w-md mx-auto font-rajdhani">
-            <div>
-              <p className="text-muted-foreground">ELINT Reserves</p>
-              <p className="font-digital7 text-xl holographic-text">{playerStats.elintReserves}</p>
+  const padScreenWrapperStyle: React.CSSProperties = {
+    backgroundColor: `var(--pad-background-color)`,
+  };
+
+
+  return (
+    // AgentSection Root - Static container for positioning layers
+    <div className="relative h-full overflow-hidden">
+      {/* Layer 1: Static Background Content (Title + Stats) */}
+      <div 
+        ref={topContentRef}
+        className="absolute inset-0 flex flex-col z-10 pointer-events-none"
+      >
+        {/* Wrapper for Title and Stats to control their collective pushing of the spacer */}
+        <div className="flex flex-col flex-grow">
+            {/* Title Area - Takes up space above Stats */}
+            <div 
+                ref={titleAreaContentRef}
+                className="flex-grow flex flex-col items-center justify-center pt-4 md:pt-2 pb-2 text-center relative overflow-hidden"
+            >
+                <div className="absolute inset-0 flex items-center justify-center -z-10 opacity-10">
+                    <Fingerprint className="w-48 h-48 md:w-64 md:h-64 text-primary" />
+                </div>
+                <h1 className="text-3xl md:text-4xl font-orbitron holographic-text">{playerSpyName || "Agent"}</h1>
+                <p className={`text-lg font-semibold ${faction === 'Cyphers' ? 'text-blue-400' : faction === 'Shadows' ? 'text-red-400' : 'text-gray-400'}`}>{faction}</p>
             </div>
-            <div>
-              <p className="text-muted-foreground">ELINT Transferred (HQ)</p>
-              <p className="font-digital7 text-xl holographic-text">{playerStats.elintTransferred}</p>
+
+            {/* Stats Area - Sits at the bottom of the title/stats content block */}
+            <div
+              ref={statsAreaRef}
+              className="flex-shrink-0 text-center pt-2 pb-4 px-2"
+            >
+              <div className="w-full max-w-md mx-auto">
+                <p className="text-sm text-muted-foreground">Agent Rank: {playerStats.level}</p>
+                <Progress value={xpProgress} className="w-full h-2 mt-1 bg-primary/20 [&>div]:bg-primary" />
+                <p className="text-xs text-muted-foreground">{playerStats.xp} / {nextLevelXpTarget} XP</p>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-3 text-sm w-full max-w-md mx-auto font-rajdhani">
+                <div>
+                  <p className="text-muted-foreground">ELINT Reserves</p>
+                  <p className="font-digital7 text-xl holographic-text">{playerStats.elintReserves}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">ELINT Transferred (HQ)</p>
+                  <p className="font-digital7 text-xl holographic-text">{playerStats.elintTransferred}</p>
+                </div>
+              </div>
+              <div className="mt-3">
+                <p className="text-sm font-semibold font-rajdhani text-yellow-400">
+                  Next Transfer Window:
+                </p>
+                <p className="font-digital7 text-xl holographic-text">
+                  02:34:56 
+                </p>
+              </div>
             </div>
-          </div>
-          <div className="mt-3">
-            <p className="text-sm font-semibold font-rajdhani text-yellow-400">
-              Next Transfer Window:
-            </p>
-            <p className="font-digital7 text-xl holographic-text">
-              02:34:56 
-            </p>
-          </div>
         </div>
         {/* Invisible Spacer to reserve space for the PAD's button panel when PAD is 'off' */}
-        <div style={{ height: `${padPeekPlusButtonHeight}px` }} className="flex-shrink-0"></div>
+        <div className="flex-shrink-0" style={{ height: `${padPeekPlusButtonHeight}px` }}></div>
       </div>
 
-      {/* The PAD - Absolutely positioned, slides up/down over the static background content */}
+      {/* Layer 2: The PAD - Absolutely positioned, slides up/down over the static background content */}
       <div
         ref={thePadRef}
         style={padDynamicStyle}
         className={cn(
-          "absolute inset-x-0 w-[90%] mx-auto flex flex-col shadow-lg z-20",
-          "transition-all duration-500 ease-in-out",
-          "bg-[var(--pad-background-color)] border border-[var(--pad-border-color)] rounded-lg",
-          "backdrop-blur-sm pad-gloss-effect"
+          "absolute inset-x-0 w-[90%] mx-auto flex flex-col shadow-lg z-20 transition-all duration-500 ease-in-out",
+          "backdrop-blur-sm pad-gloss-effect" // Effects applied via Tailwind
         )}
       >
         {/* PAD Button Panel */}
         <div
           ref={padButtonPanelRef}
           className={cn(
-            "h-[60px] flex-shrink-0 flex items-center justify-between px-4 border-b rounded-t-lg",
-            "bg-[var(--pad-background-color)] border-b-[var(--pad-button-panel-separator-color)]"
+            "h-[60px] flex-shrink-0 flex items-center justify-between px-4 rounded-t-lg" // Tailwind for rounding
           )}
+          style={padButtonPanelStyle}
         >
           {isPadUp ? (
             <div className="flex-grow flex justify-center gap-4">
@@ -335,25 +360,19 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
         {/* PAD Screen Area Wrapper */}
         <div
           className={cn(
-            "flex-grow min-h-0 rounded-b-lg", 
-            "bg-[var(--pad-background-color)]" // This provides the background for the margin area
+            "flex-grow min-h-0 rounded-b-lg" // Tailwind for rounding
           )}
+          style={padScreenWrapperStyle}
         >
           {isPadUp ? (
-             <div className="h-full w-full pad-screen-grid bg-accent/10 border border-primary/20 rounded-md m-2">
+             <div className="h-full w-full pad-screen-grid bg-accent/10 border border-[var(--primary-hsl)] rounded-md m-2">
                 <ScrollArea className="h-full w-full">
                     {renderPadScreenContent()}
                 </ScrollArea>
              </div>
           ) : (
-            <div
-              className={cn(
-                "pad-screen-grid bg-accent/10 border border-primary/20 rounded-md m-2 opacity-50",
-                `h-[${PEEK_AMOUNT}px]`
-              )}
-            >
-              {/* Intentionally empty for the peek */}
-            </div>
+            // Ensure mx-2 and mb-2 for consistent spacing with m-2 on the active screen
+            <div className="h-[20px] pad-screen-grid bg-accent/10 border border-[var(--primary-hsl)] rounded-md mx-2 mb-2"></div>
           )}
         </div>
       </div>
