@@ -12,7 +12,6 @@ import { XP_THRESHOLDS } from '@/lib/constants';
 import { useTheme } from '@/contexts/ThemeContext';
 
 const PEEK_AMOUNT = 20; // Height of the visible part of the PAD screen when "off"
-const PAD_BUTTON_PANEL_DEFAULT_HEIGHT = 60;
 
 // --- PAD Screen Views ---
 const AgentDossierView = () => {
@@ -37,7 +36,7 @@ const AgentDossierView = () => {
   const xpProgressForDossier = xpToNextLevelSpanInDossier > 0 ? Math.max(0, Math.min(100, (xpForCurrentLevelInDossier / xpToNextLevelSpanInDossier) * 100)) : 100;
 
   return (
-    <ScrollArea className="h-full p-3">
+    <ScrollArea className="h-full p-3"> {/* ScrollArea for Dossier content */}
       <h3 className="text-xl font-orbitron mb-4 holographic-text">Agent Dossier</h3>
       <div className="space-y-3 text-sm font-rajdhani">
         <div>
@@ -58,6 +57,7 @@ const AgentDossierView = () => {
           <Progress value={xpProgressForDossier} className="w-full h-1.5 mt-1 bg-primary/20 [&>div]:bg-primary" />
           <p className="text-xs text-muted-foreground">{playerStats.xp} / {XP_THRESHOLDS[playerStats.level + 1] ? XP_THRESHOLDS[playerStats.level + 1] : 'MAX'} XP</p>
         </div>
+        {/* Other stats sections... */}
         <div>
           <p className="font-semibold text-muted-foreground">Infiltration Stats:</p>
           <p>Successful Vault Infiltrations: {playerStats.successfulVaultInfiltrations}</p>
@@ -119,7 +119,7 @@ const IntelFilesView = () => {
           &larr; Back to Intel Files
         </HolographicButton>
         <h4 className="text-lg font-orbitron mb-2 holographic-text flex-shrink-0">{selectedCategoryData.heading}</h4>
-        <ScrollArea className="flex-grow min-h-0">
+        <ScrollArea className="flex-grow min-h-0"> {/* ScrollArea for category content */}
           <p className="text-muted-foreground whitespace-pre-line font-rajdhani pr-2">{selectedCategoryData.content}</p>
         </ScrollArea>
       </div>
@@ -127,7 +127,7 @@ const IntelFilesView = () => {
   }
 
   return (
-    <ScrollArea className="h-full p-3">
+    <ScrollArea className="h-full p-3"> {/* ScrollArea for category list */}
       <div className="flex items-center mb-4">
         <h3 className="text-xl font-orbitron holographic-text">Intel Files</h3>
       </div>
@@ -151,7 +151,7 @@ const IntelFilesView = () => {
 const SettingsView = () => {
   const { theme: currentTheme } = useTheme();
   return (
-    <ScrollArea className="h-full p-3 font-rajdhani">
+    <ScrollArea className="h-full p-3 font-rajdhani"> {/* ScrollArea for Settings content */}
       <h3 className="text-xl font-orbitron mb-4 holographic-text">Settings</h3>
       <ul className="space-y-2 text-sm">
         <li><HolographicButton explicitTheme={currentTheme} className="w-full justify-start text-left !bg-transparent hover:!bg-primary/10 !py-1.5">Notifications (Placeholder)</HolographicButton></li>
@@ -176,79 +176,21 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
   const [isPadUp, setIsPadUp] = useState(false);
   const [padScreenView, setPadScreenView] = useState<PadScreenView>('dossier');
   
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const topContentRef = useRef<HTMLDivElement>(null); // For the entire block of Title + Stats
-  const titleAreaContentRef = useRef<HTMLDivElement>(null); // Specifically for Player Name + Faction
-  const statsAreaRef = useRef<HTMLDivElement>(null); // For ELINT, XP, Timer
-  const thePadRef = useRef<HTMLDivElement>(null);
+  const topContentRef = useRef<HTMLDivElement>(null); // For the static background content
   const padButtonPanelRef = useRef<HTMLDivElement>(null);
-  const padScreenContentWrapperRef = useRef<HTMLDivElement>(null);
+  const [padButtonPanelHeight, setPadButtonPanelHeight] = useState(60); // Default or measured height
 
-  // Measure PAD Button Panel height
-  const [padButtonPanelHeight, setPadButtonPanelHeight] = useState(PAD_BUTTON_PANEL_DEFAULT_HEIGHT);
-   useEffect(() => {
+  useEffect(() => {
     if (padButtonPanelRef.current) {
       setPadButtonPanelHeight(padButtonPanelRef.current.offsetHeight);
     }
-  }, [isPadUp]); // Re-measure if isPadUp changes, as content might affect height
-
-  // Transfer Timer Logic
-  const [transferTimer, setTransferTimer] = useState(0);
-  const [isTransferWindowOpenState, setIsTransferWindowOpenState] = useState(false);
-  useEffect(() => {
-    const cycleDuration = 4 * 60 * 60; 
-    const openDuration = 1 * 60 * 60; 
-    const updateTimer = () => {
-      const now = Math.floor(Date.now() / 1000); 
-      const cycleProgress = now % cycleDuration;
-      if (cycleProgress < openDuration) {
-        setIsTransferWindowOpenState(true);
-        setTransferTimer(openDuration - cycleProgress);
-      } else {
-        setIsTransferWindowOpenState(false);
-        setTransferTimer(cycleDuration - cycleProgress);
-      }
-    };
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
-    return () => clearInterval(interval);
   }, []);
 
+  const padPeekPlusButtonHeight = padButtonPanelHeight + PEEK_AMOUNT;
+
   const handlePowerClick = useCallback(() => {
-    const newStateIsUp = !isPadUp;
-    setIsPadUp(newStateIsUp);
-    
-    requestAnimationFrame(() => {
-      if (newStateIsUp) {
-        thePadRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } else {
-        scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    });
-  }, [isPadUp]);
-
-  const handleScroll = useCallback(() => {
-    if (padButtonPanelRef.current && scrollContainerRef.current) {
-      const buttonPanelTop = padButtonPanelRef.current.getBoundingClientRect().top;
-      const scrollContainerTop = scrollContainerRef.current.getBoundingClientRect().top;
-      
-      // Check if the button panel is at or near the top of the scroll container
-      if (buttonPanelTop <= scrollContainerTop + 5) { // 5px tolerance
-        if (!isPadUp) setIsPadUp(true);
-      } else {
-        if (isPadUp) setIsPadUp(false);
-      }
-    }
-  }, [isPadUp]); // isPadUp is needed here to prevent stale closures
-
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (container) {
-      container.addEventListener('scroll', handleScroll);
-      return () => container.removeEventListener('scroll', handleScroll);
-    }
-  }, [handleScroll]);
-
+    setIsPadUp(prev => !prev);
+  }, []);
 
   const currentLevelXp = XP_THRESHOLDS[playerStats.level] || 0;
   const nextLevelXpTarget = XP_THRESHOLDS[playerStats.level + 1] || (XP_THRESHOLDS[XP_THRESHOLDS.length -1] + (XP_THRESHOLDS[XP_THRESHOLDS.length - 1] - XP_THRESHOLDS[XP_THRESHOLDS.length - 2] || 100));
@@ -266,15 +208,18 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
   };
   
   const padDynamicStyle: React.CSSProperties = {
-    minHeight: isPadUp ? '100vh' : 'auto',
+    top: isPadUp ? '0px' : `calc(100% - ${padPeekPlusButtonHeight}px)`,
+    height: isPadUp ? '100%' : `${padPeekPlusButtonHeight}px`,
+    // transition-all and duration-500 are handled by Tailwind class
   };
 
   return (
-    <div ref={scrollContainerRef} className="relative flex flex-col h-full overflow-y-auto scrollbar-hide">
-      {/* Top Content Area (Title + Stats) - Pushes PAD down initially */}
-      <div ref={topContentRef} className="flex flex-col flex-grow flex-shrink-0"> {/* Transparent background */}
-        {/* Title Area - Contains Agent Name and Faction - Expands within Top Content Area */}
-        <div ref={titleAreaContentRef} className="flex-grow flex flex-col items-center justify-center pt-4 md:pt-2 pb-2 text-center relative overflow-hidden">
+    // AgentSection Root: Non-scrollable, full height, relative for absolute PAD
+    <div className="relative flex flex-col h-full overflow-hidden">
+      {/* Static Background Layer (Title + Stats) - Full height, behind the PAD */}
+      <div ref={topContentRef} className="absolute inset-0 flex flex-col z-10 pointer-events-none"> {/* pointer-events-none so PAD can be clicked */}
+        {/* Title Area - Expands to fill space above Stats */}
+        <div className="flex-grow flex flex-col items-center justify-center pt-4 md:pt-2 pb-2 text-center relative overflow-hidden">
           <div className="absolute inset-0 flex items-center justify-center -z-10 opacity-10">
             <Fingerprint className="w-48 h-48 md:w-64 md:h-64 text-primary" />
           </div>
@@ -282,8 +227,8 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
           <p className={`text-lg font-semibold ${faction === 'Cyphers' ? 'text-blue-400' : faction === 'Shadows' ? 'text-red-400' : 'text-gray-400'}`}>{faction}</p>
         </div>
 
-        {/* Stats Area - Sits below Title Area */}
-        <div ref={statsAreaRef} className="flex-shrink-0 text-center pt-2 pb-4 px-2">
+        {/* Stats Area - Sits at the bottom of the topContentRef flex column */}
+        <div className="flex-shrink-0 text-center pt-2 pb-4 px-2">
           <div className="w-full max-w-md mx-auto">
             <p className="text-sm text-muted-foreground">Agent Rank: {playerStats.level}</p>
             <Progress value={xpProgress} className="w-full h-2 mt-1 bg-primary/20 [&>div]:bg-primary" />
@@ -300,23 +245,23 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
             </div>
           </div>
           <div className="mt-3">
-            <p className={`text-sm font-semibold font-rajdhani ${isTransferWindowOpenState ? 'text-green-400 animate-pulse' : 'text-yellow-400'}`}>
-              {isTransferWindowOpenState ? 'Transfer Window Ends:' : 'Next Transfer Window:'}
+            <p className="text-sm font-semibold font-rajdhani text-yellow-400">
+              Next Transfer Window: {/* Placeholder */}
             </p>
             <p className="font-digital7 text-xl holographic-text">
-              {new Date(transferTimer * 1000).toISOString().substr(11, 8)}
+              02:34:56 {/* Placeholder */}
             </p>
           </div>
         </div>
       </div>
 
-      {/* The PAD - Flows normally after Top Content, has its own styling */}
+      {/* The PAD - Absolutely positioned, slides up/down over the static background content */}
       <div
-        ref={thePadRef}
         style={padDynamicStyle}
         className={cn(
-          "w-[90%] mx-auto flex flex-col mt-4 flex-shrink-0 shadow-lg",
-          "bg-pad-backing backdrop-blur-sm pad-gloss-effect rounded-t-lg border-t border-l border-r border-white/10"
+          "absolute inset-x-0 w-[90%] mx-auto flex flex-col shadow-lg z-20",
+          "bg-pad-backing backdrop-blur-sm pad-gloss-effect rounded-t-lg border-t border-l border-r border-white/10",
+          "transition-all duration-500 ease-in-out" 
         )}
       >
         {/* PAD Button Panel */}
@@ -367,18 +312,17 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
           </HolographicButton>
         </div>
 
-        {/* PAD Screen Area */}
+        {/* PAD Screen Area - This will contain the ScrollArea */}
         <div 
-          ref={padScreenContentWrapperRef} 
-          className="flex-grow min-h-0" // Ensures this div can grow and ScrollArea inside it can use h-full
+          className="flex-grow min-h-0" // Allows ScrollArea to fill available height
         >
           {isPadUp ? (
             <ScrollArea className="h-full w-full pad-screen-grid bg-accent/10 border border-primary/20 rounded-b-md m-2">
               {renderPadScreenContent()}
             </ScrollArea>
           ) : (
-            <div className={`h-[${PEEK_AMOUNT}px] pad-screen-grid bg-accent/10 border border-primary/20 rounded-b-md m-2`}>
-              {/* Peek content or just empty grid */}
+            // Peek view: just the grid background, slightly taller to ensure button panel text is visible
+            <div className={`h-[${PEEK_AMOUNT}px] pad-screen-grid bg-accent/10 border border-primary/20 rounded-b-md m-2 opacity-50`}>
             </div>
           )}
         </div>

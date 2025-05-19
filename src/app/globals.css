@@ -31,7 +31,10 @@
     --hologram-glow-color: hsl(130 90% 55%); 
     --hologram-base-text-color-hsl: var(--foreground-hsl);
     --hologram-button-bg-hsl: var(--primary-hsl);
-    --hologram-button-text-hsl: hsl(130 85% 75%); /* Brighter for terminal green button text */
+    --hologram-button-text-hsl: hsl(130 85% 75%); 
+
+    /* Debug color */
+    --terminal-green-debug-color: lime;
 
 
     /* Convert HSL to actual colors */
@@ -89,6 +92,9 @@
     --hologram-button-bg-hsl: var(--primary-hsl);
     --hologram-button-text-hsl: hsl(var(--primary-foreground-hsl));
 
+    /* Debug color */
+    --cyphers-debug-color: blue;
+
     /* Direct color definitions */
     --background: hsl(var(--background-hsl));
     --foreground: hsl(var(--foreground-hsl));
@@ -142,6 +148,9 @@
     --hologram-base-text-color-hsl: var(--foreground-hsl);
     --hologram-button-bg-hsl: var(--primary-hsl);
     --hologram-button-text-hsl: hsl(var(--primary-foreground-hsl));
+
+    /* Debug color */
+    --shadows-debug-color: red;
 
      /* Direct color definitions */
     --background: hsl(var(--background-hsl));
@@ -198,6 +207,9 @@
     --hologram-button-bg-hsl: var(--primary-hsl);
     --hologram-button-text-hsl: hsl(var(--primary-foreground-hsl));
     
+    /* Debug color */
+    --neutral-debug-color: gray;
+
     /* Direct color definitions */
     --background: hsl(var(--background-hsl));
     --foreground: hsl(var(--foreground-hsl));
@@ -288,7 +300,7 @@
     flex: 1 1 auto;
     display: flex; 
     flex-direction: column;
-    /* overflow: hidden; */ 
+    /* overflow: hidden; */ /* Individual main tags will control their overflow */
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -298,13 +310,13 @@
 
 /* Custom holographic styles */
 .holographic-panel {
-  background-color: var(--hologram-panel-bg);
-  border-color: var(--hologram-panel-border);
+  background-color: var(--hologram-panel-bg); 
+  border-color: var(--hologram-panel-border); 
   border-width: 1px; 
   border-style: solid; 
-  border-radius: 0.5rem; /* ShadCN lg */
+  border-radius: 0.5rem; 
   box-shadow: 0 0 15px var(--hologram-glow-color), inset 0 0 10px var(--hologram-glow-color);
-  backdrop-filter: blur(2px);
+  /* backdrop-filter: blur(2px); /* Default removed */
   @apply p-4 md:p-6;
 }
 
@@ -330,7 +342,7 @@
 }
 /* Active state for PAD icon buttons */
 .active-pad-button {
-  background-color: hsl(var(--primary-hsl) / 0.3) !important; /* More prominent */
+  background-color: hsl(var(--primary-hsl) / 0.3) !important; 
   border-color: hsl(var(--primary-hsl)) !important;
   box-shadow: 0 0 10px hsl(var(--primary-hsl)), inset 0 0 8px hsl(var(--primary-hsl)) !important;
 }
@@ -441,8 +453,9 @@
   );
   transform: skewX(-25deg);
   animation: gloss-sweep 10s linear infinite;
-  pointer-events: none;
+  pointer-events: none; /* Ensure it doesn't interfere with clicks */
 }
+
 
 @keyframes gloss-sweep {
   0% {
@@ -475,10 +488,12 @@
   from { transform: translateX(0) scale(1); opacity: 1; }
   to { transform: translateX(100%) scale(0.95); opacity: 0; }
 }
+    
 .animate-slide-in-right-tod {
-  animation: slide-in-right-tod 0.2s ease-out forwards;
+  animation: slide-in-right-tod 0.3s ease-out forwards; 
 }
 .animate-slide-out-right-tod {
-  animation: slide-out-right-tod 0.2s ease-out forwards;
+  animation: slide-out-right-tod 0.3s ease-out forwards; 
 }
     
+
