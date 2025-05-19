@@ -170,29 +170,33 @@ interface SectionProps {
 
 export function AgentSection({ parallaxOffset }: SectionProps) {
   const { playerSpyName, faction, playerStats } = useAppContext();
-  const { theme: currentTheme, themeVersion } = useTheme(); // Get themeVersion to pass to PAD
+  const { theme: currentTheme } = useTheme();
 
   const [isPadUp, setIsPadUp] = useState(false);
   const [padScreenView, setPadScreenView] = useState<PadScreenView>('dossier');
   
-  const padButtonPanelRef = useRef<HTMLDivElement>(null);
-  const [padButtonPanelHeight, setPadButtonPanelHeight] = useState(60); // Default height
+  const [padButtonPanelHeight, setPadButtonPanelHeight] = useState(60); // Default height, will be measured
   const [padPeekPlusButtonHeight, setPadPeekPlusButtonHeight] = useState(padButtonPanelHeight + PEEK_AMOUNT);
 
+  const topContentRef = useRef<HTMLDivElement>(null);
+  const titleAreaContentRef = useRef<HTMLDivElement>(null);
+  const statsAreaRef = useRef<HTMLDivElement>(null);
+  const thePadRef = useRef<HTMLDivElement>(null);
+  const padButtonPanelRef = useRef<HTMLDivElement>(null);
+  const padScreenContentWrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (padButtonPanelRef.current) {
       const measuredHeight = padButtonPanelRef.current.offsetHeight;
-      if (measuredHeight > 0) { // Ensure offsetHeight is valid
+      if (measuredHeight > 0) {
         setPadButtonPanelHeight(measuredHeight);
       }
     }
-  }, [isPadUp]); // Re-measure if isPadUp changes, in case content of button panel changes height
-  
+  }, []); // Measure once on mount
+
   useEffect(() => {
     setPadPeekPlusButtonHeight(padButtonPanelHeight + PEEK_AMOUNT);
   }, [padButtonPanelHeight]);
-
 
   const handlePowerClick = useCallback(() => {
     setIsPadUp(prev => !prev);
@@ -219,23 +223,19 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
   };
 
   return (
-    // AgentSection Root: Non-scrollable, full height, relative for absolute PAD and static background
-    <div className="relative h-full overflow-hidden">
+    <div className="relative h-full overflow-hidden"> {/* AgentSection Root */}
       {/* Static Background Layer (Title + Stats) */}
-      <div className="absolute inset-0 flex flex-col z-10 pointer-events-none">
-        {/* This inner div wraps the content that needs the spacer */}
-        <div className="flex flex-col flex-grow"> {/* Allows title to grow and pushes stats + spacer down */}
-            {/* Title Area */}
-            <div className="flex-grow flex flex-col items-center justify-center pt-4 md:pt-2 pb-2 text-center relative overflow-hidden">
+      <div ref={topContentRef} className="absolute inset-0 flex flex-col z-10 pointer-events-none">
+        {/* This inner div allows Title Area to flex-grow and push Stats Area to its bottom */}
+        <div ref={titleAreaContentRef} className="flex-grow flex flex-col items-center justify-center pt-4 md:pt-2 pb-2 text-center relative overflow-hidden">
             <div className="absolute inset-0 flex items-center justify-center -z-10 opacity-10">
                 <Fingerprint className="w-48 h-48 md:w-64 md:h-64 text-primary" />
             </div>
             <h1 className="text-3xl md:text-4xl font-orbitron holographic-text">{playerSpyName || "Agent"}</h1>
             <p className={`text-lg font-semibold ${faction === 'Cyphers' ? 'text-blue-400' : faction === 'Shadows' ? 'text-red-400' : 'text-gray-400'}`}>{faction}</p>
-            </div>
+        </div>
 
-            {/* Stats Area */}
-            <div className="flex-shrink-0 text-center pt-2 pb-4 px-2">
+        <div ref={statsAreaRef} className="flex-shrink-0 text-center pt-2 pb-4 px-2">
             <div className="w-full max-w-md mx-auto">
                 <p className="text-sm text-muted-foreground">Agent Rank: {playerStats.level}</p>
                 <Progress value={xpProgress} className="w-full h-2 mt-1 bg-primary/20 [&>div]:bg-primary" />
@@ -259,19 +259,19 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
                 02:34:56 {/* Placeholder */}
                 </p>
             </div>
-            </div>
         </div>
-        {/* Spacer Div: Pushes the above content (Title + Stats) up to make room for PAD button panel when PAD is off */}
+        {/* Invisible Spacer to push static content up, reserving space for PAD button panel when PAD is off */}
         <div style={{ height: `${padPeekPlusButtonHeight}px` }} className="flex-shrink-0"></div>
       </div>
 
       {/* The PAD - Absolutely positioned, slides up/down over the static background content */}
       <div
+        ref={thePadRef}
         style={padDynamicStyle}
         className={cn(
           "absolute inset-x-0 w-[90%] mx-auto flex flex-col shadow-lg z-20",
-          "bg-pad-backing backdrop-blur-sm pad-gloss-effect rounded-t-lg border-t border-l border-r border-white/10",
-          "transition-all duration-500 ease-in-out" 
+          "transition-all duration-500 ease-in-out",
+          "bg-pad-backing backdrop-blur-sm pad-gloss-effect rounded-lg border border-white/10"
         )}
       >
         {/* PAD Button Panel */}
@@ -322,15 +322,17 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
           </HolographicButton>
         </div>
 
-        {/* PAD Screen Area */}
+        {/* PAD Screen Area Wrapper */}
         <div 
-          className="flex-grow min-h-0 overflow-hidden" // Allows ScrollArea to fill available height
+          ref={padScreenContentWrapperRef}
+          className="flex-grow min-h-0 bg-pad-backing rounded-b-lg" 
         >
           {isPadUp ? (
-            <ScrollArea className="h-full w-full pad-screen-grid bg-accent/10 border border-primary/20 rounded-b-md m-2">
+            <ScrollArea className="h-full w-full pad-screen-grid bg-accent/10 border border-primary/20 rounded-md m-2">
               {renderPadScreenContent()}
             </ScrollArea>
           ) : (
+            // Peek of the screen when PAD is off
             <div className={`h-[${PEEK_AMOUNT}px] pad-screen-grid bg-accent/10 border border-primary/20 rounded-b-md m-2 opacity-50`}>
             </div>
           )}
