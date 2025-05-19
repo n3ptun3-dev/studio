@@ -26,12 +26,13 @@
     --destructive-foreground-hsl: 0 0% 100%;
 
     /* Holographic variables for terminal-green */
-    --hologram-panel-bg-hsl: var(--card-hsl); /* Base for panel */
+    --hologram-panel-bg-hsl: var(--card-hsl); 
     --hologram-panel-border-hsl: var(--primary-hsl);
-    --hologram-glow-color: hsl(130 90% 55%); /* Direct HSL for glow */
+    --hologram-glow-color: hsl(130 90% 55%); 
     --hologram-base-text-color-hsl: var(--foreground-hsl);
     --hologram-button-bg-hsl: var(--primary-hsl);
-    --hologram-button-text-hsl: hsl(var(--primary-foreground-hsl)); /* Brighter button text */
+    --hologram-button-text-hsl: hsl(130 85% 75%); /* Brighter for terminal green button text */
+
 
     /* Convert HSL to actual colors */
     --background: hsl(var(--background-hsl));
@@ -77,11 +78,13 @@
     --border-hsl: 204 100% 60%;
     --input-hsl: 210 40% 15%;
     --ring-hsl: 204 100% 55%;
+    --destructive-hsl: 0 70% 50%;
+    --destructive-foreground-hsl: 0 0% 100%;
 
     /* Holographic variables */
     --hologram-panel-bg-hsl: var(--card-hsl);
     --hologram-panel-border-hsl: var(--primary-hsl);
-    --hologram-glow-color: hsl(204 100% 50%); /* Direct HSL for glow */
+    --hologram-glow-color: hsl(204 100% 50%); 
     --hologram-base-text-color-hsl: var(--foreground-hsl);
     --hologram-button-bg-hsl: var(--primary-hsl);
     --hologram-button-text-hsl: hsl(var(--primary-foreground-hsl));
@@ -102,7 +105,8 @@
     --border: hsl(var(--border-hsl));
     --input: hsl(var(--input-hsl));
     --ring: hsl(var(--ring-hsl));
-
+    /* --destructive already defined via HSL */
+    
     --hologram-panel-bg: hsla(var(--hologram-panel-bg-hsl), 0.6);
     --hologram-panel-border: hsl(var(--hologram-panel-border-hsl));
     /* --hologram-glow-color is set directly above */
@@ -128,11 +132,13 @@
     --border-hsl: 0 100% 50%;
     --input-hsl: 0 40% 15%;
     --ring-hsl: 0 100% 55%;
+    --destructive-hsl: 0 70% 50%;
+    --destructive-foreground-hsl: 0 0% 100%;
 
     /* Holographic variables */
     --hologram-panel-bg-hsl: var(--card-hsl);
     --hologram-panel-border-hsl: var(--primary-hsl);
-    --hologram-glow-color: hsl(0 100% 40%); /* Direct HSL for glow */
+    --hologram-glow-color: hsl(0 100% 40%); 
     --hologram-base-text-color-hsl: var(--foreground-hsl);
     --hologram-button-bg-hsl: var(--primary-hsl);
     --hologram-button-text-hsl: hsl(var(--primary-foreground-hsl));
@@ -153,6 +159,7 @@
     --border: hsl(var(--border-hsl));
     --input: hsl(var(--input-hsl));
     --ring: hsl(var(--ring-hsl));
+    /* --destructive already defined via HSL */
     
     --hologram-panel-bg: hsla(var(--hologram-panel-bg-hsl), 0.6);
     --hologram-panel-border: hsl(var(--hologram-panel-border-hsl));
@@ -186,7 +193,7 @@
     /* Holographic variables for neutral */
     --hologram-panel-bg-hsl: var(--card-hsl);
     --hologram-panel-border-hsl: var(--primary-hsl);
-    --hologram-glow-color: hsl(220 70% 60%); /* Direct HSL for glow */
+    --hologram-glow-color: hsl(220 70% 60%); 
     --hologram-base-text-color-hsl: var(--foreground-hsl);
     --hologram-button-bg-hsl: var(--primary-hsl);
     --hologram-button-text-hsl: hsl(var(--primary-foreground-hsl));
@@ -281,7 +288,7 @@
     flex: 1 1 auto;
     display: flex; 
     flex-direction: column;
-    /* overflow: hidden; */ /* Remove this if main itself needs to scroll (e.g. onboarding) */
+    /* overflow: hidden; */ 
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -321,6 +328,13 @@
   @apply opacity-50 cursor-not-allowed;
   box-shadow: none;
 }
+/* Active state for PAD icon buttons */
+.active-pad-button {
+  background-color: hsl(var(--primary-hsl) / 0.3) !important; /* More prominent */
+  border-color: hsl(var(--primary-hsl)) !important;
+  box-shadow: 0 0 10px hsl(var(--primary-hsl)), inset 0 0 8px hsl(var(--primary-hsl)) !important;
+}
+
 
 .holographic-input {
   @apply bg-transparent border border-input text-foreground rounded-md px-3 py-2;
@@ -468,4 +482,3 @@
   animation: slide-out-right-tod 0.2s ease-out forwards;
 }
     
-
