@@ -4,8 +4,6 @@
 @tailwind utilities;
 
 @layer base {
-  /* :root values are now primarily set by JS in ThemeContext for dynamic theming */
-  /* These act as fallbacks or initial values before JS runs IF ThemeContext failed */
   :root, .theme-terminal-green {
     --theme-name: "terminal-green";
     /* HSL variables (source of truth for JS to set on :root) */
@@ -17,7 +15,7 @@
     --popover-foreground-hsl: 130 80% 75%;
     --primary-hsl: 130 70% 45%; /* Main green for primary actions */
     --primary-foreground-hsl: 130 80% 90%; /* Lighter green for text on primary */
-    --secondary-hsl: 130 30% 20%;
+    --secondary-hsl: 130 30% 20%; /* A distinct, darker green for secondary elements or borders */
     --secondary-foreground-hsl: 130 70% 60%;
     --muted-hsl: 130 25% 15%;
     --muted-foreground-hsl: 130 40% 50%;
@@ -25,22 +23,22 @@
     --accent-foreground-hsl: 130 20% 5%;
     --destructive-hsl: 0 70% 50%;
     --destructive-foreground-hsl: 0 0% 100%;
-    --border-hsl: 130 60% 35%;
+    --border-hsl: 130 60% 35%; /* A more prominent green for borders */
     --input-hsl: 130 30% 25%;
     --ring-hsl: 130 70% 50%;
 
-    /* Holographic HSLs (will also be set by JS from themeHSLValues) */
-    --hologram-panel-bg-hsl: var(--card-hsl);
-    --hologram-panel-border-hsl: var(--border-hsl);
-    --hologram-glow-color-hsl: var(--accent-hsl); /* Default to accent for terminal green */
+    /* Holographic HSLs */
+    --hologram-panel-bg-hsl: var(--card-hsl); /* Default to card HSL */
+    --hologram-panel-border-hsl: var(--border-hsl); /* Default to border HSL */
+    --hologram-glow-color-hsl: hsl(var(--accent-hsl)); /* Use direct HSL value */
     --hologram-base-text-color-hsl: var(--foreground-hsl);
     --hologram-button-bg-hsl: var(--primary-hsl);
-    --hologram-button-text-hsl: hsl(var(--primary-foreground-hsl)); 
+    --hologram-button-text-hsl: hsl(var(--primary-foreground-hsl)); /* Brighter for better contrast */
 
     /* PAD specific HSLs (will also be set by JS from themeHSLValues) */
-    --pad-bg-hsl: 130 25% 8%; /* Slightly lighter than main bg, from card-hsl */
-    --pad-border-hsl: 130 60% 35%; /* from border-hsl */
-    --pad-button-panel-separator-hsl: 130 50% 25%; /* Slightly less prominent than main border */
+    --pad-bg-hsl: 130 25% 8%; 
+    --pad-border-hsl: 130 60% 35%; 
+    --pad-button-panel-separator-hsl: 130 50% 25%;
 
      /* Fallback / Debug colors if variables fail */
     --terminal-green-debug-color: lime;
@@ -49,9 +47,6 @@
     --neutral-debug-color: gray;
   }
 
-  /* Theme classes only need to define the HSL source variables. */
-  /* JS in ThemeContext will read these and set them on :root's inline style. */
-  /* The composite variables like --primary, --background will then update automatically. */
   .theme-cyphers {
     --theme-name: "cyphers";
     --background-hsl: 210 60% 8%;
@@ -62,7 +57,7 @@
     --popover-foreground-hsl: 200 100% 90%;
     --primary-hsl: 204 100% 50%; /* Electric Blue */
     --primary-foreground-hsl: 0 0% 100%;
-    --secondary-hsl: 180 100% 50%; /* Pale Turquoise */
+    --secondary-hsl: 180 100% 35%; /* Darker Turquoise for secondary elements/borders */
     --secondary-foreground-hsl: 200 100% 90%;
     --muted-hsl: 210 50% 18%;
     --muted-foreground-hsl: 200 80% 70%;
@@ -70,22 +65,23 @@
     --accent-foreground-hsl: 210 60% 8%;
     --destructive-hsl: 0 70% 50%;
     --destructive-foreground-hsl: 0 0% 100%;
-    --border-hsl: 204 100% 60%;
+    --border-hsl: 204 100% 60%; /* Prominent blue for borders */
     --input-hsl: 210 40% 15%;
     --ring-hsl: 204 100% 55%;
 
     /* Holographic HSLs */
     --hologram-panel-bg-hsl: var(--card-hsl);
     --hologram-panel-border-hsl: var(--border-hsl);
-    --hologram-glow-color-hsl: var(--primary-hsl); 
+    --hologram-glow-color-hsl: hsl(204 100% 50%); /* Direct HSL value for Cyphers primary */
     --hologram-base-text-color-hsl: var(--foreground-hsl);
     --hologram-button-bg-hsl: var(--primary-hsl);
     --hologram-button-text-hsl: hsl(var(--primary-foreground-hsl));
 
     /* PAD specific HSLs */
-    --pad-bg-hsl: 210 50% 12%; /* from card-hsl */
-    --pad-border-hsl: 204 100% 60%; /* from border-hsl */
-    --pad-button-panel-separator-hsl: 204 100% 40%; /* A bit dimmer than main border */
+    --pad-bg-hsl: 210 50% 12%; 
+    --pad-border-hsl: 204 100% 60%; 
+    --pad-button-panel-separator-hsl: 204 100% 40%;
+    --cyphers-debug-color: blue;
   }
 
   .theme-shadows {
@@ -98,7 +94,7 @@
     --popover-foreground-hsl: 0 0% 90%;
     --primary-hsl: 0 100% 40%; /* Intense Red */
     --primary-foreground-hsl: 0 0% 100%;
-    --secondary-hsl: 16 100% 71%; /* Light Salmon */
+    --secondary-hsl: 16 100% 30%; /* Darker Salmon for secondary elements/borders */
     --secondary-foreground-hsl: 0 0% 90%;
     --muted-hsl: 0 50% 18%;
     --muted-foreground-hsl: 0 0% 70%;
@@ -106,22 +102,23 @@
     --accent-foreground-hsl: 0 60% 8%;
     --destructive-hsl: 0 70% 50%;
     --destructive-foreground-hsl: 0 0% 100%;
-    --border-hsl: 0 100% 50%;
+    --border-hsl: 0 100% 50%; /* Prominent red for borders */
     --input-hsl: 0 40% 15%;
     --ring-hsl: 0 100% 55%;
 
     /* Holographic HSLs */
     --hologram-panel-bg-hsl: var(--card-hsl);
     --hologram-panel-border-hsl: var(--border-hsl);
-    --hologram-glow-color-hsl: var(--primary-hsl); 
+    --hologram-glow-color-hsl: hsl(0 100% 40%); /* Direct HSL value for Shadows primary */
     --hologram-base-text-color-hsl: var(--foreground-hsl);
     --hologram-button-bg-hsl: var(--primary-hsl);
     --hologram-button-text-hsl: hsl(var(--primary-foreground-hsl));
 
     /* PAD specific HSLs */
-    --pad-bg-hsl: 0 50% 12%; /* from card-hsl */
-    --pad-border-hsl: 0 100% 50%; /* from border-hsl */
-    --pad-button-panel-separator-hsl: 0 100% 25%; /* A bit dimmer */
+    --pad-bg-hsl: 0 50% 12%; 
+    --pad-border-hsl: 0 100% 50%; 
+    --pad-button-panel-separator-hsl: 0 100% 25%;
+    --shadows-debug-color: red;
   }
 
   .theme-neutral { 
@@ -134,7 +131,7 @@
     --popover-foreground-hsl: 220 10% 75%;
     --primary-hsl: 220 60% 50%;
     --primary-foreground-hsl: 220 10% 95%;
-    --secondary-hsl: 220 20% 20%;
+    --secondary-hsl: 220 20% 20%; /* Adjusted for neutrality */
     --secondary-foreground-hsl: 220 10% 60%;
     --muted-hsl: 220 15% 25%;
     --muted-foreground-hsl: 220 10% 55%;
@@ -142,28 +139,27 @@
     --accent-foreground-hsl: 220 10% 10%;
     --destructive-hsl: 0 70% 50%;
     --destructive-foreground-hsl: 0 0% 100%;
-    --border-hsl: 220 20% 30%;
+    --border-hsl: 220 20% 30%; /* Adjusted for neutrality */
     --input-hsl: 220 20% 25%;
     --ring-hsl: 220 60% 55%;
 
     /* Holographic HSLs */
     --hologram-panel-bg-hsl: var(--card-hsl);
     --hologram-panel-border-hsl: var(--border-hsl);
-    --hologram-glow-color-hsl: var(--accent-hsl);
+    --hologram-glow-color-hsl: hsl(var(--accent-hsl)); /* Use accent for neutral glow */
     --hologram-base-text-color-hsl: var(--foreground-hsl);
     --hologram-button-bg-hsl: var(--primary-hsl);
     --hologram-button-text-hsl: hsl(var(--primary-foreground-hsl));
 
     /* PAD specific HSLs */
-    --pad-bg-hsl: 220 15% 12%;  /* from card-hsl */
-    --pad-border-hsl: 220 20% 30%; /* from border-hsl */
-    --pad-button-panel-separator-hsl: 220 20% 20%; /* A bit dimmer */
+    --pad-bg-hsl: 220 15% 12%;  
+    --pad-border-hsl: 220 20% 30%; 
+    --pad-button-panel-separator-hsl: 220 20% 20%;
+    --neutral-debug-color: gray;
   }
 
-  /* Composite color variables (used by Tailwind & components) */
-  /* These will be overridden by JS on :root's inline style for dynamic themes */
  :root {
-    /* Core Theme Colors - Base values from --*-hsl set by JS */
+    /* Core Theme Colors - Base values from --*-hsl set by JS on :root's inline style */
     --background: hsl(var(--background-hsl));
     --foreground: hsl(var(--foreground-hsl));
     --card: hsl(var(--card-hsl));
@@ -184,20 +180,18 @@
     --input: hsl(var(--input-hsl));
     --ring: hsl(var(--ring-hsl));
     
-    /* Holographic Variables - Base values from --hologram-*-hsl set by JS */
-    --hologram-panel-bg: hsla(var(--hologram-panel-bg-hsl), 0.6);
+    /* Holographic Variables - Base values from --hologram-*-hsl set by JS on :root */
+    --hologram-panel-bg: hsla(var(--hologram-panel-bg-hsl), 0.6); /* Default for panels */
     --hologram-panel-border: hsl(var(--hologram-panel-border-hsl)); 
-    --hologram-glow-color: hsl(var(--hologram-glow-color-hsl));
+    --hologram-glow-color: hsl(var(--hologram-glow-color-hsl)); /* Sourced from theme-specific HSL */
     --hologram-base-text-color: hsl(var(--hologram-base-text-color-hsl));
     --hologram-button-bg: hsl(var(--hologram-button-bg-hsl));
     --hologram-button-text: hsl(var(--hologram-button-text-hsl));
 
-    /* PAD Specific Colors - Base values from --pad-*-hsl set by JS */
-    /* These are the variables that ThemeContext.tsx will set directly on :root */
-    /* They are given default values here for completeness but JS is the source of truth */
-    --pad-background-color: hsla(var(--pad-bg-hsl, var(--card-hsl)), 0.85); 
-    --pad-border-color: hsl(var(--pad-border-hsl, var(--border-hsl))); 
-    --pad-button-panel-separator-color: hsla(var(--pad-button-panel-separator-hsl, var(--border-hsl)), 0.5);
+    /* PAD Specific Colors - Base values from --pad-*-hsl set by JS on :root */
+    --pad-background-color: hsla(var(--pad-bg-hsl), 0.85); /* More opaque PAD bg */
+    --pad-border-color: hsl(var(--pad-border-hsl)); 
+    --pad-button-panel-separator-color: hsla(var(--pad-button-panel-separator-hsl), 0.5);
 
     /* Item Level Colors HSL (remain globally available) */
     --level-1-color-hsl: 0 100% 50%; /* Red */
@@ -220,17 +214,12 @@
     --level-7-color: hsl(var(--level-7-color-hsl));
     --level-8-color: hsl(var(--level-8-color-hsl));
 
-    /* Chart colors (will use the currently active --primary-hsl set on :root by JS) */
+    /* Chart colors */
     --chart-1: hsl(var(--primary-hsl));
     --chart-2: hsl(var(--primary-hsl) / 0.7);
     --chart-3: hsl(var(--primary-hsl) / 0.5);
     --chart-4: hsl(var(--primary-hsl) / 0.3);
     --chart-5: hsl(var(--primary-hsl) / 0.1);
-  }
-
-  .dark {
-    /* All variables are now set directly on :root by JS in ThemeContext. */
-    /* The .dark class itself doesn't need to redefine them here. */
   }
 }
 
@@ -278,7 +267,7 @@
   border-color: var(--hologram-panel-border); 
   border-width: 1px; 
   border-style: solid; 
-  border-radius: 0.5rem; /* Equivalent to Tailwind's rounded-lg with default radius */
+  border-radius: 0.5rem;
   box-shadow: 0 0 15px var(--hologram-glow-color), inset 0 0 10px var(--hologram-glow-color);
   @apply p-4 md:p-6;
 }
@@ -296,7 +285,7 @@
 }
 .holographic-button:hover {
   background-color: var(--hologram-button-bg);
-  color: var(--background) !important; 
+  color: hsl(var(--background-hsl)) !important; /* Ensure text color contrasts with button bg on hover */
   box-shadow: 0 0 15px var(--hologram-button-bg), 0 0 25px var(--hologram-button-bg);
 }
 .holographic-button:disabled {
@@ -393,24 +382,7 @@
   overflow: hidden;
 }
 
-.pad-gloss-effect::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -150%;
-  width: 50%;
-  height: 100%;
-  background: linear-gradient(
-    to right,
-    hsla(0, 0%, 100%, 0) 0%,
-    hsla(0, 0%, 100%, 0.05) 50%, /* Reduced gloss opacity */
-    hsla(0, 0%, 100%, 0) 100%
-  );
-  transform: skewX(-25deg);
-  animation: gloss-sweep 10s linear infinite; /* Slower sweep */
-  pointer-events: none; /* Ensure it doesn't interfere with clicks */
-}
-
+/* Removed .pad-gloss-effect::after to disable gloss by default */
 
 @keyframes gloss-sweep {
   0% {

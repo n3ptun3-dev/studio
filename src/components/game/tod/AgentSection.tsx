@@ -3,13 +3,13 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { HolographicButton } from '@/components/game/shared/HolographicPanel';
+import { HolographicButton } from '@/components/game/shared/HolographicPanel'; // Assuming HolographicPanel.tsx exports this
 import { Progress } from "@/components/ui/progress";
 import { Fingerprint, Settings, BookOpen, Info, Power } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { XP_THRESHOLDS } from '@/lib/constants';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/contexts/ThemeContext'; // Import useTheme
 
 // --- PAD Screen Views ---
 const AgentDossierView = () => {
@@ -170,12 +170,13 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
 
   const [isPadUp, setIsPadUp] = useState(false);
   const [padScreenView, setPadScreenView] = useState<PadScreenView>('dossier');
+  
   const [padButtonPanelHeight, setPadButtonPanelHeight] = useState(60); // Default height
   const [padPeekPlusButtonHeight, setPadPeekPlusButtonHeight] = useState(padButtonPanelHeight + PEEK_AMOUNT);
 
+  const topContentRef = useRef<HTMLDivElement>(null);
   const titleAreaContentRef = useRef<HTMLDivElement>(null);
   const statsAreaRef = useRef<HTMLDivElement>(null);
-  const topContentRef = useRef<HTMLDivElement>(null);
   const thePadRef = useRef<HTMLDivElement>(null);
   const padButtonPanelRef = useRef<HTMLDivElement>(null);
   
@@ -186,12 +187,11 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
         setPadButtonPanelHeight(measuredHeight);
       }
     }
-  }, [padButtonPanelHeight]); // Re-run if our default assumption was wrong after mount
+  }, [padButtonPanelHeight]); // Re-run if default was wrong
 
   useEffect(() => {
     setPadPeekPlusButtonHeight(padButtonPanelHeight + PEEK_AMOUNT);
   }, [padButtonPanelHeight]);
-
 
   const handlePowerClick = useCallback(() => {
     setIsPadUp(prev => !prev);
@@ -216,18 +216,24 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
   ? { top: '0px', height: '100%' }
   : { top: `calc(100% - ${padPeekPlusButtonHeight}px)`, height: `${padPeekPlusButtonHeight}px` };
 
+  // Hardcoded HSL values for terminal-green theme for PAD background and border
+  const padBgHsl = '130 25% 8%'; 
+  const padBorderHsl = '130 60% 35%'; 
+  const padButtonSeparatorHsl = '130 50% 25%';
+
   const currentPadBaseStyle: React.CSSProperties = {
     ...padDynamicStyle,
-    backgroundColor: 'var(--pad-background-color)', 
-    borderColor: 'var(--pad-border-color)',       
+    // Using hardcoded HSL for terminal-green theme as a test baseline
+    backgroundColor: `var(--pad-background-color)`, 
+    borderColor: `var(--pad-border-color)`,     
     borderRadius: '0.5rem', 
     borderWidth: '1px',
     borderStyle: 'solid',
   };
 
   const buttonPanelStyle: React.CSSProperties = {
-    backgroundColor: 'var(--pad-background-color)',
-    borderBottomColor: 'var(--pad-button-panel-separator-color)',
+    backgroundColor: `var(--pad-background-color)`,
+    borderBottomColor: `var(--pad-button-panel-separator-color)`,
     borderBottomWidth: '1px',
     borderBottomStyle: 'solid',
     borderTopLeftRadius: '0.5rem',
@@ -235,7 +241,7 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
   };
 
   const screenWrapperStyle: React.CSSProperties = {
-    backgroundColor: 'var(--pad-background-color)',
+    backgroundColor: `var(--pad-background-color)`,
     borderBottomLeftRadius: '0.5rem',
     borderBottomRightRadius: '0.5rem',
   };
@@ -279,7 +285,7 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
             </p>
           </div>
         </div>
-        {/* Invisible Spacer - Reserves space at the bottom of static layer for PAD's "off" state */}
+         {/* Invisible Spacer - Reserves space at the bottom for the PAD's "off" state */}
         <div className="flex-shrink-0" style={{ height: `${padPeekPlusButtonHeight}px` }}></div>
       </div>
 
@@ -288,15 +294,17 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
         ref={thePadRef}
         className={cn(
           "absolute inset-x-0 w-[90%] mx-auto flex flex-col shadow-lg z-20 transition-all duration-500 ease-in-out",
-          "backdrop-blur-sm pad-gloss-effect" // Effects classes
+          "rounded-lg border", // Tailwind for rounding and 1px border width
+          "backdrop-blur-sm" // Removed pad-gloss-effect for this test
         )}
-        style={currentPadBaseStyle}
+        style={currentPadBaseStyle} 
       >
         {/* PAD Button Panel */}
         <div
           ref={padButtonPanelRef}
           className={cn(
             "h-[60px] flex-shrink-0 flex items-center justify-between px-4"
+            // Removed rounded-t-lg as main PAD has rounded-lg
           )}
           style={buttonPanelStyle}
         >
@@ -349,17 +357,19 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
         <div 
           className={cn(
             "flex-grow min-h-0"
+            // Removed rounded-b-lg as main PAD has rounded-lg
           )}
-          style={screenWrapperStyle}
+          style={screenWrapperStyle} 
         >
           {isPadUp ? (
-             <div className="h-full w-full pad-screen-grid bg-accent/10 border border-[var(--primary-hsl)] rounded-md m-2">
+             <div className="h-full w-full pad-screen-grid bg-accent/10 border border-primary/20 rounded-md m-2">
                 <ScrollArea className="h-full w-full">
                     {renderPadScreenContent()}
                 </ScrollArea>
              </div>
           ) : (
-            <div className="h-[20px] pad-screen-grid bg-accent/10 border border-[var(--primary-hsl)] rounded-b-md m-2 mx-2 mb-2"></div>
+            // Peek area when PAD is off
+            <div className={cn("h-full w-full pad-screen-grid bg-accent/10 m-2 rounded-md border border-primary/20", `h-[${PEEK_AMOUNT}px]`)}></div>
           )}
         </div>
       </div>
