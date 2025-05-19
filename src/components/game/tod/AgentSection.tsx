@@ -2,25 +2,25 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useAppContext } from '@/contexts/AppContext';
+import { useAppContext, type Faction } from '@/contexts/AppContext';
 import { HolographicButton, HolographicInput } from '@/components/game/shared/HolographicPanel';
 import { Progress } from "@/components/ui/progress";
 import { Fingerprint, Settings, BookOpen, Info, Power, Edit3 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { XP_THRESHOLDS } from '@/lib/constants';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/contexts/ThemeContext'; // To get currentGlobalTheme for explicitTheme on buttons
 
 const PEEK_AMOUNT = 20; // Height of the visible part of the PAD screen when "off"
 
 const AgentDossierView = React.memo(() => {
   const { playerSpyName, playerPiName, faction, playerStats, setFaction: setAppFaction, addMessage } = useAppContext();
-  const { theme: currentGlobalTheme } = useTheme();
+  const { theme: currentGlobalTheme } = useTheme(); // For HolographicButton explicitTheme
 
   const handleFactionChange = () => {
-    let newFaction = faction === 'Cyphers' ? 'Shadows' : 'Cyphers';
+    let newFaction: Faction = faction === 'Cyphers' ? 'Shadows' : 'Cyphers';
     if (faction === 'Observer') {
-        newFaction = 'Cyphers';
+        newFaction = 'Cyphers'; // Default to Cyphers if Observer clicks
         addMessage({ type: 'system', text: `Observer protocol overridden. Faction allegiance protocols engaged. Defaulting to Cyphers.` });
     } else {
         addMessage({ type: 'system', text: `Faction allegiance protocols updated to: ${newFaction}. Coordinating with HQ.` });
@@ -168,21 +168,21 @@ SettingsView.displayName = 'SettingsView';
 type PadScreenView = 'dossier' | 'intel' | 'settings';
 
 export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
-  const { playerSpyName, faction, playerStats, openTODWindow } = useAppContext();
+  const { playerSpyName, faction, playerStats } = useAppContext();
   const { theme: currentGlobalTheme } = useTheme();
+  
   const [isPadUp, setIsPadUp] = useState(false);
   const [padScreenView, setPadScreenView] = useState<PadScreenView>('dossier');
-
+  
   const titleAreaContentRef = useRef<HTMLDivElement>(null);
   const statsAreaRef = useRef<HTMLDivElement>(null);
-  const topContentRef = useRef<HTMLDivElement>(null);
+  const topContentRef = useRef<HTMLDivElement>(null); 
   const thePadRef = useRef<HTMLDivElement>(null);
   const padButtonPanelRef = useRef<HTMLDivElement>(null);
-
-  const [padButtonPanelHeight, setPadButtonPanelHeight] = useState(60); // Default height
+  
+  const [padButtonPanelHeight, setPadButtonPanelHeight] = useState(60); 
   const [padPeekPlusButtonHeight, setPadPeekPlusButtonHeight] = useState(padButtonPanelHeight + PEEK_AMOUNT);
 
-  // Measure PAD Button Panel height
   useEffect(() => {
     if (padButtonPanelRef.current) {
       const measuredHeight = padButtonPanelRef.current.offsetHeight;
@@ -190,9 +190,8 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
         setPadButtonPanelHeight(measuredHeight);
       }
     }
-  }, []); // Run once on mount
+  }, []);
 
-  // Update peek + button height when button panel height changes
   useEffect(() => {
     setPadPeekPlusButtonHeight(padButtonPanelHeight + PEEK_AMOUNT);
   }, [padButtonPanelHeight]);
@@ -220,51 +219,51 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
     ? { top: '0px', height: '100%' }
     : { top: `calc(100% - ${padPeekPlusButtonHeight}px)`, height: `${padPeekPlusButtonHeight}px` };
 
-  // These styles are for the main PAD container and its direct children
-  // They use CSS variables set on :root by ThemeContext.tsx
   const currentPadStyle: React.CSSProperties = {
     ...padDynamicStyle,
-    backgroundColor: `hsl(var(--pad-bg-hsl))`,
-    borderColor: `hsl(var(--pad-border-hsl))`,
-    borderRadius: '0.5rem', // Tailwind's rounded-lg equivalent
+    backgroundColor: 'var(--pad-effective-background-color)',
+    borderColor: 'var(--pad-effective-border-color)',
+    borderRadius: '0.5rem',
     borderWidth: '1px',
     borderStyle: 'solid',
   };
 
   const buttonPanelStyle: React.CSSProperties = {
-    backgroundColor: `hsl(var(--pad-bg-hsl))`,
-    borderBottomColor: `hsla(var(--pad-button-panel-separator-hsl), 0.5)`,
+    backgroundColor: 'var(--pad-effective-background-color)',
+    borderBottomColor: 'var(--pad-effective-button-panel-separator-color)',
     borderBottomWidth: '1px',
     borderBottomStyle: 'solid',
-    borderTopLeftRadius: '0.5rem', // For alignment with parent's rounding
+    borderTopLeftRadius: '0.5rem',
     borderTopRightRadius: '0.5rem',
   };
-
+  
   const screenWrapperStyle: React.CSSProperties = {
-    backgroundColor: `hsl(var(--pad-bg-hsl))`,
-    borderBottomLeftRadius: '0.5rem', // For alignment with parent's rounding
+    backgroundColor: 'var(--pad-effective-background-color)',
+    borderBottomLeftRadius: '0.5rem',
     borderBottomRightRadius: '0.5rem',
   };
 
-
   return (
-    <div className="relative h-full overflow-hidden"> {/* AgentSection Root */}
-      {/* Static Background Layer (Title + Stats) */}
-      <div
+    <div className="relative h-full overflow-hidden">
+      <div 
         ref={topContentRef}
         className="absolute inset-0 flex flex-col z-10 pointer-events-none"
       >
-        {/* Wrapper for Title and Stats to control their flex behavior */}
-        <div className="flex flex-col flex-grow"> {/* This inner div allows Title to grow and push Stats down */}
-          <div ref={titleAreaContentRef} className="flex-grow flex flex-col items-center justify-center pt-4 md:pt-2 pb-2 text-center relative overflow-hidden">
+        <div className="flex flex-col flex-grow"> 
+          <div 
+            ref={titleAreaContentRef} 
+            className="flex-grow flex flex-col items-center justify-center pt-4 md:pt-2 pb-2 text-center relative overflow-hidden"
+          >
             <div className="absolute inset-0 flex items-center justify-center -z-10 opacity-10">
               <Fingerprint className="w-48 h-48 md:w-64 md:h-64 text-primary icon-glow" />
             </div>
             <h1 className="text-3xl md:text-4xl font-orbitron holographic-text">{playerSpyName || "Agent"}</h1>
             <p className={`text-lg font-semibold ${faction === 'Cyphers' ? 'text-blue-400' : faction === 'Shadows' ? 'text-red-400' : 'text-gray-400'}`}>{faction}</p>
           </div>
-
-          <div ref={statsAreaRef} className="flex-shrink-0 text-center pt-2 pb-4 px-2">
+          <div 
+            ref={statsAreaRef} 
+            className="flex-shrink-0 text-center pt-2 pb-4 px-2"
+          >
             <div className="w-full max-w-md mx-auto">
               <p className="text-sm text-muted-foreground">Agent Rank: {playerStats.level}</p>
               <Progress value={xpProgress} className="w-full h-2 mt-1 bg-primary/20 [&>div]:bg-primary" />
@@ -282,7 +281,7 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
             </div>
             <div className="mt-3">
               <p className="text-sm font-semibold font-rajdhani text-yellow-400">
-                Next Transfer Window: {/* This will be dynamic */}
+                Next Transfer Window:
               </p>
               <p className="font-digital7 text-xl holographic-text">
                 02:34:56 {/* Placeholder */}
@@ -290,28 +289,22 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
             </div>
           </div>
         </div>
-         {/* Invisible Spacer to reserve space for the PAD when it's "off" */}
         <div className="flex-shrink-0" style={{ height: `${padPeekPlusButtonHeight}px` }}></div>
       </div>
 
-      {/* The PAD - Absolutely Positioned Sliding Layer */}
       <div
         ref={thePadRef}
         className={cn(
           "absolute inset-x-0 w-[90%] mx-auto flex flex-col shadow-lg z-20",
-          "transition-all duration-500 ease-in-out"
-          // "backdrop-blur-sm", // Temporarily removed for debugging background
-          // "pad-gloss-effect" // Temporarily removed for debugging background
+          "transition-all duration-500 ease-in-out",
+          "backdrop-blur-sm",
+          "pad-gloss-effect" 
         )}
         style={currentPadStyle}
       >
-        {/* PAD Button Panel */}
         <div
           ref={padButtonPanelRef}
-          className={cn(
-            "h-[60px] flex-shrink-0 flex items-center justify-between px-4"
-            // Style applied via inline 'buttonPanelStyle'
-          )}
+          className={cn("h-[60px] flex-shrink-0 flex items-center justify-between px-4")}
           style={buttonPanelStyle}
         >
           {isPadUp ? (
@@ -359,23 +352,25 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
           </HolographicButton>
         </div>
 
-        {/* PAD Screen Area Wrapper */}
-        <div
+        <div 
           className={cn(
-            "flex-grow min-h-0"
-            // Style applied via inline 'screenWrapperStyle'
+            "flex-grow min-h-0", 
+            "rounded-b-lg"
           )}
-          style={screenWrapperStyle}
+          style={screenWrapperStyle} 
         >
           {isPadUp ? (
-             <div className="h-full w-full pad-screen-grid bg-accent/10 border border-[hsl(var(--primary-hsl))] rounded-md m-2">
+             <div className="h-full w-full pad-screen-grid bg-accent/10 border border-[var(--primary-hsl)] rounded-md m-2">
                 <ScrollArea className="h-full w-full">
                     {renderPadScreenContent()}
                 </ScrollArea>
              </div>
           ) : (
-            // Peek view of the screen grid when PAD is off
-            <div className="h-[${PEEK_AMOUNT}px] pad-screen-grid bg-accent/10 border border-[hsl(var(--primary-hsl))] rounded-md m-2"></div>
+            <div 
+              className="pad-screen-grid bg-accent/10 border border-[var(--primary-hsl)] rounded-md m-2"
+              style={{ height: `${PEEK_AMOUNT}px` }}
+            >
+            </div>
           )}
         </div>
       </div>
