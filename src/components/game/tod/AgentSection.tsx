@@ -3,25 +3,23 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { HolographicButton } from '@/components/game/shared/HolographicPanel';
+import { HolographicButton } from '@/components/game/shared/HolographicPanel'; // Keep for buttons inside PAD
 import { Progress } from "@/components/ui/progress";
 import { Fingerprint, Settings, BookOpen, Info, Power } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { XP_THRESHOLDS } from '@/lib/constants';
-import { useTheme } from '@/contexts/ThemeContext'; // Import useTheme
-
-const PEEK_AMOUNT = 20; // Height of the visible part of the PAD screen when "off"
+import { useTheme } from '@/contexts/ThemeContext';
 
 // --- PAD Screen Views ---
 const AgentDossierView = () => {
   const { playerSpyName, playerPiName, faction, playerStats, setFaction: setAppFaction, addMessage } = useAppContext();
-  const { theme: currentTheme } = useTheme(); // Use theme for explicitTheme on buttons
+  const { theme: currentGlobalTheme } = useTheme();
 
   const handleFactionChange = () => {
     let newFaction = faction === 'Cyphers' ? 'Shadows' : 'Cyphers';
     if (faction === 'Observer') {
-        newFaction = 'Cyphers';
+        newFaction = 'Cyphers'; // Default to Cyphers if Observer clicks
         addMessage({ type: 'system', text: `Observer protocol overridden. Faction allegiance protocols engaged. Defaulting to Cyphers.` });
     } else {
         addMessage({ type: 'system', text: `Faction allegiance protocols updated to: ${newFaction}. Coordinating with HQ.` });
@@ -90,7 +88,7 @@ const AgentDossierView = () => {
 };
 
 const IntelFilesView = () => {
-  const { theme: currentTheme } = useTheme();
+  const { theme: currentGlobalTheme } = useTheme();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   const categories = [
@@ -113,7 +111,7 @@ const IntelFilesView = () => {
         <HolographicButton
           onClick={() => setActiveCategory(null)}
           className="mb-4 !py-1 !px-2 text-xs flex-shrink-0"
-          explicitTheme={currentTheme}
+          explicitTheme={currentGlobalTheme}
         >
           &larr; Back to Intel Files
         </HolographicButton>
@@ -136,7 +134,7 @@ const IntelFilesView = () => {
             <HolographicButton
               className="w-full justify-start text-left !bg-transparent hover:!bg-primary/10 !py-1.5"
               onClick={() => setActiveCategory(cat.id)}
-              explicitTheme={currentTheme}
+              explicitTheme={currentGlobalTheme}
             >
               {cat.title}
             </HolographicButton>
@@ -148,15 +146,15 @@ const IntelFilesView = () => {
 };
 
 const SettingsView = () => {
-  const { theme: currentTheme } = useTheme();
+  const { theme: currentGlobalTheme } = useTheme();
   return (
     <ScrollArea className="h-full p-3 font-rajdhani">
       <h3 className="text-xl font-orbitron mb-4 holographic-text">Settings</h3>
       <ul className="space-y-2 text-sm">
-        <li><HolographicButton explicitTheme={currentTheme} className="w-full justify-start text-left !bg-transparent hover:!bg-primary/10 !py-1.5">Notifications (Placeholder)</HolographicButton></li>
-        <li><HolographicButton explicitTheme={currentTheme} className="w-full justify-start text-left !bg-transparent hover:!bg-primary/10 !py-1.5">Sound (Placeholder)</HolographicButton></li>
-        <li><HolographicButton explicitTheme={currentTheme} className="w-full justify-start text-left !bg-transparent hover:!bg-primary/10 !py-1.5">Language (Placeholder)</HolographicButton></li>
-        <li><HolographicButton explicitTheme={currentTheme} className="w-full justify-start text-left !bg-transparent hover:!bg-primary/10 !py-1.5 text-destructive">Delete History (Placeholder)</HolographicButton></li>
+        <li><HolographicButton explicitTheme={currentGlobalTheme} className="w-full justify-start text-left !bg-transparent hover:!bg-primary/10 !py-1.5">Notifications (Placeholder)</HolographicButton></li>
+        <li><HolographicButton explicitTheme={currentGlobalTheme} className="w-full justify-start text-left !bg-transparent hover:!bg-primary/10 !py-1.5">Sound (Placeholder)</HolographicButton></li>
+        <li><HolographicButton explicitTheme={currentGlobalTheme} className="w-full justify-start text-left !bg-transparent hover:!bg-primary/10 !py-1.5">Language (Placeholder)</HolographicButton></li>
+        <li><HolographicButton explicitTheme={currentGlobalTheme} className="w-full justify-start text-left !bg-transparent hover:!bg-primary/10 !py-1.5 text-destructive">Delete History (Placeholder)</HolographicButton></li>
       </ul>
     </ScrollArea>
   );
@@ -164,21 +162,23 @@ const SettingsView = () => {
 
 type PadScreenView = 'dossier' | 'intel' | 'settings';
 
+const PEEK_AMOUNT = 20; // Height of the visible part of the PAD screen when "off"
+
 export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
   const { playerSpyName, faction, playerStats } = useAppContext();
   const { theme: currentGlobalTheme } = useTheme();
 
   const [isPadUp, setIsPadUp] = useState(false);
   const [padScreenView, setPadScreenView] = useState<PadScreenView>('dossier');
-  const [padButtonPanelHeight, setPadButtonPanelHeight] = useState(60);
+  const [padButtonPanelHeight, setPadButtonPanelHeight] = useState(60); // Initial estimate
   const [padPeekPlusButtonHeight, setPadPeekPlusButtonHeight] = useState(padButtonPanelHeight + PEEK_AMOUNT);
 
+  const topContentRef = useRef<HTMLDivElement>(null);
   const titleAreaContentRef = useRef<HTMLDivElement>(null);
   const statsAreaRef = useRef<HTMLDivElement>(null);
-  const topContentRef = useRef<HTMLDivElement>(null);
   const thePadRef = useRef<HTMLDivElement>(null);
   const padButtonPanelRef = useRef<HTMLDivElement>(null);
-
+  
   useEffect(() => {
     if (padButtonPanelRef.current) {
       const measuredHeight = padButtonPanelRef.current.offsetHeight;
@@ -186,7 +186,7 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
         setPadButtonPanelHeight(measuredHeight);
       }
     }
-  }, []); 
+  }, [padButtonPanelHeight]); // Rerun if padButtonPanelHeight changes (though it's usually fixed by its content)
 
   useEffect(() => {
     setPadPeekPlusButtonHeight(padButtonPanelHeight + PEEK_AMOUNT);
@@ -210,31 +210,32 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
       default: return <AgentDossierView />;
     }
   };
-
+  
   const padDynamicStyle: React.CSSProperties = isPadUp
-    ? { top: '0px', height: '100%' }
-    : { top: `calc(100% - ${padPeekPlusButtonHeight}px)`, height: `${padPeekPlusButtonHeight}px` };
+  ? { top: '0px', height: '100%' }
+  : { top: `calc(100% - ${padPeekPlusButtonHeight}px)`, height: `${padPeekPlusButtonHeight}px` };
 
+  // Inline styles for PAD appearance, using CSS variables set on :root by ThemeContext
   const currentPadStyle: React.CSSProperties = {
     ...padDynamicStyle,
-    backgroundColor: `hsla(var(--pad-bg-hsl), 0.85)`, 
+    backgroundColor: `hsl(var(--pad-bg-hsl))`, // Using HSL directly
     borderColor: `hsl(var(--pad-border-hsl))`,
-    borderRadius: '0.5rem', 
+    borderRadius: '0.5rem', // Matches Tailwind's rounded-lg
     borderWidth: '1px',
     borderStyle: 'solid',
   };
 
   const buttonPanelStyle: React.CSSProperties = {
-    backgroundColor: `hsla(var(--pad-bg-hsl), 0.85)`,
+    backgroundColor: `hsl(var(--pad-bg-hsl))`, // Match PAD bg, use HSL
     borderBottomColor: `hsla(var(--pad-button-panel-separator-hsl), 0.5)`,
     borderBottomWidth: '1px',
     borderBottomStyle: 'solid',
-    borderTopLeftRadius: '0.5rem',
+    borderTopLeftRadius: '0.5rem', // For alignment with parent's rounding
     borderTopRightRadius: '0.5rem',
   };
-  
+
   const screenWrapperStyle: React.CSSProperties = {
-    backgroundColor: `hsla(var(--pad-bg-hsl), 0.85)`,
+    backgroundColor: `hsl(var(--pad-bg-hsl))`, // Match PAD bg, use HSL
     borderBottomLeftRadius: '0.5rem',
     borderBottomRightRadius: '0.5rem',
   };
@@ -273,8 +274,7 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
               Next Transfer Window:
             </p>
             <p className="font-digital7 text-xl holographic-text">
-              {/* Placeholder for actual timer component/logic */}
-              02:34:56 
+              02:34:56 {/* Placeholder */}
             </p>
           </div>
         </div>
@@ -287,8 +287,7 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
         ref={thePadRef}
         className={cn(
           "absolute inset-x-0 w-[90%] mx-auto flex flex-col shadow-lg z-20 transition-all duration-500 ease-in-out",
-          // Removed direct bg/border/rounded from className, will be applied by inline style
-          // "backdrop-blur-sm pad-gloss-effect" // Temporarily removed for focused bg test
+          "backdrop-blur-sm pad-gloss-effect" // Effects classes
         )}
         style={currentPadStyle}
       >
@@ -297,8 +296,7 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
           ref={padButtonPanelRef}
           className={cn(
             "h-[60px] flex-shrink-0 flex items-center justify-between px-4"
-            // Styling for bg and border-b via inline `buttonPanelStyle`
-            // Tailwind's rounded-t-lg applied directly
+            // Style applied via inline `buttonPanelStyle`
           )}
           style={buttonPanelStyle}
         >
@@ -351,19 +349,18 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
         <div 
           className={cn(
             "flex-grow min-h-0"
-            // Styling for bg and rounded-b-lg via inline `screenWrapperStyle`
+            // Style applied via inline `screenWrapperStyle`
           )}
           style={screenWrapperStyle}
         >
           {isPadUp ? (
-             <div className="h-full w-full pad-screen-grid bg-accent/10 border border-[hsl(var(--primary-hsl))] rounded-md m-2">
+             <div className="h-full w-full m-2 pad-screen-grid bg-accent/10 border border-[hsl(var(--primary-hsl))] rounded-md">
                 <ScrollArea className="h-full w-full">
                     {renderPadScreenContent()}
                 </ScrollArea>
              </div>
           ) : (
-            // When PAD is off, show just a peek of the grid
-            <div className="h-[20px] pad-screen-grid bg-accent/10 border border-[hsl(var(--primary-hsl))] rounded-md m-2"></div>
+            <div className={`h-[${PEEK_AMOUNT}px] m-2 pad-screen-grid bg-accent/10 border border-[hsl(var(--primary-hsl))] rounded-md`}></div>
           )}
         </div>
       </div>
