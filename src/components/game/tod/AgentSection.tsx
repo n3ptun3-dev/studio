@@ -2,14 +2,14 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useAppContext } from '@/contexts/AppContext';
+import { useAppContext, type Faction } from '@/contexts/AppContext';
+import { useTheme } from '@/contexts/ThemeContext'; // For getting currentGlobalTheme for explicitTheme prop on buttons
 import { HolographicButton } from '@/components/game/shared/HolographicPanel';
 import { Progress } from "@/components/ui/progress";
 import { Fingerprint, Settings, BookOpen, Info, Power } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { XP_THRESHOLDS } from '@/lib/constants';
-import { useTheme } from '@/contexts/ThemeContext';
 
 const PEEK_AMOUNT = 20; // Height of the visible part of the PAD screen when "off"
 
@@ -19,9 +19,9 @@ const AgentDossierView = React.memo(() => {
   const { theme: currentGlobalTheme } = useTheme();
 
   const handleFactionChange = () => {
-    let newFaction = faction === 'Cyphers' ? 'Shadows' : 'Cyphers';
+    let newFaction: Faction = faction === 'Cyphers' ? 'Shadows' : 'Cyphers';
     if (faction === 'Observer') {
-        newFaction = 'Cyphers'; // Default to Cyphers if changing from Observer
+        newFaction = 'Cyphers';
         addMessage({ type: 'system', text: `Observer protocol overridden. Faction allegiance protocols engaged. Defaulting to Cyphers.` });
     } else {
         addMessage({ type: 'system', text: `Faction allegiance protocols updated to: ${newFaction}. Coordinating with HQ.` });
@@ -93,7 +93,7 @@ AgentDossierView.displayName = 'AgentDossierView';
 
 const IntelFilesView = React.memo(() => {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const { theme: currentGlobalTheme } = useTheme();
+  const { theme: currentGlobalTheme } = useTheme(); // For explicitTheme on buttons
 
   const categories = [
     { id: "briefing", title: "Briefing", heading: "Current Situation & Objectives", content: "Placeholder content for Briefing: Overview of the current game state, active global events, and primary objectives for agents." },
@@ -151,7 +151,7 @@ const IntelFilesView = React.memo(() => {
 IntelFilesView.displayName = 'IntelFilesView';
 
 const SettingsView = React.memo(() => {
-  const { theme: currentGlobalTheme } = useTheme();
+  const { theme: currentGlobalTheme } = useTheme(); // For explicitTheme on buttons
   return (
     <ScrollArea className="h-full p-3 font-rajdhani">
       <h3 className="text-xl font-orbitron mb-4 holographic-text">Settings</h3>
@@ -175,7 +175,6 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
   const [isPadUp, setIsPadUp] = useState(false);
   const [padScreenView, setPadScreenView] = useState<PadScreenView>('dossier');
   
-  const topContentRef = useRef<HTMLDivElement>(null);
   const titleAreaContentRef = useRef<HTMLDivElement>(null);
   const statsAreaRef = useRef<HTMLDivElement>(null);
   const thePadRef = useRef<HTMLDivElement>(null);
@@ -191,7 +190,7 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
         setPadButtonPanelHeight(measuredHeight);
       }
     }
-  }, []); // Measure once on mount
+  }, []);
 
   useEffect(() => {
     setPadPeekPlusButtonHeight(padButtonPanelHeight + PEEK_AMOUNT);
@@ -220,18 +219,19 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
     ? { top: '0px', height: '100%' }
     : { top: `calc(100% - ${padPeekPlusButtonHeight}px)`, height: `${padPeekPlusButtonHeight}px` };
 
-  // Inline styles for PAD core appearance, using CSS variables set on :root by ThemeContext
+  // Styles for PAD components using CSS variables set by ThemeContext
   const currentPadBaseStyle: React.CSSProperties = {
-    backgroundColor: `hsl(var(--pad-bg-hsl))`, // Opaque themed background
-    borderColor: `hsl(var(--pad-border-hsl))`,
-    borderRadius: '0.5rem', // Tailwind's rounded-lg
+    ...padDynamicStyle,
+    backgroundColor: 'var(--pad-effective-background-color)', // Uses variable set on :root by JS
+    borderColor: 'var(--pad-effective-border-color)',       // Uses variable set on :root by JS
+    borderRadius: '0.5rem', // Equivalent to Tailwind's rounded-lg
     borderWidth: '1px',
     borderStyle: 'solid',
   };
 
   const buttonPanelStyle: React.CSSProperties = {
-    backgroundColor: `hsl(var(--pad-bg-hsl))`, // Match PAD bg, opaque
-    borderBottomColor: `hsl(var(--pad-button-panel-separator-hsl))`, // Opaque separator
+    backgroundColor: 'var(--pad-effective-background-color)', // Match PAD bg
+    borderBottomColor: 'var(--pad-effective-button-panel-separator-color)', // Uses variable set on :root by JS
     borderBottomWidth: '1px',
     borderBottomStyle: 'solid',
     borderTopLeftRadius: '0.5rem',
@@ -239,17 +239,16 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
   };
   
   const screenWrapperStyle: React.CSSProperties = {
-    backgroundColor: `hsl(var(--pad-bg-hsl))`, // Match PAD bg, opaque
+    backgroundColor: 'var(--pad-effective-background-color)', // Match PAD bg
     borderBottomLeftRadius: '0.5rem',
     borderBottomRightRadius: '0.5rem',
   };
 
   return (
     // AgentSection Root: Static container, PAD slides over its content
-    <div className="relative h-full overflow-hidden"> {/* No internal scroll for AgentSection itself */}
+    <div className="relative h-full overflow-hidden">
       {/* Static Background Layer (Title + Stats) - Fills entire AgentSection, behind the PAD */}
       <div 
-        ref={topContentRef}
         className="absolute inset-0 flex flex-col z-10 pointer-events-none" 
       >
         {/* Title Area - grows to push Stats Area to its bottom */}
@@ -264,7 +263,7 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
           <p className={`text-lg font-semibold ${faction === 'Cyphers' ? 'text-blue-400' : faction === 'Shadows' ? 'text-red-400' : 'text-gray-400'}`}>{faction}</p>
         </div>
 
-        {/* Stats Area - Sits at the bottom of the topContentRef */}
+        {/* Stats Area - Sits at the bottom of the static background layer */}
         <div 
           ref={statsAreaRef} 
           className="flex-shrink-0 text-center pt-2 pb-4 px-2"
@@ -306,14 +305,14 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
           // "backdrop-blur-sm", // Temporarily removed
           // "pad-gloss-effect" // Temporarily removed
         )}
-        style={{...padDynamicStyle, ...currentPadBaseStyle}} 
+        style={currentPadBaseStyle} 
       >
         {/* PAD Button Panel */}
         <div
           ref={padButtonPanelRef}
           className={cn(
-            "h-[60px] flex-shrink-0 flex items-center justify-between px-4"
-            // No rounded-t-lg here if currentPadBaseStyle handles all rounding for thePadRef
+            "h-[60px] flex-shrink-0 flex items-center justify-between px-4",
+            "rounded-t-lg" // This handles top rounding for the button panel part
           )}
           style={buttonPanelStyle}
         >
@@ -365,8 +364,8 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
         {/* PAD Screen Area Wrapper */}
         <div 
           className={cn(
-            "flex-grow min-h-0"
-            // No rounded-b-lg here if currentPadBaseStyle handles all rounding for thePadRef
+            "flex-grow min-h-0", 
+            "rounded-b-lg" // This handles bottom rounding for the screen wrapper part
           )}
           style={screenWrapperStyle} 
         >
@@ -379,9 +378,9 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
              </div>
           ) : (
             <div 
-              className="pad-screen-grid bg-accent/10 border border-[hsl(var(--primary-hsl))] rounded-md m-2"
-              style={{ height: `${PEEK_AMOUNT}px` }} // Shows a peek of the screen grid
+              className="h-[${PEEK_AMOUNT}px] pad-screen-grid bg-accent/10 border border-[hsl(var(--primary-hsl))] rounded-md m-2"
             >
+              {/* Peek content, or just the grid for visual cue */}
             </div>
           )}
         </div>
