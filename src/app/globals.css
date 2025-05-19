@@ -32,15 +32,15 @@
     /* Holographic HSLs (will also be set by JS from themeHSLValues) */
     --hologram-panel-bg-hsl: var(--card-hsl);
     --hologram-panel-border-hsl: var(--border-hsl);
-    --hologram-glow-color-hsl: var(--accent-hsl);
+    --hologram-glow-color-hsl: var(--accent-hsl); /* Default to accent for terminal green */
     --hologram-base-text-color-hsl: var(--foreground-hsl);
     --hologram-button-bg-hsl: var(--primary-hsl);
     --hologram-button-text-hsl: hsl(var(--primary-foreground-hsl)); 
 
     /* PAD specific HSLs (will also be set by JS from themeHSLValues) */
-    --pad-bg-hsl: 130 20% 7%; 
-    --pad-border-hsl: 130 50% 30%;
-    --pad-button-panel-separator-hsl: 130 50% 25%;
+    --pad-bg-hsl: 130 25% 8%; /* Slightly lighter than main bg, from card-hsl */
+    --pad-border-hsl: 130 60% 35%; /* from border-hsl */
+    --pad-button-panel-separator-hsl: 130 50% 25%; /* Slightly less prominent than main border */
 
      /* Fallback / Debug colors if variables fail */
     --terminal-green-debug-color: lime;
@@ -83,9 +83,9 @@
     --hologram-button-text-hsl: hsl(var(--primary-foreground-hsl));
 
     /* PAD specific HSLs */
-    --pad-bg-hsl: 210 50% 10%; 
-    --pad-border-hsl: 204 100% 50%;
-    --pad-button-panel-separator-hsl: 204 100% 40%;
+    --pad-bg-hsl: 210 50% 12%; /* from card-hsl */
+    --pad-border-hsl: 204 100% 60%; /* from border-hsl */
+    --pad-button-panel-separator-hsl: 204 100% 40%; /* A bit dimmer than main border */
   }
 
   .theme-shadows {
@@ -119,9 +119,9 @@
     --hologram-button-text-hsl: hsl(var(--primary-foreground-hsl));
 
     /* PAD specific HSLs */
-    --pad-bg-hsl: 0 50% 10%; 
-    --pad-border-hsl: 0 100% 30%;
-    --pad-button-panel-separator-hsl: 0 100% 25%;
+    --pad-bg-hsl: 0 50% 12%; /* from card-hsl */
+    --pad-border-hsl: 0 100% 50%; /* from border-hsl */
+    --pad-button-panel-separator-hsl: 0 100% 25%; /* A bit dimmer */
   }
 
   .theme-neutral { 
@@ -155,9 +155,9 @@
     --hologram-button-text-hsl: hsl(var(--primary-foreground-hsl));
 
     /* PAD specific HSLs */
-    --pad-bg-hsl: 220 15% 10%; 
-    --pad-border-hsl: 220 20% 25%;
-    --pad-button-panel-separator-hsl: 220 20% 20%;
+    --pad-bg-hsl: 220 15% 12%;  /* from card-hsl */
+    --pad-border-hsl: 220 20% 30%; /* from border-hsl */
+    --pad-button-panel-separator-hsl: 220 20% 20%; /* A bit dimmer */
   }
 
   /* Composite color variables (used by Tailwind & components) */
@@ -193,9 +193,11 @@
     --hologram-button-text: hsl(var(--hologram-button-text-hsl));
 
     /* PAD Specific Colors - Base values from --pad-*-hsl set by JS */
-    --pad-background-color: hsla(var(--pad-bg-hsl), 0.85); 
-    --pad-border-color: hsl(var(--pad-border-hsl)); 
-    --pad-button-panel-separator-color: hsla(var(--pad-button-panel-separator-hsl), 0.5);
+    /* These are the variables that ThemeContext.tsx will set directly on :root */
+    /* They are given default values here for completeness but JS is the source of truth */
+    --pad-background-color: hsla(var(--pad-bg-hsl, var(--card-hsl)), 0.85); 
+    --pad-border-color: hsl(var(--pad-border-hsl, var(--border-hsl))); 
+    --pad-button-panel-separator-color: hsla(var(--pad-button-panel-separator-hsl, var(--border-hsl)), 0.5);
 
     /* Item Level Colors HSL (remain globally available) */
     --level-1-color-hsl: 0 100% 50%; /* Red */
