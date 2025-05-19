@@ -36,7 +36,7 @@ const AgentDossierView = () => {
   const xpProgressForDossier = xpToNextLevelSpanInDossier > 0 ? Math.max(0, Math.min(100, (xpForCurrentLevelInDossier / xpToNextLevelSpanInDossier) * 100)) : 100;
 
   return (
-    <ScrollArea className="h-full p-3"> {/* ScrollArea for Dossier content */}
+    <ScrollArea className="h-full p-3">
       <h3 className="text-xl font-orbitron mb-4 holographic-text">Agent Dossier</h3>
       <div className="space-y-3 text-sm font-rajdhani">
         <div>
@@ -57,7 +57,6 @@ const AgentDossierView = () => {
           <Progress value={xpProgressForDossier} className="w-full h-1.5 mt-1 bg-primary/20 [&>div]:bg-primary" />
           <p className="text-xs text-muted-foreground">{playerStats.xp} / {XP_THRESHOLDS[playerStats.level + 1] ? XP_THRESHOLDS[playerStats.level + 1] : 'MAX'} XP</p>
         </div>
-        {/* Other stats sections... */}
         <div>
           <p className="font-semibold text-muted-foreground">Infiltration Stats:</p>
           <p>Successful Vault Infiltrations: {playerStats.successfulVaultInfiltrations}</p>
@@ -119,7 +118,7 @@ const IntelFilesView = () => {
           &larr; Back to Intel Files
         </HolographicButton>
         <h4 className="text-lg font-orbitron mb-2 holographic-text flex-shrink-0">{selectedCategoryData.heading}</h4>
-        <ScrollArea className="flex-grow min-h-0"> {/* ScrollArea for category content */}
+        <ScrollArea className="flex-grow min-h-0">
           <p className="text-muted-foreground whitespace-pre-line font-rajdhani pr-2">{selectedCategoryData.content}</p>
         </ScrollArea>
       </div>
@@ -127,7 +126,7 @@ const IntelFilesView = () => {
   }
 
   return (
-    <ScrollArea className="h-full p-3"> {/* ScrollArea for category list */}
+    <ScrollArea className="h-full p-3">
       <div className="flex items-center mb-4">
         <h3 className="text-xl font-orbitron holographic-text">Intel Files</h3>
       </div>
@@ -151,7 +150,7 @@ const IntelFilesView = () => {
 const SettingsView = () => {
   const { theme: currentTheme } = useTheme();
   return (
-    <ScrollArea className="h-full p-3 font-rajdhani"> {/* ScrollArea for Settings content */}
+    <ScrollArea className="h-full p-3 font-rajdhani">
       <h3 className="text-xl font-orbitron mb-4 holographic-text">Settings</h3>
       <ul className="space-y-2 text-sm">
         <li><HolographicButton explicitTheme={currentTheme} className="w-full justify-start text-left !bg-transparent hover:!bg-primary/10 !py-1.5">Notifications (Placeholder)</HolographicButton></li>
@@ -171,22 +170,29 @@ interface SectionProps {
 
 export function AgentSection({ parallaxOffset }: SectionProps) {
   const { playerSpyName, faction, playerStats } = useAppContext();
-  const { theme: currentTheme } = useTheme();
+  const { theme: currentTheme, themeVersion } = useTheme(); // Get themeVersion to pass to PAD
 
   const [isPadUp, setIsPadUp] = useState(false);
   const [padScreenView, setPadScreenView] = useState<PadScreenView>('dossier');
   
-  const topContentRef = useRef<HTMLDivElement>(null); // For the static background content
   const padButtonPanelRef = useRef<HTMLDivElement>(null);
-  const [padButtonPanelHeight, setPadButtonPanelHeight] = useState(60); // Default or measured height
+  const [padButtonPanelHeight, setPadButtonPanelHeight] = useState(60); // Default height
+  const [padPeekPlusButtonHeight, setPadPeekPlusButtonHeight] = useState(padButtonPanelHeight + PEEK_AMOUNT);
+
 
   useEffect(() => {
     if (padButtonPanelRef.current) {
-      setPadButtonPanelHeight(padButtonPanelRef.current.offsetHeight);
+      const measuredHeight = padButtonPanelRef.current.offsetHeight;
+      if (measuredHeight > 0) { // Ensure offsetHeight is valid
+        setPadButtonPanelHeight(measuredHeight);
+      }
     }
-  }, []);
+  }, [isPadUp]); // Re-measure if isPadUp changes, in case content of button panel changes height
+  
+  useEffect(() => {
+    setPadPeekPlusButtonHeight(padButtonPanelHeight + PEEK_AMOUNT);
+  }, [padButtonPanelHeight]);
 
-  const padPeekPlusButtonHeight = padButtonPanelHeight + PEEK_AMOUNT;
 
   const handlePowerClick = useCallback(() => {
     setIsPadUp(prev => !prev);
@@ -210,49 +216,53 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
   const padDynamicStyle: React.CSSProperties = {
     top: isPadUp ? '0px' : `calc(100% - ${padPeekPlusButtonHeight}px)`,
     height: isPadUp ? '100%' : `${padPeekPlusButtonHeight}px`,
-    // transition-all and duration-500 are handled by Tailwind class
   };
 
   return (
-    // AgentSection Root: Non-scrollable, full height, relative for absolute PAD
-    <div className="relative flex flex-col h-full overflow-hidden">
-      {/* Static Background Layer (Title + Stats) - Full height, behind the PAD */}
-      <div ref={topContentRef} className="absolute inset-0 flex flex-col z-10 pointer-events-none"> {/* pointer-events-none so PAD can be clicked */}
-        {/* Title Area - Expands to fill space above Stats */}
-        <div className="flex-grow flex flex-col items-center justify-center pt-4 md:pt-2 pb-2 text-center relative overflow-hidden">
-          <div className="absolute inset-0 flex items-center justify-center -z-10 opacity-10">
-            <Fingerprint className="w-48 h-48 md:w-64 md:h-64 text-primary" />
-          </div>
-          <h1 className="text-3xl md:text-4xl font-orbitron holographic-text">{playerSpyName || "Agent"}</h1>
-          <p className={`text-lg font-semibold ${faction === 'Cyphers' ? 'text-blue-400' : faction === 'Shadows' ? 'text-red-400' : 'text-gray-400'}`}>{faction}</p>
-        </div>
+    // AgentSection Root: Non-scrollable, full height, relative for absolute PAD and static background
+    <div className="relative h-full overflow-hidden">
+      {/* Static Background Layer (Title + Stats) */}
+      <div className="absolute inset-0 flex flex-col z-10 pointer-events-none">
+        {/* This inner div wraps the content that needs the spacer */}
+        <div className="flex flex-col flex-grow"> {/* Allows title to grow and pushes stats + spacer down */}
+            {/* Title Area */}
+            <div className="flex-grow flex flex-col items-center justify-center pt-4 md:pt-2 pb-2 text-center relative overflow-hidden">
+            <div className="absolute inset-0 flex items-center justify-center -z-10 opacity-10">
+                <Fingerprint className="w-48 h-48 md:w-64 md:h-64 text-primary" />
+            </div>
+            <h1 className="text-3xl md:text-4xl font-orbitron holographic-text">{playerSpyName || "Agent"}</h1>
+            <p className={`text-lg font-semibold ${faction === 'Cyphers' ? 'text-blue-400' : faction === 'Shadows' ? 'text-red-400' : 'text-gray-400'}`}>{faction}</p>
+            </div>
 
-        {/* Stats Area - Sits at the bottom of the topContentRef flex column */}
-        <div className="flex-shrink-0 text-center pt-2 pb-4 px-2">
-          <div className="w-full max-w-md mx-auto">
-            <p className="text-sm text-muted-foreground">Agent Rank: {playerStats.level}</p>
-            <Progress value={xpProgress} className="w-full h-2 mt-1 bg-primary/20 [&>div]:bg-primary" />
-            <p className="text-xs text-muted-foreground">{playerStats.xp} / {XP_THRESHOLDS[playerStats.level + 1] ? XP_THRESHOLDS[playerStats.level + 1] : 'MAX'} XP</p>
-          </div>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-3 text-sm w-full max-w-md mx-auto font-rajdhani">
-            <div>
-              <p className="text-muted-foreground">ELINT Reserves</p>
-              <p className="font-digital7 text-xl holographic-text">{playerStats.elintReserves}</p>
+            {/* Stats Area */}
+            <div className="flex-shrink-0 text-center pt-2 pb-4 px-2">
+            <div className="w-full max-w-md mx-auto">
+                <p className="text-sm text-muted-foreground">Agent Rank: {playerStats.level}</p>
+                <Progress value={xpProgress} className="w-full h-2 mt-1 bg-primary/20 [&>div]:bg-primary" />
+                <p className="text-xs text-muted-foreground">{playerStats.xp} / {XP_THRESHOLDS[playerStats.level + 1] ? XP_THRESHOLDS[playerStats.level + 1] : 'MAX'} XP</p>
             </div>
-            <div>
-              <p className="text-muted-foreground">ELINT Transferred (HQ)</p>
-              <p className="font-digital7 text-xl holographic-text">{playerStats.elintTransferred}</p>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-3 text-sm w-full max-w-md mx-auto font-rajdhani">
+                <div>
+                <p className="text-muted-foreground">ELINT Reserves</p>
+                <p className="font-digital7 text-xl holographic-text">{playerStats.elintReserves}</p>
+                </div>
+                <div>
+                <p className="text-muted-foreground">ELINT Transferred (HQ)</p>
+                <p className="font-digital7 text-xl holographic-text">{playerStats.elintTransferred}</p>
+                </div>
             </div>
-          </div>
-          <div className="mt-3">
-            <p className="text-sm font-semibold font-rajdhani text-yellow-400">
-              Next Transfer Window: {/* Placeholder */}
-            </p>
-            <p className="font-digital7 text-xl holographic-text">
-              02:34:56 {/* Placeholder */}
-            </p>
-          </div>
+            <div className="mt-3">
+                <p className="text-sm font-semibold font-rajdhani text-yellow-400">
+                Next Transfer Window: {/* Placeholder */}
+                </p>
+                <p className="font-digital7 text-xl holographic-text">
+                02:34:56 {/* Placeholder */}
+                </p>
+            </div>
+            </div>
         </div>
+        {/* Spacer Div: Pushes the above content (Title + Stats) up to make room for PAD button panel when PAD is off */}
+        <div style={{ height: `${padPeekPlusButtonHeight}px` }} className="flex-shrink-0"></div>
       </div>
 
       {/* The PAD - Absolutely positioned, slides up/down over the static background content */}
@@ -312,16 +322,15 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
           </HolographicButton>
         </div>
 
-        {/* PAD Screen Area - This will contain the ScrollArea */}
+        {/* PAD Screen Area */}
         <div 
-          className="flex-grow min-h-0" // Allows ScrollArea to fill available height
+          className="flex-grow min-h-0 overflow-hidden" // Allows ScrollArea to fill available height
         >
           {isPadUp ? (
             <ScrollArea className="h-full w-full pad-screen-grid bg-accent/10 border border-primary/20 rounded-b-md m-2">
               {renderPadScreenContent()}
             </ScrollArea>
           ) : (
-            // Peek view: just the grid background, slightly taller to ensure button panel text is visible
             <div className={`h-[${PEEK_AMOUNT}px] pad-screen-grid bg-accent/10 border border-primary/20 rounded-b-md m-2 opacity-50`}>
             </div>
           )}
@@ -331,3 +340,4 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
   );
 }
 
+    
