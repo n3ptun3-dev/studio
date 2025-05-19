@@ -5,7 +5,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { HolographicButton } from '@/components/game/shared/HolographicPanel';
 import { Progress } from "@/components/ui/progress";
-import { Fingerprint, Settings, BookOpen, Info, Power, Edit3 } from 'lucide-react';
+import { Fingerprint, Settings, BookOpen, Info, Power } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { XP_THRESHOLDS } from '@/lib/constants';
@@ -181,7 +181,7 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
   const thePadRef = useRef<HTMLDivElement>(null);
   const padButtonPanelRef = useRef<HTMLDivElement>(null);
   
-  const [padButtonPanelHeight, setPadButtonPanelHeight] = useState(60); 
+  const [padButtonPanelHeight, setPadButtonPanelHeight] = useState(60); // Default height
   const [padPeekPlusButtonHeight, setPadPeekPlusButtonHeight] = useState(padButtonPanelHeight + PEEK_AMOUNT);
 
   useEffect(() => {
@@ -191,7 +191,7 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
         setPadButtonPanelHeight(measuredHeight);
       }
     }
-  }, [isPadUp]); // Re-measure if PAD visibility changes button panel content
+  }, []); // Measure once on mount
 
   useEffect(() => {
     setPadPeekPlusButtonHeight(padButtonPanelHeight + PEEK_AMOUNT);
@@ -201,7 +201,6 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
     setIsPadUp(prev => !prev);
   }, []);
 
-  // Calculate XP progress for the main stats display
   const currentLevelXp = XP_THRESHOLDS[playerStats.level] || 0;
   const nextLevelXpTarget = XP_THRESHOLDS[playerStats.level + 1] || (XP_THRESHOLDS[XP_THRESHOLDS.length -1] + (XP_THRESHOLDS[XP_THRESHOLDS.length - 1] - XP_THRESHOLDS[XP_THRESHOLDS.length - 2] || 100));
   const xpForCurrentLevel = playerStats.xp - currentLevelXp;
@@ -217,39 +216,37 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
     }
   };
   
-  // PAD Dynamic Styling for position and height
   const padDynamicStyle: React.CSSProperties = isPadUp
     ? { top: '0px', height: '100%' }
     : { top: `calc(100% - ${padPeekPlusButtonHeight}px)`, height: `${padPeekPlusButtonHeight}px` };
 
-  // Inline styles for core PAD appearance - referencing CSS variables set on :root
-  const currentPadStyle: React.CSSProperties = {
-    ...padDynamicStyle,
-    backgroundColor: `hsla(var(--pad-bg-hsl), 0.85)`,
+  // Inline styles for PAD core appearance, using CSS variables set on :root by ThemeContext
+  const currentPadBaseStyle: React.CSSProperties = {
+    backgroundColor: `hsl(var(--pad-bg-hsl))`, // Opaque themed background
     borderColor: `hsl(var(--pad-border-hsl))`,
-    borderRadius: '0.5rem', // Equivalent to rounded-lg
+    borderRadius: '0.5rem', // Tailwind's rounded-lg
     borderWidth: '1px',
     borderStyle: 'solid',
   };
 
   const buttonPanelStyle: React.CSSProperties = {
-    backgroundColor: `hsla(var(--pad-bg-hsl), 0.85)`, // Match PAD bg
-    borderBottomColor: `hsla(var(--pad-button-panel-separator-hsl), 0.5)`,
+    backgroundColor: `hsl(var(--pad-bg-hsl))`, // Match PAD bg, opaque
+    borderBottomColor: `hsl(var(--pad-button-panel-separator-hsl))`, // Opaque separator
     borderBottomWidth: '1px',
     borderBottomStyle: 'solid',
-    borderTopLeftRadius: '0.5rem', // For inner rounding matching parent
+    borderTopLeftRadius: '0.5rem',
     borderTopRightRadius: '0.5rem',
   };
   
   const screenWrapperStyle: React.CSSProperties = {
-    backgroundColor: `hsla(var(--pad-bg-hsl), 0.85)`, // Match PAD bg
-    borderBottomLeftRadius: '0.5rem', // For inner rounding matching parent
+    backgroundColor: `hsl(var(--pad-bg-hsl))`, // Match PAD bg, opaque
+    borderBottomLeftRadius: '0.5rem',
     borderBottomRightRadius: '0.5rem',
   };
 
   return (
     // AgentSection Root: Static container, PAD slides over its content
-    <div className="relative h-full overflow-hidden">
+    <div className="relative h-full overflow-hidden"> {/* No internal scroll for AgentSection itself */}
       {/* Static Background Layer (Title + Stats) - Fills entire AgentSection, behind the PAD */}
       <div 
         ref={topContentRef}
@@ -309,13 +306,14 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
           // "backdrop-blur-sm", // Temporarily removed
           // "pad-gloss-effect" // Temporarily removed
         )}
-        style={currentPadStyle} 
+        style={{...padDynamicStyle, ...currentPadBaseStyle}} 
       >
         {/* PAD Button Panel */}
         <div
           ref={padButtonPanelRef}
           className={cn(
             "h-[60px] flex-shrink-0 flex items-center justify-between px-4"
+            // No rounded-t-lg here if currentPadBaseStyle handles all rounding for thePadRef
           )}
           style={buttonPanelStyle}
         >
@@ -368,19 +366,20 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
         <div 
           className={cn(
             "flex-grow min-h-0"
+            // No rounded-b-lg here if currentPadBaseStyle handles all rounding for thePadRef
           )}
           style={screenWrapperStyle} 
         >
           {/* Actual Screen content or Peek area */}
           {isPadUp ? (
-             <div className="h-full w-full pad-screen-grid bg-accent/10 border border-[var(--primary-hsl)] rounded-md m-2">
+             <div className="h-full w-full pad-screen-grid bg-accent/10 border border-[hsl(var(--primary-hsl))] rounded-md m-2">
                 <ScrollArea className="h-full w-full">
                     {renderPadScreenContent()}
                 </ScrollArea>
              </div>
           ) : (
             <div 
-              className="pad-screen-grid bg-accent/10 border border-[var(--primary-hsl)] rounded-md m-2"
+              className="pad-screen-grid bg-accent/10 border border-[hsl(var(--primary-hsl))] rounded-md m-2"
               style={{ height: `${PEEK_AMOUNT}px` }} // Shows a peek of the screen grid
             >
             </div>
