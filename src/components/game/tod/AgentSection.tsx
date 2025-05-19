@@ -2,8 +2,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useAppContext, type Faction } from '@/contexts/AppContext';
-import { useTheme } from '@/contexts/ThemeContext'; // For getting currentGlobalTheme for explicitTheme prop on buttons
+import { useAppContext } from '@/contexts/AppContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { HolographicButton } from '@/components/game/shared/HolographicPanel';
 import { Progress } from "@/components/ui/progress";
 import { Fingerprint, Settings, BookOpen, Info, Power } from 'lucide-react';
@@ -19,9 +19,9 @@ const AgentDossierView = React.memo(() => {
   const { theme: currentGlobalTheme } = useTheme();
 
   const handleFactionChange = () => {
-    let newFaction: Faction = faction === 'Cyphers' ? 'Shadows' : 'Cyphers';
+    let newFaction = faction === 'Cyphers' ? 'Shadows' : 'Cyphers';
     if (faction === 'Observer') {
-        newFaction = 'Cyphers';
+        newFaction = 'Cyphers'; // Default to Cyphers if changing from Observer
         addMessage({ type: 'system', text: `Observer protocol overridden. Faction allegiance protocols engaged. Defaulting to Cyphers.` });
     } else {
         addMessage({ type: 'system', text: `Faction allegiance protocols updated to: ${newFaction}. Coordinating with HQ.` });
@@ -177,6 +177,7 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
   
   const titleAreaContentRef = useRef<HTMLDivElement>(null);
   const statsAreaRef = useRef<HTMLDivElement>(null);
+  const topContentRef = useRef<HTMLDivElement>(null);
   const thePadRef = useRef<HTMLDivElement>(null);
   const padButtonPanelRef = useRef<HTMLDivElement>(null);
   
@@ -219,19 +220,19 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
     ? { top: '0px', height: '100%' }
     : { top: `calc(100% - ${padPeekPlusButtonHeight}px)`, height: `${padPeekPlusButtonHeight}px` };
 
-  // Styles for PAD components using CSS variables set by ThemeContext
+  // Inline styles for PAD elements using CSS variables
   const currentPadBaseStyle: React.CSSProperties = {
     ...padDynamicStyle,
-    backgroundColor: 'var(--pad-effective-background-color)', // Uses variable set on :root by JS
-    borderColor: 'var(--pad-effective-border-color)',       // Uses variable set on :root by JS
+    backgroundColor: `hsl(var(--pad-bg-hsl))`,
+    borderColor: `hsl(var(--pad-border-hsl))`,
     borderRadius: '0.5rem', // Equivalent to Tailwind's rounded-lg
     borderWidth: '1px',
     borderStyle: 'solid',
   };
 
   const buttonPanelStyle: React.CSSProperties = {
-    backgroundColor: 'var(--pad-effective-background-color)', // Match PAD bg
-    borderBottomColor: 'var(--pad-effective-button-panel-separator-color)', // Uses variable set on :root by JS
+    backgroundColor: `hsl(var(--pad-bg-hsl))`,
+    borderBottomColor: `hsl(var(--pad-button-panel-separator-hsl))`,
     borderBottomWidth: '1px',
     borderBottomStyle: 'solid',
     borderTopLeftRadius: '0.5rem',
@@ -239,16 +240,18 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
   };
   
   const screenWrapperStyle: React.CSSProperties = {
-    backgroundColor: 'var(--pad-effective-background-color)', // Match PAD bg
+    backgroundColor: `hsl(var(--pad-bg-hsl))`,
     borderBottomLeftRadius: '0.5rem',
     borderBottomRightRadius: '0.5rem',
   };
+
 
   return (
     // AgentSection Root: Static container, PAD slides over its content
     <div className="relative h-full overflow-hidden">
       {/* Static Background Layer (Title + Stats) - Fills entire AgentSection, behind the PAD */}
       <div 
+        ref={topContentRef}
         className="absolute inset-0 flex flex-col z-10 pointer-events-none" 
       >
         {/* Title Area - grows to push Stats Area to its bottom */}
@@ -311,8 +314,8 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
         <div
           ref={padButtonPanelRef}
           className={cn(
-            "h-[60px] flex-shrink-0 flex items-center justify-between px-4",
-            "rounded-t-lg" // This handles top rounding for the button panel part
+            "h-[60px] flex-shrink-0 flex items-center justify-between px-4"
+            // No rounded-t-lg here if parent (thePadRef) has rounded-lg and overflow:hidden
           )}
           style={buttonPanelStyle}
         >
@@ -364,8 +367,8 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
         {/* PAD Screen Area Wrapper */}
         <div 
           className={cn(
-            "flex-grow min-h-0", 
-            "rounded-b-lg" // This handles bottom rounding for the screen wrapper part
+            "flex-grow min-h-0" 
+            // No rounded-b-lg here if parent (thePadRef) has rounded-lg and overflow:hidden
           )}
           style={screenWrapperStyle} 
         >
@@ -379,6 +382,7 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
           ) : (
             <div 
               className="h-[${PEEK_AMOUNT}px] pad-screen-grid bg-accent/10 border border-[hsl(var(--primary-hsl))] rounded-md m-2"
+              style={{ height: `${PEEK_AMOUNT}px`}} // Ensure PEEK_AMOUNT is applied
             >
               {/* Peek content, or just the grid for visual cue */}
             </div>
@@ -388,3 +392,4 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
     </div>
   );
 }
+
