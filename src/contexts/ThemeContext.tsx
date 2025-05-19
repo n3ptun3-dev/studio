@@ -39,19 +39,20 @@ const themeHSLValues: Record<Theme, Record<string, string>> = {
     '--secondary-foreground-hsl': '130 70% 60%',
     '--muted-hsl': '130 25% 15%',
     '--muted-foreground-hsl': '130 40% 50%',
-    '--accent-hsl': '130 90% 55%',
+    '--accent-hsl': '130 90% 55%', // Bright green for accents, glows
     '--accent-foreground-hsl': '130 20% 5%',
     '--destructive-hsl': '0 70% 50%',
     '--destructive-foreground-hsl': '0 0% 100%',
     '--border-hsl': '130 60% 35%',
     '--input-hsl': '130 30% 25%',
     '--ring-hsl': '130 70% 50%',
-    '--hologram-glow-color-hsl': '130 90% 55%', // Matches accent-hsl
+    '--hologram-glow-color-hsl': '130 90% 55%', // Direct HSL for terminal green glow
 
-    // PAD specific HSL sources for terminal-green
-    '--pad-bg-hsl': '130 25% 15%', // Darker green for PAD bg
+    // PAD specific HSL sources
+    '--pad-bg-hsl': '130 25% 15%', // Darker green for PAD bg - Made this lighter than main bg
     '--pad-border-hsl': '130 60% 45%', // Brighter green for PAD border
     '--pad-button-panel-separator-hsl': '130 50% 25%',
+    '--terminal-green-debug-color': 'lime',
   },
   'cyphers': {
     '--background-hsl': '210 60% 8%',
@@ -73,12 +74,13 @@ const themeHSLValues: Record<Theme, Record<string, string>> = {
     '--border-hsl': '204 100% 60%',
     '--input-hsl': '210 40% 15%',
     '--ring-hsl': '204 100% 55%',
-    '--hologram-glow-color-hsl': '204 100% 50%', // Matches primary-hsl
+    '--hologram-glow-color-hsl': '204 100% 50%', // Direct HSL for Cyphers glow
 
-    // PAD specific HSL sources for cyphers
-    '--pad-bg-hsl': '210 50% 18%', 
-    '--pad-border-hsl': '204 100% 70%', 
+    // PAD specific HSL sources
+    '--pad-bg-hsl': '210 50% 20%', // Made this lighter than main bg
+    '--pad-border-hsl': '204 100% 70%',
     '--pad-button-panel-separator-hsl': '204 100% 40%',
+    '--cyphers-debug-color': 'blue',
   },
   'shadows': {
     '--background-hsl': '0 60% 8%',
@@ -89,7 +91,7 @@ const themeHSLValues: Record<Theme, Record<string, string>> = {
     '--popover-foreground-hsl': '0 0% 90%',
     '--primary-hsl': '0 100% 40%', // Intense Red
     '--primary-foreground-hsl': '0 0% 100%',
-    '--secondary-hsl': '16 100% 30%',
+    '--secondary-hsl': '16 100% 30%', // Darker Salmon
     '--secondary-foreground-hsl': '0 0% 90%',
     '--muted-hsl': '0 50% 18%',
     '--muted-foreground-hsl': '0 0% 70%',
@@ -100,14 +102,15 @@ const themeHSLValues: Record<Theme, Record<string, string>> = {
     '--border-hsl': '0 100% 50%',
     '--input-hsl': '0 40% 15%',
     '--ring-hsl': '0 100% 55%',
-    '--hologram-glow-color-hsl': '0 100% 40%', // Matches primary-hsl
+    '--hologram-glow-color-hsl': '0 100% 40%', // Direct HSL for Shadows glow
 
-    // PAD specific HSL sources for shadows
-    '--pad-bg-hsl': '0 50% 18%', 
-    '--pad-border-hsl': '0 100% 60%', 
+    // PAD specific HSL sources
+    '--pad-bg-hsl': '0 50% 20%', // Made this lighter than main bg
+    '--pad-border-hsl': '0 100% 60%',
     '--pad-button-panel-separator-hsl': '0 100% 25%',
+    '--shadows-debug-color': 'red',
   },
-  'neutral': { 
+  'neutral': { // Ensure neutral also has all variables
     '--background-hsl': '220 10% 10%',
     '--foreground-hsl': '220 10% 70%',
     '--card-hsl': '220 15% 12%',
@@ -120,7 +123,7 @@ const themeHSLValues: Record<Theme, Record<string, string>> = {
     '--secondary-foreground-hsl': '220 10% 60%',
     '--muted-hsl': '220 15% 25%',
     '--muted-foreground-hsl': '220 10% 55%',
-    '--accent-hsl': '180 70% 60%', 
+    '--accent-hsl': '180 70% 60%',
     '--accent-foreground-hsl': '220 10% 10%',
     '--destructive-hsl': '0 70% 50%',
     '--destructive-foreground-hsl': '0 0% 100%',
@@ -129,30 +132,38 @@ const themeHSLValues: Record<Theme, Record<string, string>> = {
     '--ring-hsl': '220 60% 55%',
     '--hologram-glow-color-hsl': '180 70% 60%', // Uses accent-hsl
 
-    // PAD specific HSL sources for neutral
-    '--pad-bg-hsl': '220 15% 20%', 
-    '--pad-border-hsl': '220 20% 40%', 
+    // PAD specific HSL sources
+    '--pad-bg-hsl': '220 15% 25%', // Made this lighter than main bg
+    '--pad-border-hsl': '220 20% 40%',
     '--pad-button-panel-separator-hsl': '220 20% 20%',
+    '--neutral-debug-color': 'gray',
   },
 };
 
 // CSS HSL source variables that ThemeProvider will set directly on :root's inline style
-const HSL_VARIABLES_TO_SET_ON_ROOT = [
+const CORE_HSL_VARIABLES_TO_SET_ON_ROOT = [
   '--background-hsl', '--foreground-hsl', '--card-hsl', '--card-foreground-hsl',
   '--popover-hsl', '--popover-foreground-hsl', '--primary-hsl', '--primary-foreground-hsl',
   '--secondary-hsl', '--secondary-foreground-hsl', '--muted-hsl', '--muted-foreground-hsl',
   '--accent-hsl', '--accent-foreground-hsl', '--destructive-hsl', '--destructive-foreground-hsl',
-  '--border-hsl', '--input-hsl', '--ring-hsl', '--hologram-glow-color-hsl',
-  // PAD specific HSL sources
+  '--border-hsl', '--input-hsl', '--ring-hsl',
+];
+
+const PAD_HSL_VARIABLES_TO_SET_ON_ROOT = [
   '--pad-bg-hsl', '--pad-border-hsl', '--pad-button-panel-separator-hsl'
 ];
+
+const HOLOGRAM_HSL_VARIABLES_TO_SET_ON_ROOT = [
+  '--hologram-glow-color-hsl' // This might not be strictly needed on :root if classes define it
+];
+
 
 export function ThemeProvider({ children, defaultTheme = "terminal-green", attribute, enableSystem, disableTransitionOnChange }: {
     children: ReactNode,
     defaultTheme?: Theme,
-    attribute?: string, // Kept for shadcn/ui compatibility, not used for class on html
-    enableSystem?: boolean, // Kept for shadcn/ui compatibility, not used
-    disableTransitionOnChange?: boolean, // Kept for shadcn/ui compatibility, not used
+    attribute?: string,
+    enableSystem?: boolean,
+    disableTransitionOnChange?: boolean,
 }) {
   const [currentThemeInternal, setThemeInternal] = useState<Theme>(() => {
     if (typeof window !== 'undefined') {
@@ -166,19 +177,19 @@ export function ThemeProvider({ children, defaultTheme = "terminal-green", attri
   const [themeVersion, setThemeVersion] = useState(0);
 
   const setTheme = useCallback((newTheme: Theme) => {
-    setThemeInternal(currentInternalTheme => {
+    setThemeInternal(prevTheme => {
       if (availableThemesList.includes(newTheme)) {
         console.log(`[ThemeContext] setTheme callback invoked with newTheme: ${newTheme}`);
-        if (currentInternalTheme !== newTheme) {
-          console.log(`[ThemeContext] Actually changing theme from ${currentInternalTheme} to ${newTheme}`);
+        if (prevTheme !== newTheme) {
+          console.log(`[ThemeContext] Actually changing theme from ${prevTheme} to ${newTheme}`);
           return newTheme;
         }
-        return currentInternalTheme; 
+        return prevTheme;
       }
       console.warn(`[ThemeContext] Attempted to set invalid theme: ${newTheme}`);
-      return currentInternalTheme;
+      return prevTheme;
     });
-  }, [setThemeInternal]); // Dependency only on setThemeInternal (stable)
+  }, [setThemeInternal]); // setThemeInternal is stable
 
   useEffect(() => {
     console.log(`[ThemeContext] Effect running. Current internal theme to apply: ${currentThemeInternal}`);
@@ -187,7 +198,6 @@ export function ThemeProvider({ children, defaultTheme = "terminal-green", attri
       const htmlEl = document.documentElement;
       const style = htmlEl.style;
 
-      // Remove old theme classes
       availableThemesList.forEach(tName => {
         if (tName) htmlEl.classList.remove(`theme-${tName}`);
       });
@@ -202,46 +212,53 @@ export function ThemeProvider({ children, defaultTheme = "terminal-green", attri
       const themeColorsToSet = themeHSLValues[effectiveTheme];
       
       if (themeColorsToSet) {
-        // Set core HSL source variables
-        HSL_VARIABLES_TO_SET_ON_ROOT.forEach(variableName => {
+        // Set CORE HSL source variables
+        CORE_HSL_VARIABLES_TO_SET_ON_ROOT.forEach(variableName => {
           if (themeColorsToSet[variableName]) {
             style.setProperty(variableName, themeColorsToSet[variableName]);
           } else {
-             console.warn(`[ThemeContext] HSL variable ${variableName} not found for theme ${effectiveTheme}`);
+             console.warn(`[ThemeContext] CORE HSL variable ${variableName} not found for theme ${effectiveTheme}`);
+          }
+        });
+
+        // Set PAD HSL source variables
+        PAD_HSL_VARIABLES_TO_SET_ON_ROOT.forEach(variableName => {
+          if (themeColorsToSet[variableName]) {
+            style.setProperty(variableName, themeColorsToSet[variableName]);
+          } else {
+             console.warn(`[ThemeContext] PAD HSL variable ${variableName} not found for theme ${effectiveTheme}`);
           }
         });
         
-        // Set final computed PAD colors directly, including opacity
-        if (themeColorsToSet['--pad-bg-hsl']) {
-            const padEffectiveBg = `hsla(${themeColorsToSet['--pad-bg-hsl']}, 0.85)`;
-            style.setProperty('--pad-effective-background-color', padEffectiveBg);
-        } else {
-            console.warn(`[ThemeContext] --pad-bg-hsl not found for theme ${effectiveTheme} when trying to set --pad-effective-background-color`);
-        }
+        // Set HOLOGRAM HSL source variables
+        HOLOGRAM_HSL_VARIABLES_TO_SET_ON_ROOT.forEach(variableName => {
+            if (themeColorsToSet[variableName]) {
+              style.setProperty(variableName, themeColorsToSet[variableName]);
+            } else {
+               console.warn(`[ThemeContext] HOLOGRAM HSL variable ${variableName} not found for theme ${effectiveTheme}`);
+            }
+          });
 
-        if (themeColorsToSet['--pad-border-hsl']) {
-             const padEffectiveBorder = `hsl(${themeColorsToSet['--pad-border-hsl']})`;
-            style.setProperty('--pad-effective-border-color', padEffectiveBorder);
-        } else {
-            console.warn(`[ThemeContext] --pad-border-hsl not found for theme ${effectiveTheme} when trying to set --pad-effective-border-color`);
-        }
-
-        if (themeColorsToSet['--pad-button-panel-separator-hsl']) {
-            const padEffectiveSeparator = `hsla(${themeColorsToSet['--pad-button-panel-separator-hsl']}, 0.5)`;
-            style.setProperty('--pad-effective-button-panel-separator-color', padEffectiveSeparator);
-        } else {
-            console.warn(`[ThemeContext] --pad-button-panel-separator-hsl not found for theme ${effectiveTheme} when trying to set --pad-effective-button-panel-separator-color`);
-        }
+        // Set final computed PAD colors with opacity (if needed, otherwise AgentSection will construct hsla)
+        // For now, AgentSection will construct hsla using the --pad-bg-hsl variables.
+        // We can re-introduce pre-computed effective colors here if direct hsl(var(--pad-bg-hsl)) doesn't work with opacity.
         
+        // Example: If we wanted ThemeContext to set the final --pad-effective-background-color
+        // if (themeColorsToSet['--pad-bg-hsl']) {
+        //   const padEffectiveBg = `hsla(${themeColorsToSet['--pad-bg-hsl']}, 0.85)`;
+        //   style.setProperty('--pad-effective-background-color', padEffectiveBg);
+        // }
+        // And similar for border and separator if they need opacity.
+
       } else {
         console.error(`[ThemeContext] No HSL values found for theme ${effectiveTheme}!`);
       }
 
       setThemeVersion(v => v + 1);
       // The log below will show the themeVersion *before* this increment, which is expected.
-      console.log(`[ThemeContext] Updated :root styles and themeVersion for theme ${effectiveTheme}`);
+      // console.log(`[ThemeContext] Updated :root styles and themeVersion for theme ${effectiveTheme}`);
     }
-  }, [currentThemeInternal]); // Only currentThemeInternal.
+  }, [currentThemeInternal]);
 
 
   const contextValue = useMemo(() => ({
