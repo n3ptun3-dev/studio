@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { HolographicButton } from '@/components/game/shared/HolographicPanel';
+import { HolographicButton, HolographicInput } from '@/components/game/shared/HolographicPanel';
 import { Progress } from "@/components/ui/progress";
 import { Fingerprint, Settings, BookOpen, Info, Power } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -169,39 +169,33 @@ interface SectionProps {
 }
 
 export function AgentSection({ parallaxOffset }: SectionProps) {
-  const { playerSpyName, faction, playerStats, isTODWindowOpen } = useAppContext();
-  const { theme: currentTheme, themeVersion } = useTheme();
+  const { playerSpyName, faction, playerStats } = useAppContext();
+  const { theme: currentTheme } = useTheme();
 
   const [isPadUp, setIsPadUp] = useState(false);
   const [padScreenView, setPadScreenView] = useState<PadScreenView>('dossier');
   const [padButtonPanelHeight, setPadButtonPanelHeight] = useState(60); 
   const [padPeekPlusButtonHeight, setPadPeekPlusButtonHeight] = useState(padButtonPanelHeight + PEEK_AMOUNT);
   
+  // Refs for layout calculations
+  const topContentRef = useRef<HTMLDivElement>(null); 
+  const titleAreaContentRef = useRef<HTMLDivElement>(null);
+  const statsAreaRef = useRef<HTMLDivElement>(null);
+  const thePadRef = useRef<HTMLDivElement>(null); 
   const padButtonPanelRef = useRef<HTMLDivElement>(null);
-  // const topContentRef = useRef<HTMLDivElement>(null); // Not strictly needed for layout if PAD is absolute
-  // const titleAreaContentRef = useRef<HTMLDivElement>(null); // Not strictly needed
-  // const statsAreaRef = useRef<HTMLDivElement>(null); // Not strictly needed
-  const thePadRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (padButtonPanelRef.current) {
       const measuredHeight = padButtonPanelRef.current.offsetHeight;
-      if (measuredHeight > 0) {
+      if (measuredHeight > 0 && measuredHeight !== padButtonPanelHeight) {
         setPadButtonPanelHeight(measuredHeight);
       }
     }
-  }, []);
+  }, [padButtonPanelHeight]); 
 
   useEffect(() => {
     setPadPeekPlusButtonHeight(padButtonPanelHeight + PEEK_AMOUNT);
   }, [padButtonPanelHeight]);
-
-  // Auto-close PAD if TODWindow opens (e.g. from another section)
-   useEffect(() => {
-    if (isTODWindowOpen && isPadUp) {
-      setIsPadUp(false);
-    }
-  }, [isTODWindowOpen, isPadUp]);
 
   const handlePowerClick = useCallback(() => {
     setIsPadUp(prev => !prev);
@@ -228,16 +222,16 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
   };
 
   return (
-    // AgentSection Root: Full height, overflow hidden (PAD handles its own scroll for content)
-    <div className="relative h-full overflow-hidden">
+    // AgentSection Root: Full height, overflow hidden.
+    <div className="relative h-full overflow-hidden"> {/* scrollContainerRef equivalent */}
       {/* Static Background Layer (Title + Stats) - Fills AgentSection */}
       <div 
-        // ref={topContentRef} // Not directly manipulated for layout in this absolute model
+        ref={topContentRef} // Ref for the entire static background content block
         className="absolute inset-0 flex flex-col z-10 pointer-events-none" 
       >
         {/* Title Area - Expands to fill space above Stats Area */}
         <div 
-          // ref={titleAreaContentRef} // Not directly manipulated
+          ref={titleAreaContentRef} // Ref for Title Area
           className="flex-grow flex flex-col items-center justify-center pt-4 md:pt-2 pb-2 text-center relative overflow-hidden"
         >
             <div className="absolute inset-0 flex items-center justify-center -z-10 opacity-10">
@@ -249,7 +243,7 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
 
         {/* Stats Area - Sits at the bottom of the topContentRef */}
         <div 
-          // ref={statsAreaRef} // Not directly manipulated
+          ref={statsAreaRef} // Ref for Stats Area
           className="flex-shrink-0 text-center pt-2 pb-4 px-2"
         >
             <div className="w-full max-w-md mx-auto">
@@ -276,7 +270,7 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
                 </p>
             </div>
         </div>
-        {/* Invisible Spacer to reserve space for PAD button panel when PAD is off */}
+         {/* Invisible Spacer to reserve space for PAD button panel when PAD is off */}
         <div style={{ height: `${padPeekPlusButtonHeight}px` }} className="flex-shrink-0"></div>
       </div>
 
@@ -341,23 +335,27 @@ export function AgentSection({ parallaxOffset }: SectionProps) {
           </HolographicButton>
         </div>
 
-        {/* PAD Screen Area Wrapper */}
+        {/* PAD Screen Area Wrapper - This gets the PAD's main background */}
         <div 
           className={cn(
             "flex-grow min-h-0", 
             "pad-screen-wrapper-style rounded-b-lg" 
             )}
         >
+          {/* Conditional rendering of screen content or peek area */}
           {isPadUp ? (
-             <ScrollArea className="h-full w-full pad-screen-grid bg-accent/10 border border-primary/20 rounded-md m-2">
-                {renderPadScreenContent()}
-             </ScrollArea>
+             // This div is the one that gets the inset grid style AND the margin
+             <div className="h-full w-full pad-screen-grid bg-accent/10 border border-primary/20 rounded-md m-2">
+                <ScrollArea className="h-full w-full"> 
+                    {renderPadScreenContent()}
+                </ScrollArea>
+             </div>
           ) : (
             // Peek of the screen when PAD is off
             <div 
               className={cn(
-                "pad-screen-grid bg-accent/10 border border-primary/20 rounded-b-lg m-2 opacity-50",
-                `h-[${PEEK_AMOUNT}px]`
+                "pad-screen-grid bg-accent/10 border border-primary/20 rounded-b-md m-2 opacity-50", // Added m-2 here for consistency if peek is visible
+                `h-[${PEEK_AMOUNT}px]` 
               )}
             >
               {/* Intentionally empty */}

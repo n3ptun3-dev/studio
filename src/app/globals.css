@@ -28,9 +28,9 @@
     --border-hsl: 130 60% 35%;
     --input-hsl: 130 30% 25%;
     --ring-hsl: 130 70% 50%;
-    --hologram-glow-color-hsl: 130 90% 55%; /* Specific HSL for glow */
+    --hologram-glow-color-hsl: 130 90% 55%; 
     /* PAD specific HSLs (will also be set by JS from themeHSLValues) */
-    --pad-bg-hsl: var(--card-hsl); /* Or specific, e.g., 130 20% 6% */
+    --pad-bg-hsl: var(--card-hsl); 
     --pad-border-hsl: var(--border-hsl);
     --pad-button-panel-separator-hsl: var(--border-hsl);
 
@@ -66,9 +66,9 @@
     --hologram-button-text: hsl(var(--primary-foreground-hsl), 0.9);
 
     /* PAD specific colors (also overridden by JS on :root) */
-    --pad-background-color: hsla(var(--pad-bg-hsl), 0.75);
-    --pad-border-color: hsl(var(--pad-border-hsl));
-    --pad-button-panel-separator-color: hsla(var(--pad-button-panel-separator-hsl), 0.5);
+    --pad-background-color: hsla(var(--pad-bg-hsl), 0.85) !important; /* Higher opacity */
+    --pad-border-color: hsl(var(--pad-border-hsl)) !important;
+    --pad-button-panel-separator-color: hsla(var(--pad-button-panel-separator-hsl), 0.5) !important;
 
     /* Debug color */
     --terminal-green-debug-color: lime;
@@ -158,9 +158,9 @@
     --ring-hsl: 220 60% 55%;
     --hologram-glow-color-hsl: 220 70% 60%;
     /* PAD specific HSLs (will also be set by JS from themeHSLValues) */
-    --pad-bg-hsl: var(--card-hsl);
-    --pad-border-hsl: var(--border-hsl);
-    --pad-button-panel-separator-hsl: var(--border-hsl);
+    --pad-bg-hsl: 220 15% 12%; /* Example for neutral PAD */
+    --pad-border-hsl: 220 20% 30%;
+    --pad-button-panel-separator-hsl: 220 20% 30%;
     --neutral-debug-color: gray;
   }
 
@@ -304,14 +304,14 @@
 
 /* New PAD specific styling using variables set on :root by JS */
 .pad-main-container {
-  background-color: var(--pad-background-color) !important; /* e.g., hsla(var(--pad-bg-hsl), 0.75) */
-  border-color: var(--pad-border-color) !important;     /* e.g., hsl(var(--pad-border-hsl)) */
+  background-color: var(--pad-background-color) !important; 
+  border-color: var(--pad-border-color) !important;     
   /* Tailwind's `border` class will provide border-width: 1px; */
 }
 
 .pad-button-panel-style {
   background-color: var(--pad-background-color) !important; /* Match main PAD bg */
-  border-bottom-color: var(--pad-button-panel-separator-color) !important; /* e.g., hsla(var(--pad-button-panel-separator-hsl), 0.5) */
+  border-bottom-color: var(--pad-button-panel-separator-color) !important; 
 }
 
 .pad-screen-wrapper-style {
