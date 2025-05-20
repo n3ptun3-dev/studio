@@ -172,14 +172,14 @@ interface AgentSectionProps {
 }
 
 export function AgentSection({ parallaxOffset }: AgentSectionProps) {
-  const { playerSpyName, faction, playerStats, isLoading } = useAppContext();
-  const { theme: currentGlobalTheme } = useTheme();
+  const { playerSpyName, playerPiName, faction, playerStats, isLoading } = useAppContext();
+  const { theme: currentGlobalTheme } = useTheme(); 
 
   const [isPadUp, setIsPadUp] = useState(false);
   const [padScreenView, setPadScreenView] = useState<PadScreenView>('dossier');
   const [padButtonPanelHeight, setPadButtonPanelHeight] = useState(60); 
   const [padPeekPlusButtonHeight, setPadPeekPlusButtonHeight] = useState(padButtonPanelHeight + PEEK_AMOUNT);
-
+  
   const titleAreaContentRef = useRef<HTMLDivElement>(null);
   const statsAreaRef = useRef<HTMLDivElement>(null);
   const thePadRef = useRef<HTMLDivElement>(null);
@@ -223,18 +223,23 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
     height: isPadUp ? '100%' : `${padPeekPlusButtonHeight}px`,
   };
 
+  // Hardcoded HSL values for terminal-green theme's PAD
+  const padBgHsl_HardcodedGreen = '130 25% 15%';
+  const padBorderHsl_HardcodedGreen = '130 60% 45%'; // This will be overridden by var(--pad-border-hsl) if that var is correctly set and themed
+  const padButtonSeparatorHsl_HardcodedGreen = '130 50% 25%';
+
   const currentPadInlineStyle: React.CSSProperties = {
     ...padDynamicStyle,
-    backgroundColor: 'var(--pad-effective-background-color)', 
-    borderColor: 'var(--pad-effective-border-color)',
+    backgroundColor: `hsl(${padBgHsl_HardcodedGreen})`, // Opaque hardcoded green
+    borderColor: `hsl(var(--pad-border-hsl))`,       // Themed border from :root
     borderRadius: '0.5rem',
     borderWidth: '1px',
     borderStyle: 'solid',
   };
 
   const buttonPanelInlineStyle: React.CSSProperties = {
-    backgroundColor: 'var(--pad-effective-background-color)', 
-    borderBottomColor: 'var(--pad-effective-button-panel-separator-color)',
+    backgroundColor: `hsl(${padBgHsl_HardcodedGreen})`, // Opaque hardcoded green
+    borderBottomColor: `hsl(${padButtonSeparatorHsl_HardcodedGreen})`, // Opaque hardcoded green separator
     borderBottomWidth: '1px',
     borderBottomStyle: 'solid',
     borderTopLeftRadius: '0.5rem',
@@ -242,7 +247,7 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
   };
   
   const screenWrapperInlineStyle: React.CSSProperties = {
-    backgroundColor: 'var(--pad-effective-background-color)',
+    backgroundColor: `hsl(${padBgHsl_HardcodedGreen})`, // Opaque hardcoded green
     borderBottomLeftRadius: '0.5rem',
     borderBottomRightRadius: '0.5rem',
   };
@@ -257,8 +262,8 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
   }
   
   return (
-    <div className="relative h-full overflow-hidden">
-      {/* Layer 1: Static Background Content (Title + Stats) */}
+    <div className="relative h-full overflow-hidden"> {/* AgentSection Root */}
+      {/* Static Background Layer (Title + Stats) */}
       <div 
         ref={topContentRef} 
         className="absolute inset-0 flex flex-col z-10 pointer-events-none"
@@ -295,17 +300,18 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
               </p>
             </div>
         </div>
-        <div className="flex-shrink-0" style={{ height: `${padPeekPlusButtonHeight}px` }} /> {/* Spacer */}
+        {/* Invisible Spacer for PAD when "off" */}
+        <div className="flex-shrink-0" style={{ height: `${padPeekPlusButtonHeight}px` }} />
       </div>
 
-      {/* Layer 2: The PAD (Absolutely Positioned Sliding Layer) */}
+      {/* The PAD (Absolutely Positioned Sliding Layer) */}
       <div
         ref={thePadRef}
         className={cn(
           "absolute inset-x-0 w-[90%] mx-auto flex flex-col shadow-lg z-20",
-          "transition-all duration-500 ease-in-out",
-          "backdrop-blur-sm", // Re-added backdrop-blur
-          "pad-gloss-effect"  // Re-added gloss effect
+          "transition-all duration-500 ease-in-out"
+          // "backdrop-blur-sm", // Temporarily removed
+          // "pad-gloss-effect" // Temporarily removed
         )}
         style={currentPadInlineStyle} 
       >
@@ -365,20 +371,20 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
         {/* PAD Screen Area Wrapper */}
         <div 
           className={cn(
-            "flex-grow min-h-0"
+            "flex-grow min-h-0" 
           )}
           style={screenWrapperInlineStyle}
         >
           {/* Actual Scrollable Screen Grid Area */}
           {isPadUp ? (
-             <div className="h-full w-full pad-screen-grid bg-[hsla(var(--accent-hsl),0.1)] border border-[hsl(var(--primary-hsl))] rounded-md m-2">
+             <div className="h-full w-full pad-screen-grid bg-accent/10 border border-primary/20 rounded-md m-2">
               <ScrollArea className="h-full w-full">
                 {renderPadScreenContent()}
               </ScrollArea>
             </div>
           ) : (
-             <div className="h-[20px] pad-screen-grid bg-[hsla(var(--accent-hsl),0.1)] border border-[hsl(var(--primary-hsl))] rounded-md m-2">
-              {/* Empty for peek state, grid shows through from parent */}
+             <div className="h-[20px] pad-screen-grid bg-accent/10 border border-primary/20 rounded-md m-2">
+              {/* Empty for peek state, grid shows through */}
             </div>
           )}
         </div>
