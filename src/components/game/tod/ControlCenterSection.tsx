@@ -3,9 +3,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { HolographicButton } from '@/components/game/shared/HolographicPanel'; // For Comms section
+import { HolographicButton } from '@/components/game/shared/HolographicPanel';
 import { MessageFeed } from '@/components/game/shared/MessageFeed';
-import { Zap, Fingerprint, ShieldAlert, Info, Clock, AlertTriangle, CheckSquare, Activity, Timer as TimerIcon } from 'lucide-react';
+import { Zap, Fingerprint, ShieldAlert, Info, Clock, AlertTriangle, CheckSquare, Activity, Timer as TimerIcon, Copy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -24,14 +24,14 @@ interface CircularTimerProps {
   warningThresholds?: { mild: number; strong: number }; // seconds remaining for color change
   isPulsing?: boolean;
   errorState?: boolean; // For Transfer Window flashing "ERROR"
-  sizeClasses?: string; // e.g. "w-24 h-24 md:w-32 md:h-32" for explicit sizing control
+  sizeClasses?: string; 
 }
 
 const CircularTimer: React.FC<CircularTimerProps> = ({
   id, title, duration, currentTime, onClick, icon, rate, statusText, warningThresholds, isPulsing, errorState, sizeClasses
 }) => {
   const progress = duration > 0 ? ((duration - currentTime) / duration) * 100 : 0;
-  const dynamicSize = 80 + (progress * 0.7); // Grows from 80px to 150px as timer runs out
+  const dynamicSize = 80 + (progress * 0.7); 
 
   let borderColorClass = 'border-primary';
   let textColorClass = 'text-primary';
@@ -57,7 +57,7 @@ const CircularTimer: React.FC<CircularTimerProps> = ({
         className={cn(
           "relative flex flex-col items-center justify-center rounded-full border-2 cursor-pointer transition-all duration-300 ease-out",
           borderColorClass,
-          "bg-background/30 hover:bg-background/50" // Subtle background for the timer itself
+          "bg-background/30 hover:bg-background/50"
         )}
         style={{ 
           width: sizeClasses ? undefined : `${dynamicSize}px`, 
@@ -118,8 +118,8 @@ interface SimpleIconTimerProps {
   title: string;
   progress: number; // 0-100
   icon: React.ReactNode;
-  baseSizeClasses?: string; // e.g., "w-16 h-16"
-  colorClass?: string; // e.g., "text-primary border-primary"
+  baseSizeClasses?: string; 
+  colorClass?: string; 
   onClick?: () => void;
   isPulsing?: boolean;
 }
@@ -144,13 +144,13 @@ const SimpleIconTimer: React.FC<SimpleIconTimerProps> = ({
             <svg className="absolute inset-0 w-full h-full" viewBox="0 0 36 36" style={{ transform: 'rotate(-90deg)' }}>
               <circle
                 className="text-transparent"
-                strokeWidth="2.5" // Slightly thicker for icon view
+                strokeWidth="2.5" 
                 stroke="currentColor"
                 fill="transparent"
                 r="15.9155"
                 cx="18"
                 cy="18"
-                opacity="0.2" // Dimmer track
+                opacity="0.2" 
               />
               <circle
                 className={cn("transition-all duration-500")}
@@ -164,7 +164,7 @@ const SimpleIconTimer: React.FC<SimpleIconTimerProps> = ({
                 cy="18"
               />
             </svg>
-            <div className={cn("w-1/2 h-1/2", colorClass.split(' ')[0])}> {/* Use only text color for icon */}
+            <div className={cn("w-1/2 h-1/2", colorClass.split(' ')[0])}>
               {icon}
             </div>
           </div>
@@ -176,6 +176,13 @@ const SimpleIconTimer: React.FC<SimpleIconTimerProps> = ({
     </TooltipProvider>
   );
 };
+
+type SectionProps = {
+  parallaxOffset: number;
+};
+
+const SELECTABLE_COMMS_TABS = ['All', 'HQ', 'Alerts', 'System'] as const;
+type SelectableCommsTab = typeof SELECTABLE_COMMS_TABS[number];
 
 
 export function ControlCenterSection({ parallaxOffset }: SectionProps) {
@@ -196,18 +203,8 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
   const [isVaultRaidedError, setIsVaultRaidedError] = useState(false); 
   const [weeklyCycleTime, setWeeklyCycleTime] = useState(7 * 24 * 60 * 60); 
 
-  const [activeCommsTab, setActiveCommsTab] = useState<'All' | 'HQ' | 'Alerts' | 'System'>('All');
+  const [activeCommsTab, setActiveCommsTab] = useState<SelectableCommsTab>('All');
   
-  // Placeholder logic for vault raided status - in a real app this would come from state
-  useEffect(() => {
-    const randomVaultStatus = Math.random() > 0.8; // 20% chance of being raided
-    // setIsVaultRaidedError(randomVaultStatus); 
-    // if (randomVaultStatus) {
-    //    addMessage({type:'alert', text:'Vault breach detected! ELINT transfer systems compromised.'});
-    // }
-  }, [addMessage]);
-
-
   useEffect(() => { 
     if (networkTapTime > 0) {
       const timer = setInterval(() => setNetworkTapTime(prev => Math.max(0, prev - 1)), 1000);
@@ -268,8 +265,8 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
             setNetworkTapTime(3600); 
             setNetworkTapRate(10 + (playerStats.level * 2)); 
             addMessage({type:'system', text:'Network Tap Activated! Generating ELINT.'}); 
-            if(openTODWindow) openTODWindow("", <></>, {showCloseButton:false}); // Close window hack
-            setTimeout(() => openTODWindow("", <></>, {showCloseButton:false}),0) // Close window hack part 2
+            if(openTODWindow) openTODWindow("", <></>, {showCloseButton:false}); 
+            setTimeout(() => openTODWindow("", <></>, {showCloseButton:false}),0) 
           }}>Activate Lvl 1 Tap</HolographicButton>
         </div>
       );
@@ -390,7 +387,6 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
 
   const displayedFactionCode = dailyTeamCode[faction] || dailyTeamCode['Observer'];
 
-  // Simple Icon Timer data
   const simpleTimersData = [
     { id: "s-network-tap", title: "Network Tap", progress: networkTapTime > 0 ? ((3600 - networkTapTime) / 3600) * 100 : 0, icon: <Zap className="w-full h-full" />, onClick: handleNetworkTapClick, isPulsing: networkTapTime > 0 && networkTapTime <= 600, colorClass: networkTapTime <= 0 ? "text-yellow-400 border-yellow-400" : (networkTapTime <= 300 ? "text-destructive border-destructive" : (networkTapTime <= 600 ? "text-yellow-400 border-yellow-400" : "text-primary border-primary")) },
     { id: "s-check-in", title: "Check-In", progress: checkInTime > 0 ? (((6 * 3600) - checkInTime) / (6*3600)) * 100 : 0, icon: <CheckSquare className="w-full h-full" />, onClick: handleCheckInClick, isPulsing: checkInTime > 0 && checkInTime < 300, colorClass: checkInTime <= 0 ? "text-green-400 border-green-400" : (checkInTime <= 300 ? "text-destructive border-destructive" : (checkInTime <= 600 ? "text-yellow-400 border-yellow-400" : "text-primary border-primary")) },
@@ -401,9 +397,8 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
 
   return (
     <div className="flex flex-col p-3 md:p-4 h-full overflow-hidden space-y-3 md:space-y-4">
-      {/* Timer Area - No HolographicPanel border */}
+      {/* Timer Area */}
       <div className="flex-shrink-0">
-        {/* Group 1: Scrollable Detailed Timers */}
         <div className="flex overflow-x-auto py-2 space-x-3 md:space-x-4 scrollbar-hide items-start">
           <CircularTimer 
             id="network-tap"
@@ -419,7 +414,7 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
           />
           <CircularTimer 
             id="check-in"
-            title="Check-In" // Updated title
+            title="Check-In"
             duration={6 * 3600} 
             currentTime={checkInTime}
             onClick={handleCheckInClick}
@@ -450,7 +445,6 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
             warningThresholds={{ mild: 12 * 3600, strong: 6 * 3600 }} 
           />
         </div>
-        {/* Group 2: Always Fit Icon Timers */}
         <div className="flex justify-around items-center w-full py-1 space-x-1 md:space-x-2 mt-1">
           {simpleTimersData.map(timer => (
             <SimpleIconTimer
@@ -462,7 +456,7 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
               onClick={timer.onClick}
               isPulsing={timer.isPulsing}
               colorClass={timer.colorClass}
-              baseSizeClasses="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16" // Smaller base for this row
+              baseSizeClasses="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16"
             />
           ))}
         </div>
@@ -470,25 +464,27 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
 
       {/* Comms Area */}
       <div className="flex-grow flex flex-col min-h-0 bg-black/70 backdrop-blur-sm border border-primary/30 rounded-lg">
-        <div className="flex-none flex items-center justify-between p-1.5 md:p-2 border-b border-primary/20">
-          <div className="flex space-x-1">
-            {(['All', 'HQ', 'Alerts', 'System'] as const).map(tab => (
-              <HolographicButton 
-                key={tab}
-                size="sm"
-                className={cn(
-                  "!text-xs !py-1 !px-1.5 md:!px-2", 
-                  activeCommsTab === tab ? "active-pad-button" : "hover:bg-primary/10"
-                )}
-                onClick={() => setActiveCommsTab(tab)}
-              >
-                {tab}
-              </HolographicButton>
-            ))}
-          </div>
+        {/* Tab Bar */}
+        <div className="flex-none flex items-center p-1.5 md:p-2 border-b border-primary/20 space-x-1">
+          <div className="px-2 py-1 text-sm font-semibold text-primary mr-1">Comms</div>
+          {SELECTABLE_COMMS_TABS.map((tab) => (
+            <HolographicButton 
+              key={tab}
+              size="sm" // Already a ShadCN prop, might need custom styling for very small buttons
+              className={cn(
+                "!text-xs !font-rajdhani !py-1 !px-1.5 md:!px-2", // Force smaller text and padding
+                activeCommsTab === tab ? "active-pad-button" : "hover:bg-primary/10 !bg-transparent"
+              )}
+              onClick={() => setActiveCommsTab(tab)}
+            >
+              {tab}
+            </HolographicButton>
+          ))}
         </div>
+        
+        {/* Daily Team Code */}
         <div 
-            className="p-1.5 md:p-2 border-b border-primary/20 bg-primary/10 cursor-pointer hover:bg-primary/20"
+            className="group p-1.5 md:p-2 border-b border-primary/20 bg-primary/10 cursor-pointer hover:bg-primary/20 flex items-center justify-center gap-2"
             onClick={handleCodeCopy}
             title="Click to copy Daily Team Code"
           >
@@ -496,7 +492,10 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
               <span className="font-semibold text-primary">DTC ({faction.substring(0,3)}): </span> 
               <span className="text-accent font-digital7 tracking-wider">{displayedFactionCode}</span>
             </p>
+            <Copy className="w-3 h-3 text-muted-foreground group-hover:text-accent icon-glow"/>
         </div>
+
+        {/* Message Feed */}
         <div className="flex-grow min-h-0">
           <MessageFeed filter={activeCommsTab !== 'All' ? activeCommsTab.toLowerCase() as 'hq' | 'alerts' | 'system' : undefined} />
         </div>
@@ -504,5 +503,3 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
     </div>
   );
 }
-
-
