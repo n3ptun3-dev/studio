@@ -168,29 +168,28 @@ SettingsView.displayName = 'SettingsView';
 type PadScreenView = 'dossier' | 'intel' | 'settings';
 
 export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
-  const { playerSpyName, faction, playerStats } = useAppContext();
+  const { playerSpyName, faction, playerStats, isLoading } = useAppContext();
   const { theme: currentGlobalTheme } = useTheme();
   
   const [isPadUp, setIsPadUp] = useState(false);
   const [padScreenView, setPadScreenView] = useState<PadScreenView>('dossier');
-  
+  const [padButtonPanelHeight, setPadButtonPanelHeight] = useState(60); // Default estimate
+  const [padPeekPlusButtonHeight, setPadPeekPlusButtonHeight] = useState(padButtonPanelHeight + PEEK_AMOUNT);
+
   const topContentRef = useRef<HTMLDivElement>(null);
   const titleAreaContentRef = useRef<HTMLDivElement>(null);
   const statsAreaRef = useRef<HTMLDivElement>(null);
   const thePadRef = useRef<HTMLDivElement>(null);
   const padButtonPanelRef = useRef<HTMLDivElement>(null);
-  
-  const [padButtonPanelHeight, setPadButtonPanelHeight] = useState(60); // Default height
-  const [padPeekPlusButtonHeight, setPadPeekPlusButtonHeight] = useState(padButtonPanelHeight + PEEK_AMOUNT);
 
   useEffect(() => {
     if (padButtonPanelRef.current) {
       const measuredHeight = padButtonPanelRef.current.offsetHeight;
-      if (measuredHeight > 0) {
+      if (measuredHeight > 0 && measuredHeight !== padButtonPanelHeight) {
         setPadButtonPanelHeight(measuredHeight);
       }
     }
-  }, [isPadUp]); // Re-measure if PAD comes up, in case its content changes
+  }, [isPadUp, padButtonPanelHeight]); // Re-measure if PAD comes up or if default height was used
 
   useEffect(() => {
     setPadPeekPlusButtonHeight(padButtonPanelHeight + PEEK_AMOUNT);
@@ -219,41 +218,32 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
     ? { top: '0px', height: '100%' }
     : { top: `calc(100% - ${padPeekPlusButtonHeight}px)`, height: `${padPeekPlusButtonHeight}px` };
 
-  // Define inline styles for PAD elements using CSS variables
-  const currentPadBaseStyle: React.CSSProperties = {
-    ...padDynamicStyle,
-    backgroundColor: `hsl(var(--pad-bg-hsl))`,
-    borderColor: `hsl(var(--pad-border-hsl))`,
-    borderRadius: '0.5rem', // Equivalent to Tailwind's rounded-lg
-    borderWidth: '1px',
-    borderStyle: 'solid',
-  };
+  const padBaseClasses = "absolute inset-x-0 w-[90%] mx-auto flex flex-col shadow-lg z-20 transition-all duration-500 ease-in-out";
+  const padVisualClasses = "border rounded-lg bg-[hsl(var(--pad-bg-hsl))]/85 border-[hsl(var(--pad-border-hsl))]"; // Added /85 for opacity
+  // backdrop-blur-sm pad-gloss-effect // Temporarily removed
 
-  const buttonPanelStyle: React.CSSProperties = {
-    backgroundColor: `hsl(var(--pad-bg-hsl))`,
-    borderBottomColor: `hsl(var(--pad-button-panel-separator-hsl))`,
-    borderBottomWidth: '1px',
-    borderBottomStyle: 'solid',
-    borderTopLeftRadius: '0.5rem',
-    borderTopRightRadius: '0.5rem',
-  };
-  
-  const screenWrapperStyle: React.CSSProperties = {
-    backgroundColor: `hsl(var(--pad-bg-hsl))`,
-    borderBottomLeftRadius: '0.5rem',
-    borderBottomRightRadius: '0.5rem',
-  };
+  const buttonPanelVisualClasses = "bg-[hsl(var(--pad-bg-hsl))]/85 border-b-[hsl(var(--pad-button-panel-separator-hsl))]/50 rounded-t-lg"; // Added /85 and /50 for opacity
+  const screenWrapperVisualClasses = "bg-[hsl(var(--pad-bg-hsl))]/85 rounded-b-lg"; // Added /85 for opacity
+
+
+  if (isLoading && !playerSpyName) { // Show loading state only if truly initial loading
+    return (
+      <div className="relative h-full overflow-hidden flex items-center justify-center">
+        <p className="holographic-text text-xl animate-pulse">Loading Agent Data...</p>
+      </div>
+    );
+  }
 
   return (
-    // AgentSection Root: Static container for the fixed background content and the sliding PAD
-    <div className="relative h-full overflow-hidden"> {/* No internal flex needed here */}
+    // AgentSection Root: Manages overall layout and PAD positioning
+    <div className="relative h-full overflow-hidden">
       
-      {/* Static Background Layer (Title + Stats + Spacer for PAD when off) */}
+      {/* Static Background Layer (Title + Stats) */}
       <div 
         ref={topContentRef}
         className="absolute inset-0 flex flex-col z-10 pointer-events-none" 
       >
-        {/* Wrapper for Title and Stats to allow Title to grow */}
+        {/* Wrapper to allow Title Area to grow and push Stats Area down */}
         <div className="flex flex-col flex-grow">
           {/* Title Area - grows to push Stats Area to its bottom */}
           <div 
@@ -275,7 +265,7 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
             <div className="w-full max-w-md mx-auto">
               <p className="text-sm text-muted-foreground">Agent Rank: {playerStats.level}</p>
               <Progress value={xpProgress} className="w-full h-2 mt-1 bg-primary/20 [&>div]:bg-primary" />
-              <p className="text-xs text-muted-foreground">{playerStats.xp} / {nextLevelXpTarget} XP</p>
+              <p className="text-xs text-muted-foreground">{xpForCurrentLevel} / {xpToNextLevelSpan} XP ({playerStats.xp} total)</p>
             </div>
             <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-3 text-sm w-full max-w-md mx-auto font-rajdhani">
               <div>
@@ -305,20 +295,20 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
       <div
         ref={thePadRef}
         className={cn(
-          "absolute inset-x-0 w-[90%] mx-auto flex flex-col shadow-lg z-20",
-          "transition-all duration-500 ease-in-out",
-          "backdrop-blur-sm" 
-          // "pad-gloss-effect" // Re-add if background works
+          padBaseClasses,
+          padVisualClasses
+          // "backdrop-blur-sm", // Re-add if background works
+          // "pad-gloss-effect"  // Re-add if background works
         )}
-        style={currentPadBaseStyle} 
+        style={padDynamicStyle} 
       >
         {/* PAD Button Panel */}
         <div
           ref={padButtonPanelRef}
           className={cn(
-            "h-[60px] flex-shrink-0 flex items-center justify-between px-4"
+            "h-[60px] flex-shrink-0 flex items-center justify-between px-4 border-b",
+            buttonPanelVisualClasses
           )}
-          style={buttonPanelStyle}
         >
           {isPadUp ? (
             <div className="flex-grow flex justify-center gap-4">
@@ -368,9 +358,9 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
         {/* PAD Screen Area Wrapper */}
         <div 
           className={cn(
-            "flex-grow min-h-0" // Allows ScrollArea to fill height
+            "flex-grow min-h-0", 
+            screenWrapperVisualClasses // For background and bottom rounding
           )}
-          style={screenWrapperStyle} 
         >
           {/* Actual Screen content or Peek area */}
           {isPadUp ? (
@@ -381,8 +371,7 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
              </div>
           ) : (
             <div 
-              className="pad-screen-grid bg-accent/10 border border-[hsl(var(--primary-hsl))] rounded-md m-2"
-              style={{ height: `${PEEK_AMOUNT}px`}} // Ensure PEEK_AMOUNT is applied
+              className="h-[${PEEK_AMOUNT}px] pad-screen-grid bg-accent/10 border border-[hsl(var(--primary-hsl))] rounded-md m-2" // Shows the grid for peek
             >
               {/* Peek content, or just the grid for visual cue */}
             </div>
@@ -392,5 +381,3 @@ export function AgentSection({ parallaxOffset }: { parallaxOffset: number }) {
     </div>
   );
 }
-
-    
