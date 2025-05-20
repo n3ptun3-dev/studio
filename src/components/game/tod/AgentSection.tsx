@@ -3,13 +3,15 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppContext, type Faction } from '@/contexts/AppContext';
-import { HolographicButton } from '@/components/game/shared/HolographicPanel';
+// import { HolographicButton } from '@/components/game/shared/HolographicPanel'; // Not used if button is simple div
 import { Progress } from "@/components/ui/progress";
 import { Fingerprint, Settings, BookOpen, Info, Power } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { XP_THRESHOLDS } from '@/lib/constants';
 import { useTheme, type Theme } from '@/contexts/ThemeContext';
+import { HolographicButton } from '@/components/game/shared/HolographicPanel';
+
 
 const PEEK_AMOUNT = 20; // Height of the screen area visible when PAD is "off"
 
@@ -222,36 +224,30 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
     top: isPadUp ? '0px' : `calc(100% - ${padPeekPlusButtonHeight}px)`,
     height: isPadUp ? '100%' : `${padPeekPlusButtonHeight}px`,
   };
-
-  // Hardcoded HSL values for terminal-green theme's PAD
-  const padBgHsl_HardcodedGreen = '130 25% 15%';
-  const padBorderHsl_HardcodedGreen = '130 60% 45%'; // This will be overridden by var(--pad-border-hsl) if that var is correctly set and themed
-  const padButtonSeparatorHsl_HardcodedGreen = '130 50% 25%';
-
+  
   const currentPadInlineStyle: React.CSSProperties = {
     ...padDynamicStyle,
-    backgroundColor: `hsl(${padBgHsl_HardcodedGreen})`, // Opaque hardcoded green
-    borderColor: `hsl(var(--pad-border-hsl))`,       // Themed border from :root
-    borderRadius: '0.5rem',
+    backgroundColor: `hsl(var(--pad-bg-hsl))`, 
+    borderColor: `hsl(var(--pad-border-hsl))`,
+    borderRadius: '0.5rem', // Tailwind rounded-lg
     borderWidth: '1px',
     borderStyle: 'solid',
   };
 
   const buttonPanelInlineStyle: React.CSSProperties = {
-    backgroundColor: `hsl(${padBgHsl_HardcodedGreen})`, // Opaque hardcoded green
-    borderBottomColor: `hsl(${padButtonSeparatorHsl_HardcodedGreen})`, // Opaque hardcoded green separator
+    backgroundColor: `hsl(var(--pad-bg-hsl))`,
+    borderBottomColor: `hsl(var(--pad-button-panel-separator-hsl))`,
     borderBottomWidth: '1px',
     borderBottomStyle: 'solid',
     borderTopLeftRadius: '0.5rem',
     borderTopRightRadius: '0.5rem',
   };
-  
+
   const screenWrapperInlineStyle: React.CSSProperties = {
-    backgroundColor: `hsl(${padBgHsl_HardcodedGreen})`, // Opaque hardcoded green
+    backgroundColor: `hsl(var(--pad-bg-hsl))`,
     borderBottomLeftRadius: '0.5rem',
     borderBottomRightRadius: '0.5rem',
   };
-
 
   if (isLoading && !playerSpyName && playerStats.level === 0) {
     return (
@@ -320,6 +316,7 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
           ref={padButtonPanelRef}
           className={cn(
             "h-[60px] flex-shrink-0 flex items-center justify-between px-4"
+            // No explicit "rounded-t-lg" here if parent clips or style provides it
           )}
            style={buttonPanelInlineStyle}
         >
@@ -371,7 +368,8 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
         {/* PAD Screen Area Wrapper */}
         <div 
           className={cn(
-            "flex-grow min-h-0" 
+            "flex-grow min-h-0" // For background and bottom rounding
+            // "pad-screen-wrapper-style rounded-b-lg" 
           )}
           style={screenWrapperInlineStyle}
         >
