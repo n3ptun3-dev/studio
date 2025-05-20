@@ -17,7 +17,7 @@ interface CircularTimerProps {
   id: string;
   title: string;
   duration: number; // in seconds
-  currentTime: number; // in seconds
+  currentTime: number; // in seconds, represents time *remaining*
   onTimeUp?: () => void;
   onClick?: () => void;
   icon?: React.ReactNode;
@@ -31,8 +31,9 @@ interface CircularTimerProps {
 const CircularTimer: React.FC<CircularTimerProps> = ({
   id, title, duration, currentTime, onClick, icon, rate, statusText, warningThresholds, isPulsing, errorState
 }) => {
-  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
-  const size = Math.max(80, 150 - (progress * 0.5)); // Dynamic size: gets larger as time runs out
+  // Inverted progress: 0 when currentTime is duration (timer full), 100 when currentTime is 0 (timer empty)
+  const progress = duration > 0 ? ((duration - currentTime) / duration) * 100 : 0;
+  const size = Math.max(80, 150 - (progress * 0.5)); // Dynamic size: gets smaller as progress increases (time runs out)
 
   let borderColorClass = 'border-primary';
   let textColorClass = 'text-primary';
@@ -40,6 +41,7 @@ const CircularTimer: React.FC<CircularTimerProps> = ({
     borderColorClass = 'border-destructive animate-pulse';
     textColorClass = 'text-destructive animate-pulse';
   } else if (warningThresholds) {
+    // Warning thresholds are based on time *remaining* (currentTime)
     if (currentTime <= warningThresholds.strong) {
       borderColorClass = 'border-destructive';
       textColorClass = 'text-destructive';
@@ -117,13 +119,13 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
   const { toast } = useToast();
 
   // Timers State - These would ideally come from context or backend
-  const [networkTapTime, setNetworkTapTime] = useState(0); // 0 = inactive
+  const [networkTapTime, setNetworkTapTime] = useState(0); // 0 = inactive, time remaining in seconds
   const [networkTapRate, setNetworkTapRate] = useState(0);
-  const [checkInTime, setCheckInTime] = useState(0); // 0 = ready
-  const [transferWindowTime, setTransferWindowTime] = useState(0);
+  const [checkInTime, setCheckInTime] = useState(0); // 0 = ready, cooldown time remaining in seconds
+  const [transferWindowTime, setTransferWindowTime] = useState(0); // Time remaining in current state (open/closed)
   const [isTransferWindowOpen, setIsTransferWindowOpen] = useState(false);
   const [isVaultRaidedError, setIsVaultRaidedError] = useState(false); // Placeholder
-  const [weeklyCycleTime, setWeeklyCycleTime] = useState(7 * 24 * 60 * 60); // 7 days
+  const [weeklyCycleTime, setWeeklyCycleTime] = useState(7 * 24 * 60 * 60); // 7 days, time remaining
 
   const [activeCommsTab, setActiveCommsTab] = useState<'All' | 'HQ' | 'Alerts' | 'System'>('All');
 
@@ -133,10 +135,11 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
     if (networkTapTime > 0) {
       const timer = setInterval(() => setNetworkTapTime(prev => Math.max(0, prev - 1)), 1000);
       return () => clearInterval(timer);
-    } else {
-      setNetworkTapRate(0);
+    } else if (networkTapRate > 0) { // If rate was set but time ran out
+      setNetworkTapRate(0); // Reset rate
+      addMessage({type:'alert', text:'Network Tap depleted. Re-activation required.'});
     }
-  }, [networkTapTime]);
+  }, [networkTapTime, networkTapRate, addMessage]);
 
   useEffect(() => { // Check-in placeholder (6 hour cooldown)
     if (checkInTime > 0) {
@@ -145,24 +148,26 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
     }
   }, [checkInTime]);
 
-  useEffect(() => { // Transfer Window placeholder (1h open, 3h closed)
-    const cycleDuration = 4 * 60 * 60;
-    const openDuration = 1 * 60 * 60;
+  useEffect(() => { // Transfer Window placeholder (1h open, 3h closed cycle)
+    const cycleDuration = 4 * 60 * 60; // 4 hours total cycle
+    const openDuration = 1 * 60 * 60;  // 1 hour open
+    
     const updateTransferTimer = () => {
       const nowSeconds = Math.floor(Date.now() / 1000);
       const cycleProgress = nowSeconds % cycleDuration;
-      if (cycleProgress < openDuration) {
-        setIsTransferWindowOpen(true);
+
+      if (cycleProgress < openDuration) { // Window is open
+        if (!isTransferWindowOpen) setIsTransferWindowOpen(true); // Update state if it changed
         setTransferWindowTime(openDuration - cycleProgress);
-      } else {
-        setIsTransferWindowOpen(false);
+      } else { // Window is closed
+        if (isTransferWindowOpen) setIsTransferWindowOpen(false); // Update state if it changed
         setTransferWindowTime(cycleDuration - cycleProgress);
       }
     };
-    updateTransferTimer();
-    const interval = setInterval(updateTransferTimer, 1000);
+    updateTransferTimer(); // Initial call
+    const interval = setInterval(updateTransferTimer, 1000); // Update every second
     return () => clearInterval(interval);
-  }, []);
+  }, [isTransferWindowOpen]); // Re-run if isTransferWindowOpen changes to correctly reflect state
   
   useEffect(() => { // Weekly Cycle placeholder
     const timer = setInterval(() => setWeeklyCycleTime(prev => Math.max(0, prev - 1)), 1000);
@@ -174,16 +179,23 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
   const handleNetworkTapClick = () => {
     if (networkTapTime > 0) {
       openTODWindow("Network Tap Status", 
-        <div>
-          <p>Time Remaining: {new Date(networkTapTime * 1000).toISOString().substr(11, 8)}</p>
-          <p>Current Rate: {networkTapRate} ELINT/hr</p>
+        <div className="font-rajdhani text-center">
+          <p>Time Remaining: <span className="font-digital7 text-lg">{new Date(networkTapTime * 1000).toISOString().substr(11, 8)}</span></p>
+          <p>Current Rate: <span className="font-digital7 text-lg">{networkTapRate}</span> ELINT/hr</p>
         </div>
       );
     } else {
       openTODWindow("Activate Network Tap", 
-        <div>
-          <p>Placeholder for Network Tap activation interface.</p>
-          <HolographicButton onClick={() => { setNetworkTapTime(3600); setNetworkTapRate(10 + (playerStats.level * 5)); addMessage({type:'system', text:'Network Tap Activated!'}); }}>Activate Tap</HolographicButton>
+        <div className="font-rajdhani text-center space-y-4">
+          <p>The Network Tap generates ELINT passively over time. Higher level Taps yield more ELINT.</p>
+          <p className="text-muted-foreground text-sm">Activation Cost: 100 ELINT (Placeholder)</p>
+          <HolographicButton onClick={() => { 
+            // TODO: Deduct cost if player has enough ELINT
+            setNetworkTapTime(3600); // Activate for 1 hour
+            setNetworkTapRate(10 + (playerStats.level * 2)); // Example rate
+            addMessage({type:'system', text:'Network Tap Activated! Generating ELINT.'}); 
+            // closeTODWindow(); // Assuming openTODWindow context handles closing or we do it manually
+          }}>Activate Lvl 1 Tap</HolographicButton>
         </div>
       );
     }
@@ -191,14 +203,15 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
 
   const handleCheckInClick = () => {
     if (checkInTime > 0) {
-       openTODWindow("Check-In Status", 
-        <div>
-          <p>Next Check-In: {new Date(checkInTime * 1000).toISOString().substr(11, 8)}</p>
+       openTODWindow("Check-In Cooldown", 
+        <div className="font-rajdhani text-center">
+          <p>Next Check-In Available In:</p>
+          <p className="font-digital7 text-2xl my-2">{new Date(checkInTime * 1000).toISOString().substr(11, 8)}</p>
           <HolographicButton 
             variant="ghost" 
-            size="icon" 
-            className="absolute top-2 right-2"
-            onClick={() => openTODWindow("Intel Files: Check-In Protocol", <p>Check-In Protocol details...</p>)}
+            size="sm" 
+            className="absolute top-2 right-2 !p-1"
+            onClick={() => openTODWindow("Intel: Check-In Protocol", <p className="font-rajdhani">Regular agent check-ins are rewarded with ELINT and potential operational bonuses. Maintain consistent contact with HQ.</p>)}
           >
             <Info className="w-4 h-4" />
           </HolographicButton>
@@ -206,14 +219,20 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
       );
     } else {
       openTODWindow("Agent Check-In", 
-        <div>
-          <p>Placeholder for Check-In process.</p>
-          <HolographicButton onClick={() => { setCheckInTime(6 * 3600); addMessage({type:'hq', text:'Check-In Successful. Reward granted.'}); }}>Complete Check-In</HolographicButton>
-          <HolographicButton 
+        <div className="font-rajdhani text-center space-y-4">
+          <p>Welcome back, Agent. Your continued dedication is noted.</p>
+          <p className="text-green-400 font-semibold">Reward: 50 ELINT + XP Boost (Placeholder)</p>
+          <HolographicButton onClick={() => { 
+            setCheckInTime(6 * 3600); // 6 hour cooldown
+            // TODO: Add ELINT and XP to playerStats
+            addMessage({type:'hq', text:'Check-In Successful. Reward credited to your account.'}); 
+            // closeTODWindow();
+          }}>Complete Check-In</HolographicButton>
+           <HolographicButton 
             variant="ghost" 
-            size="icon" 
-            className="absolute top-2 right-2"
-            onClick={() => openTODWindow("Intel Files: Check-In Protocol", <p>Check-In Protocol details...</p>)}
+            size="sm" 
+            className="absolute top-2 right-2 !p-1"
+            onClick={() => openTODWindow("Intel: Check-In Protocol", <p className="font-rajdhani">Regular agent check-ins are rewarded with ELINT and potential operational bonuses. Maintain consistent contact with HQ.</p>)}
           >
             <Info className="w-4 h-4" />
           </HolographicButton>
@@ -224,16 +243,18 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
 
   const handleTransferWindowClick = () => {
     if (isTransferWindowOpen) {
-      openTODWindow("Transfer Minigame (Host)", <p>Placeholder for Transfer Minigame interface.</p>);
+      // TODO: Implement actual transfer minigame/interface
+      openTODWindow("Transfer ELINT to HQ (Host)", <p className="font-rajdhani text-center">Placeholder for ELINT Transfer Minigame interface. Securely move your ELINT reserves to the faction vault.</p>);
     } else {
       openTODWindow("Transfer Window Closed", 
-        <div>
-          <p>Next Transfer Window Opens In: {new Date(transferWindowTime * 1000).toISOString().substr(11, 8)}</p>
+        <div className="font-rajdhani text-center">
+          <p>Next Transfer Window Opens In:</p>
+          <p className="font-digital7 text-2xl my-2">{new Date(transferWindowTime * 1000).toISOString().substr(11, 8)}</p>
           <HolographicButton 
             variant="ghost" 
-            size="icon" 
-            className="absolute top-2 right-2"
-            onClick={() => openTODWindow("Intel Files: Transferring ELINT", <p>Details about transferring ELINT to HQ...</p>)}
+            size="sm" 
+            className="absolute top-2 right-2 !p-1"
+            onClick={() => openTODWindow("Intel: Transferring ELINT", <p className="font-rajdhani">During active Transfer Windows, agents can securely move their acquired ELINT to their faction's central vault, contributing to the war effort and earning faction loyalty.</p>)}
           >
             <Info className="w-4 h-4" />
           </HolographicButton>
@@ -243,30 +264,43 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
   };
   
   const handleWeeklyCycleClick = () => {
+    const days = Math.floor(weeklyCycleTime / (24 * 3600));
+    const hours = Math.floor((weeklyCycleTime % (24*3600)) / 3600);
+    const minutes = Math.floor((weeklyCycleTime % 3600) / 60);
+    const seconds = weeklyCycleTime % 60;
+
     openTODWindow("Weekly Cycle Status", 
-      <div>
-        <p>Current Cycle Ends In: {new Date(weeklyCycleTime * 1000).toISOString().substr(8, 2).replace(/^0+/, '')}d {new Date(weeklyCycleTime * 1000).toISOString().substr(11, 8)}</p>
+      <div className="font-rajdhani text-center">
+        <p>Current Cycle Ends In:</p>
+        <p className="font-digital7 text-2xl my-2">
+          {days > 0 ? `${days}d ` : ""}
+          {String(hours).padStart(2, '0')}:{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+        </p>
         <HolographicButton 
-          variant="ghost" 
-          size="icon" 
-          className="absolute top-2 right-2"
-          onClick={() => openTODWindow("Intel Files: Weekly Cycle", <p>Details about the weekly game cycle...</p>)}
-        >
-          <Info className="w-4 h-4" />
-        </HolographicButton>
+            variant="ghost" 
+            size="sm" 
+            className="absolute top-2 right-2 !p-1"
+            onClick={() => openTODWindow("Intel: Weekly Cycle", <p className="font-rajdhani">Elint Heist operates in weekly cycles. At the end of each cycle, faction scores are tallied, and rewards are distributed based on performance and contributions.</p>)}
+          >
+            <Info className="w-4 h-4" />
+          </HolographicButton>
       </div>
     );
   };
 
   const handleCodeCopy = () => {
-    navigator.clipboard.writeText(dailyTeamCode[faction] || dailyTeamCode['Observer'])
-      .then(() => {
-        toast({ title: "Success", description: "Daily Team Code copied to clipboard!" });
-      })
-      .catch(err => {
-        toast({ variant: "destructive", title: "Error", description: "Failed to copy code." });
-        console.error('Failed to copy: ', err);
-      });
+    if (typeof window !== "undefined" && navigator.clipboard) {
+        navigator.clipboard.writeText(dailyTeamCode[faction] || dailyTeamCode['Observer'])
+        .then(() => {
+            toast({ title: "Success", description: "Daily Team Code copied to clipboard!" });
+        })
+        .catch(err => {
+            toast({ variant: "destructive", title: "Error", description: "Failed to copy code." });
+            console.error('Failed to copy: ', err);
+        });
+    } else {
+        toast({ variant: "destructive", title: "Error", description: "Clipboard not available."});
+    }
   };
 
   const displayedFactionCode = dailyTeamCode[faction] || dailyTeamCode['Observer'];
@@ -279,14 +313,14 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
         <CircularTimer 
           id="network-tap"
           title="Network Tap"
-          duration={3600} // Assuming 1 hour active duration
+          duration={3600} // Assuming 1 hour active duration for display purposes
           currentTime={networkTapTime}
           onClick={handleNetworkTapClick}
-          icon={<Zap />}
+          icon={<Zap className="w-full h-full" />}
           rate={`${networkTapRate} E/hr`}
           statusText={networkTapTime <= 0 ? "INACTIVE" : undefined}
-          isPulsing={networkTapTime > 0}
-          warningThresholds={{ mild: 600, strong: 300 }} // Example thresholds
+          isPulsing={networkTapTime > 0 && networkTapTime <= 600} // Pulse when <10m left or active & low
+          warningThresholds={{ mild: 600, strong: 300 }} 
         />
         <CircularTimer 
           id="check-in"
@@ -294,7 +328,7 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
           duration={6 * 3600} // 6 hour cooldown
           currentTime={checkInTime}
           onClick={handleCheckInClick}
-          icon={<Fingerprint />}
+          icon={<Fingerprint className="w-full h-full" />}
           statusText={checkInTime <= 0 ? "CHECK IN" : undefined}
           isPulsing={checkInTime > 0 && checkInTime < 300} // Pulse when about to be ready
            warningThresholds={{ mild: 600, strong: 300 }}
@@ -302,21 +336,21 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
          <CircularTimer 
           id="transfer-window"
           title={isTransferWindowOpen ? "Transfer Window OPEN" : "Transfer Window"}
-          duration={isTransferWindowOpen ? 1 * 3600 : 3 * 3600}
+          duration={isTransferWindowOpen ? (1 * 60 * 60) : (3 * 60 * 60)} // Duration based on state
           currentTime={transferWindowTime}
           onClick={handleTransferWindowClick}
-          icon={<ShieldAlert />} // Placeholder for Bank/Building
+          icon={<ShieldAlert className="w-full h-full"/>} 
           isPulsing={isTransferWindowOpen}
-          warningThresholds={{ mild: 1200, strong: 600 }} // 20min, 10min
-          errorState={isVaultRaidedError && isTransferWindowOpen}
+          warningThresholds={{ mild: 1200, strong: 600 }} // 20min, 10min (applies to time remaining)
+          errorState={isVaultRaidedError && isTransferWindowOpen} // Only show error if window is also open
         />
         <CircularTimer 
           id="weekly-cycle"
           title="Weekly Cycle"
-          duration={7 * 24 * 3600}
+          duration={7 * 24 * 3600} // 7 days
           currentTime={weeklyCycleTime}
           onClick={handleWeeklyCycleClick}
-          icon={<Clock />} // Placeholder for bomb with clock
+          icon={<Clock className="w-full h-full"/>} 
           isPulsing={weeklyCycleTime < 24 * 3600} // Pulse if <24h left
           warningThresholds={{ mild: 12 * 3600, strong: 6 * 3600 }} // 12h, 6h
         />
@@ -351,10 +385,11 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
             </p>
         </div>
         <div className="flex-grow min-h-0">
-          <MessageFeed filter={activeCommsTab !== 'All' ? activeCommsTab.toLowerCase() as any : undefined} />
+          <MessageFeed filter={activeCommsTab !== 'All' ? activeCommsTab.toLowerCase() as 'hq' | 'alerts' | 'system' : undefined} />
         </div>
       </HolographicPanel>
     </div>
   );
 }
 
+    
