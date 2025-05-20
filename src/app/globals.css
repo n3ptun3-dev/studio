@@ -32,8 +32,8 @@
     --pad-button-panel-separator-hsl: 130 50% 25%;
     
     /* Holographic HSLs - also set by JS on :root */
-    --hologram-glow-color-hsl: hsl(130 90% 55%); /* Theme's accent */
-    --hologram-button-text-hsl: hsl(130 85% 75%); 
+    --hologram-glow-color-hsl: hsl(var(--accent-hsl)); /* Theme's accent */
+    --hologram-button-text-hsl: hsl(var(--primary-foreground-hsl));
     --terminal-green-debug-color: lime;
   }
 
@@ -66,8 +66,8 @@
     --pad-button-panel-separator-hsl: 204 100% 40%;
 
     /* Holographic */
-    --hologram-glow-color-hsl: hsl(204 100% 50%); 
-    --hologram-button-text-hsl: hsl(0 0% 100%);
+    --hologram-glow-color-hsl: hsl(var(--primary-hsl)); 
+    --hologram-button-text-hsl: hsl(var(--primary-foreground-hsl));
     --cyphers-debug-color: blue;
   }
 
@@ -82,7 +82,7 @@
     --popover-foreground-hsl: 0 0% 90%;
     --primary-hsl: 0 100% 40%;
     --primary-foreground-hsl: 0 0% 100%;
-    --secondary-hsl: 16 100% 71%; /* Light Salmon - Used for Shadows debug border */
+    --secondary-hsl: 16 100% 71%; /* Light Salmon */
     --secondary-foreground-hsl: 0 0% 90%;
     --muted-hsl: 0 50% 18%;
     --muted-foreground-hsl: 0 0% 70%;
@@ -100,33 +100,33 @@
     --pad-button-panel-separator-hsl: 0 100% 25%;
 
     /* Holographic */
-    --hologram-glow-color-hsl: hsl(0 100% 40%);
-    --hologram-button-text-hsl: hsl(0 0% 100%);
+    --hologram-glow-color-hsl: hsl(var(--primary-hsl));
+    --hologram-button-text-hsl: hsl(var(--primary-foreground-hsl));
     --shadows-debug-color: red;
   }
 
-  .theme-neutral {
+  .theme-neutral { /* Used for pre-faction selection screens */
     --theme-name: "neutral";
      /* HSL variables set by JS on :root */
     --background-hsl: 220 10% 10%;
     --foreground-hsl: 220 10% 70%;
-    --card-hsl: 220 15% 12%;
+    --card-hsl: 220 15% 12%; /* Slightly lighter than background */
     --card-foreground-hsl: 220 10% 75%;
     --popover-hsl: 220 15% 15%;
     --popover-foreground-hsl: 220 10% 75%;
-    --primary-hsl: 220 60% 50%;
+    --primary-hsl: 180 70% 50%; /* Muted Teal as primary for neutral */
     --primary-foreground-hsl: 220 10% 95%;
     --secondary-hsl: 220 20% 20%;
     --secondary-foreground-hsl: 220 10% 60%;
     --muted-hsl: 220 15% 25%;
     --muted-foreground-hsl: 220 10% 55%;
-    --accent-hsl: 180 70% 60%; 
+    --accent-hsl: 180 70% 60%; /* Brighter Teal for accents */
     --accent-foreground-hsl: 220 10% 10%;
     --destructive-hsl: 0 70% 50%;
     --destructive-foreground-hsl: 0 0% 100%;
     --border-hsl: 220 20% 30%;
     --input-hsl: 220 20% 25%;
-    --ring-hsl: 220 60% 55%;
+    --ring-hsl: 180 70% 55%; /* Muted Teal for ring */
 
     /* PAD specific HSLs */
     --pad-bg-hsl: 220 15% 18%;
@@ -134,7 +134,7 @@
     --pad-button-panel-separator-hsl: 220 20% 25%;
 
     /* Holographic */
-    --hologram-glow-color-hsl: hsl(180 70% 60%); /* Theme's accent for neutral */
+    --hologram-glow-color-hsl: hsl(var(--accent-hsl)); /* Theme's accent for neutral */
     --hologram-button-text-hsl: hsl(var(--primary-foreground-hsl));
     --neutral-debug-color: gray;
   }
@@ -162,8 +162,8 @@
     --ring: hsl(var(--ring-hsl));
 
     /* Holographic Variables - HSL sources are set by JS on :root */
-    --hologram-panel-bg: hsla(var(--card-hsl), 0.6); /* Default panel bg from card with opacity */
-    --hologram-panel-border: hsl(var(--primary-hsl)); /* Default border from primary */
+    --hologram-panel-bg: hsla(var(--card-hsl), 0.6); 
+    --hologram-panel-border: hsl(var(--primary-hsl)); 
     --hologram-glow-color: hsl(var(--hologram-glow-color-hsl));
     --hologram-base-text-color: hsl(var(--foreground-hsl));
     --hologram-button-bg: hsl(var(--primary-hsl));
@@ -313,10 +313,8 @@
   height: 100%;
   background: linear-gradient(
     to right,
-    hsla(0,0%,100%,0) 0%,      
-    hsla(0,0%,100%,0.05) 48%, /* Adjusted opacity */
-    hsla(0,0%,100%,0.08) 50%, /* Adjusted peak opacity */
-    hsla(0,0%,100%,0.05) 52%, /* Adjusted opacity */
+    hsla(0,0%,100%,0) 0%,
+    hsla(0,0%,100%,0.05) 50%,
     hsla(0,0%,100%,0) 100%
   );
   transform: skewX(-25deg);
@@ -416,3 +414,12 @@
 .animate-slide-out-right-tod {
   animation: slide-out-right-tod 0.3s ease-out forwards;
 }
+
+/* Debug borders */
+/*
+.debug-border-red { border: 2px solid red !important; }
+.debug-border-blue { border: 2px solid blue !important; }
+.debug-border-green { border: 2px solid lime !important; }
+.debug-border-yellow { border: 2px solid yellow !important; }
+.debug-border-purple { border: 2px solid purple !important; }
+*/
