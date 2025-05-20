@@ -1,7 +1,7 @@
 
 "use client";
 
-import { HolographicPanel, HolographicButton } from '@/components/game/shared/HolographicPanel';
+import { HolographicButton, HolographicPanel } from '@/components/game/shared/HolographicPanel';
 import { RefreshCw, MapPin, AlertTriangle, Gift, Info } from 'lucide-react';
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
@@ -75,31 +75,40 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
   };
 
   return (
-    // New outer wrapper div, providing the p-4 md:p-6 OUTSIDE the border
     <div className="flex flex-col h-full overflow-hidden p-4 md:p-6">
-      {/* This div is the main bordered panel, using holographic-panel class which includes its own p-4 md:p-6 */}
-      <div className="holographic-panel flex flex-col flex-grow overflow-hidden">
+      <div className={cn(
+        "holographic-panel flex flex-col flex-grow overflow-hidden",
+        "bg-black/70 pad-gloss-effect" // Added dark background and gloss to the main scanner panel
+      )}>
         {/* Title Area - Blends into the section panel */}
         <div className="flex-none mb-4 flex items-center justify-between">
           <h2 className="text-2xl font-orbitron holographic-text">Network Scanner</h2>
-          <div className="flex items-center">
-            <HolographicButton onClick={refreshScanner} disabled={isLoading} className="p-2">
-              <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
-              <span className="ml-2 hidden sm:inline">Ping Network</span>
-            </HolographicButton>
+          <div className="flex items-center space-x-2">
             <HolographicButton 
               onClick={() => openTODWindow("Scanner Intel", <p className="font-rajdhani text-muted-foreground">The Network Scanner pings the local digital vicinity for active vaults, high-priority ELINT transfers, and dropped item caches. Use Team Codes to claim dropped items for your faction.</p>)} 
               variant="ghost" 
               size="icon" 
-              className="!p-1 ml-2"
+              className="!p-2" // Ensure consistent button size
             >
               <Info className="w-5 h-5 icon-glow" />
+            </HolographicButton>
+            <HolographicButton 
+              onClick={refreshScanner} 
+              disabled={isLoading} 
+              className="!p-2" // Ensure consistent button size
+              size="icon"
+            >
+              <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
             </HolographicButton>
           </div>
         </div>
 
         {/* Node Display Area - This IS a HolographicPanel component for layering effect, with reduced padding */}
-        <HolographicPanel className="flex-grow relative overflow-hidden p-1">
+        <HolographicPanel 
+          className="flex-grow relative overflow-hidden p-1"
+          // Removed explicit bg-accent/10 from inline style, relies on holographic-panel default bg
+          // and radial-gradient for grid lines
+        >
           {/* Stylized Network Map Background */}
           <div className="absolute inset-0 opacity-20" style={{
               backgroundImage: `
@@ -112,7 +121,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
           
           {/* Connecting Lines */}
           {nodes.map((node, i) => 
-            i < nodes.length -1 && ( // Ensure we don't try to connect the last node to a non-existent next one
+            i < nodes.length -1 && ( 
               <svg key={`line-${i}`} className="absolute inset-0 w-full h-full" style={{ pointerEvents: 'none' }}>
                 <line 
                   x1={`${node.position.x}%`} y1={`${node.position.y}%`} 
@@ -144,7 +153,11 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
           {/* Selected Node Details Overlay */}
           {selectedNode && (
             <HolographicPanel 
-              className="absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 p-4 z-20 animate-slide-in-bottom font-rajdhani"
+              className={cn(
+                "absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80",
+                "p-4 z-20 animate-slide-in-bottom font-rajdhani",
+                "bg-black/30 backdrop-blur-sm" // Added darker bg and backdrop blur
+              )}
             >
               <h3 className="text-lg font-orbitron mb-2 holographic-text">{selectedNode.title}</h3>
               {selectedNode.type === 'vault' && (
@@ -181,4 +194,3 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
     </div>
   );
 }
-
