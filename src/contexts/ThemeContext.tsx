@@ -24,7 +24,6 @@ export const availableThemesList: Theme[] = [
 ];
 
 // HSL value definitions (space-separated, no commas, no "hsl()")
-// These are the SOURCE HSL strings for each theme.
 const themeHSLValues: Record<Theme, Record<string, string>> = {
   'terminal-green': {
     '--background-hsl': '130 20% 5%',
@@ -47,12 +46,12 @@ const themeHSLValues: Record<Theme, Record<string, string>> = {
     '--input-hsl': '130 30% 25%',
     '--ring-hsl': '130 70% 50%',
     // PAD specific HSL sources
-    '--pad-bg-hsl': '130 25% 15%', // Lighter than main bg, e.g.
+    '--pad-bg-hsl': '130 25% 15%', 
     '--pad-border-hsl': '130 60% 45%',
     '--pad-button-panel-separator-hsl': '130 50% 25%',
     // Holographic
-    '--hologram-glow-color-hsl': '130 90% 55%', // Theme's primary/accent
-    '--hologram-button-text-hsl': '130 85% 75%', // Brighter for better contrast on buttons
+    '--hologram-glow-color-hsl': 'hsl(130 90% 55%)', 
+    '--hologram-button-text-hsl': 'hsl(130 85% 75%)',
     '--terminal-green-debug-color': 'lime',
   },
   'cyphers': {
@@ -76,12 +75,12 @@ const themeHSLValues: Record<Theme, Record<string, string>> = {
     '--input-hsl': '210 40% 15%',
     '--ring-hsl': '204 100% 55%',
     // PAD specific HSL sources
-    '--pad-bg-hsl': '210 50% 18%', // Darker blue
+    '--pad-bg-hsl': '210 50% 18%', 
     '--pad-border-hsl': '204 100% 70%',
     '--pad-button-panel-separator-hsl': '204 100% 40%',
     // Holographic
-    '--hologram-glow-color-hsl': '204 100% 50%',
-    '--hologram-button-text-hsl': '0 0% 100%',
+    '--hologram-glow-color-hsl': 'hsl(204 100% 50%)',
+    '--hologram-button-text-hsl': 'hsl(0 0% 100%)',
     '--cyphers-debug-color': 'blue',
   },
   'shadows': {
@@ -105,12 +104,12 @@ const themeHSLValues: Record<Theme, Record<string, string>> = {
     '--input-hsl': '0 40% 15%',
     '--ring-hsl': '0 100% 55%',
     // PAD specific HSL sources
-    '--pad-bg-hsl': '0 50% 18%', // Darker red
+    '--pad-bg-hsl': '0 50% 18%', 
     '--pad-border-hsl': '0 100% 60%',
     '--pad-button-panel-separator-hsl': '0 100% 25%',
     // Holographic
-    '--hologram-glow-color-hsl': '0 100% 40%',
-    '--hologram-button-text-hsl': '0 0% 100%',
+    '--hologram-glow-color-hsl': 'hsl(0 100% 40%)',
+    '--hologram-button-text-hsl': 'hsl(0 0% 100%)',
     '--shadows-debug-color': 'red',
   },
   'neutral': {
@@ -138,8 +137,8 @@ const themeHSLValues: Record<Theme, Record<string, string>> = {
     '--pad-border-hsl': '220 20% 35%',
     '--pad-button-panel-separator-hsl': '220 20% 25%',
     // Holographic
-    '--hologram-glow-color-hsl': '180 70% 60%',
-    '--hologram-button-text-hsl': '220 10% 95%',
+    '--hologram-glow-color-hsl': 'hsl(180 70% 60%)',
+    '--hologram-button-text-hsl': 'hsl(220 10% 95%)',
     '--neutral-debug-color': 'gray',
   },
 };
@@ -151,20 +150,18 @@ const HSL_VARIABLES_TO_SET_ON_ROOT = [
   '--secondary-hsl', '--secondary-foreground-hsl', '--muted-hsl', '--muted-foreground-hsl',
   '--accent-hsl', '--accent-foreground-hsl', '--destructive-hsl', '--destructive-foreground-hsl',
   '--border-hsl', '--input-hsl', '--ring-hsl',
-  '--hologram-glow-color-hsl', '--hologram-button-text-hsl',
   // PAD specific HSL sources
   '--pad-bg-hsl', '--pad-border-hsl', '--pad-button-panel-separator-hsl',
-  // Debug colors
-  '--terminal-green-debug-color', '--cyphers-debug-color', '--shadows-debug-color', '--neutral-debug-color',
+  // Holographic - direct HSL values, not HSL variable sources
+  '--hologram-glow-color-hsl', '--hologram-button-text-hsl', 
 ];
-
 
 export function ThemeProvider({ children, defaultTheme = "terminal-green" }: {
     children: ReactNode,
     defaultTheme?: Theme,
-    attribute?: string,
-    enableSystem?: boolean,
-    disableTransitionOnChange?: boolean,
+    attribute?: string, // Kept for potential future use with next-themes if direct JS manipulation fails
+    enableSystem?: boolean, // Kept for potential future use
+    disableTransitionOnChange?: boolean, // Kept for potential future use
 }) {
   const [currentThemeInternal, setThemeInternal] = useState<Theme>(() => {
     if (typeof window !== 'undefined') {
@@ -191,7 +188,7 @@ export function ThemeProvider({ children, defaultTheme = "terminal-green" }: {
       // console.warn(`[ThemeContext] Attempted to set invalid theme: ${newTheme}`);
       return currentInternalTheme;
     });
-  }, [setThemeInternal]);
+  }, [setThemeInternal]); // setThemeInternal from useState is stable
 
   useEffect(() => {
     // console.log(`[ThemeContext] Effect running. Current internal theme to apply: ${currentThemeInternal}`);
@@ -200,6 +197,7 @@ export function ThemeProvider({ children, defaultTheme = "terminal-green" }: {
       const htmlEl = document.documentElement;
       const style = htmlEl.style;
 
+      // Remove all theme classes first
       availableThemesList.forEach(tName => {
         if (tName) htmlEl.classList.remove(`theme-${tName}`);
       });
@@ -219,17 +217,16 @@ export function ThemeProvider({ children, defaultTheme = "terminal-green" }: {
           if (themeColorsToSet[variableName]) {
             style.setProperty(variableName, themeColorsToSet[variableName]);
           } else {
-            // console.warn(`[ThemeContext] HSL variable ${variableName} not found for theme ${effectiveTheme}`);
+             // console.warn(`[ThemeContext] HSL variable ${variableName} not found for theme ${effectiveTheme}`);
           }
         });
         
         // Set pre-computed "effective" colors for PAD, including opacity, directly on :root
         if (themeColorsToSet['--pad-bg-hsl']) {
           const padEffectiveBg = `hsla(${themeColorsToSet['--pad-bg-hsl']}, 0.85)`;
-          // console.log(`[ThemeContext] Setting --pad-effective-background-color to: ${padEffectiveBg}`);
           style.setProperty('--pad-effective-background-color', padEffectiveBg);
         } else {
-          // console.warn(`[ThemeContext] --pad-bg-hsl not found for theme ${effectiveTheme} to compute --pad-effective-background-color`);
+           // console.warn(`[ThemeContext] --pad-bg-hsl not found for theme ${effectiveTheme} to compute --pad-effective-background-color`);
         }
 
         if (themeColorsToSet['--pad-border-hsl']) {
@@ -246,14 +243,22 @@ export function ThemeProvider({ children, defaultTheme = "terminal-green" }: {
           // console.warn(`[ThemeContext] --pad-button-panel-separator-hsl not found for theme ${effectiveTheme} to compute --pad-effective-button-panel-separator-color`);
         }
 
+        // Set theme debug colors
+        const debugColorVar = `--${effectiveTheme}-debug-color`;
+        if (themeColorsToSet[debugColorVar]) {
+             style.setProperty(debugColorVar, themeColorsToSet[debugColorVar]);
+        }
+
+
       } else {
         // console.error(`[ThemeContext] No HSL values found for theme ${effectiveTheme}!`);
       }
 
       setThemeVersion(v => v + 1);
-      // console.log(`[ThemeContext] Updated :root styles and themeVersion for theme ${effectiveTheme}`);
+      // console.log(`[ThemeContext] Updated :root styles and themeVersion to ${themeVersion + 1} for theme ${effectiveTheme}`);
     }
-  }, [currentThemeInternal]); 
+  }, [currentThemeInternal]); // Only re-run when the internal theme string changes
+
 
   const contextValue = useMemo(() => ({
     theme: currentThemeInternal,
@@ -276,5 +281,3 @@ export function useTheme() {
   }
   return context;
 }
-
-    

@@ -2,8 +2,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useAppContext, type Faction } from '@/contexts/AppContext';
-import { HolographicButton, HolographicInput } from '@/components/game/shared/HolographicPanel';
+import { useAppContext } from '@/contexts/AppContext'; 
+import { HolographicButton } from '@/components/game/shared/HolographicPanel';
 import { Progress } from "@/components/ui/progress";
 import { Fingerprint, Settings, BookOpen, Info, Power } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -11,17 +11,17 @@ import { cn } from '@/lib/utils';
 import { XP_THRESHOLDS } from '@/lib/constants';
 import { useTheme } from '@/contexts/ThemeContext';
 
-const PEEK_AMOUNT = 20; // How much of the screen grid is visible when PAD is "off"
+const PEEK_AMOUNT = 20; 
 
 // --- Sub-Components for PAD Screen Views ---
 const AgentDossierView = React.memo(() => {
   const { playerSpyName, playerPiName, faction, playerStats, setFaction: setAppFaction, addMessage } = useAppContext();
-  const { theme: currentGlobalTheme } = useTheme(); // Get current theme for button theming
+  const { theme: currentGlobalTheme } = useTheme();
 
   const handleFactionChange = useCallback(() => {
-    let newFaction: Faction = faction === 'Cyphers' ? 'Shadows' : 'Cyphers';
+    let newFaction = faction === 'Cyphers' ? 'Shadows' : 'Cyphers';
     if (faction === 'Observer') {
-        newFaction = 'Cyphers'; // Default to Cyphers if changing from Observer
+        newFaction = 'Cyphers'; 
         addMessage({ type: 'system', text: `Observer protocol overridden. Faction allegiance protocols engaged. Defaulting to Cyphers.` });
     } else {
         addMessage({ type: 'system', text: `Faction allegiance protocols updated to: ${newFaction}. Coordinating with HQ.` });
@@ -29,15 +29,11 @@ const AgentDossierView = React.memo(() => {
     setAppFaction(newFaction);
   }, [faction, setAppFaction, addMessage]);
 
-  // XP Calculation (copied from main component, consider moving to a utility or context if used elsewhere)
   const currentLevelXpForDossier = XP_THRESHOLDS[playerStats.level] || 0;
   const nextLevelXpTargetForDossier = XP_THRESHOLDS[playerStats.level + 1] || (XP_THRESHOLDS[XP_THRESHOLDS.length -1] + (XP_THRESHOLDS[XP_THRESHOLDS.length - 1] - XP_THRESHOLDS[XP_THRESHOLDS.length - 2] || 100));
-
   const xpForCurrentLevelInDossier = playerStats.xp - currentLevelXpForDossier;
   const xpToNextLevelSpanInDossier = nextLevelXpTargetForDossier - currentLevelXpForDossier;
-
   const xpProgressForDossier = xpToNextLevelSpanInDossier > 0 ? Math.max(0, Math.min(100, (xpForCurrentLevelInDossier / xpToNextLevelSpanInDossier) * 100)) : 100;
-
 
   return (
     <ScrollArea className="h-full p-3">
@@ -94,10 +90,9 @@ const AgentDossierView = React.memo(() => {
 });
 AgentDossierView.displayName = 'AgentDossierView';
 
-
 const IntelFilesView = React.memo(() => {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const { theme: currentGlobalTheme } = useTheme(); // For button theming
+  const { theme: currentGlobalTheme } = useTheme(); 
 
   const categories = [
     { id: "briefing", title: "Briefing", heading: "Current Situation & Objectives", content: "Placeholder content for Briefing: Overview of the current game state, active global events, and primary objectives for agents." },
@@ -119,7 +114,7 @@ const IntelFilesView = React.memo(() => {
         <HolographicButton
           onClick={() => setActiveCategory(null)}
           className="mb-4 !py-1 !px-2 text-xs flex-shrink-0"
-          explicitTheme={currentGlobalTheme} // Use current global theme for back button
+          explicitTheme={currentGlobalTheme} 
         >
           &larr; Back to Intel Files
         </HolographicButton>
@@ -142,7 +137,7 @@ const IntelFilesView = React.memo(() => {
             <HolographicButton
               className="w-full justify-start text-left !bg-transparent hover:!bg-primary/10 !py-1.5"
               onClick={() => setActiveCategory(cat.id)}
-              explicitTheme={currentGlobalTheme} // Use current global theme for category buttons
+              explicitTheme={currentGlobalTheme} 
             >
               {cat.title}
             </HolographicButton>
@@ -154,10 +149,8 @@ const IntelFilesView = React.memo(() => {
 });
 IntelFilesView.displayName = 'IntelFilesView';
 
-
 const SettingsView = React.memo(() => {
-  const { theme: currentGlobalTheme } = useTheme(); // For button theming
-  // Placeholder for actual settings logic
+  const { theme: currentGlobalTheme } = useTheme(); 
   return (
     <ScrollArea className="h-full p-3 font-rajdhani">
       <h3 className="text-xl font-orbitron mb-4 holographic-text">Settings</h3>
@@ -172,27 +165,24 @@ const SettingsView = React.memo(() => {
 });
 SettingsView.displayName = 'SettingsView';
 
-
 type PadScreenView = 'dossier' | 'intel' | 'settings';
 
 interface AgentSectionProps {
-  parallaxOffset: number; // Used by ParallaxBackground if re-enabled, keep for now
+  parallaxOffset: number; 
 }
 
 export function AgentSection({ parallaxOffset }: AgentSectionProps) {
   const { playerSpyName, faction, playerStats, isLoading } = useAppContext();
-  const { theme: currentGlobalTheme } = useTheme(); // Get current theme from ThemeContext
+  const { theme: currentGlobalTheme } = useTheme();
 
   const [isPadUp, setIsPadUp] = useState(false);
   const [padScreenView, setPadScreenView] = useState<PadScreenView>('dossier');
-  const [padButtonPanelHeight, setPadButtonPanelHeight] = useState(60); // Default, will be measured
-  const [padPeekPlusButtonHeight, setPadPeekPlusButtonHeight] = useState(PEEK_AMOUNT + 60);
+  const [padButtonPanelHeight, setPadButtonPanelHeight] = useState(60); 
+  const [padPeekPlusButtonHeight, setPadPeekPlusButtonHeight] = useState(60 + PEEK_AMOUNT);
 
-
+  const topContentRef = useRef<HTMLDivElement>(null);
   const titleAreaContentRef = useRef<HTMLDivElement>(null);
   const statsAreaRef = useRef<HTMLDivElement>(null);
-  const topContentRef = useRef<HTMLDivElement>(null); // Contains Title and Stats
-
   const thePadRef = useRef<HTMLDivElement>(null);
   const padButtonPanelRef = useRef<HTMLDivElement>(null);
 
@@ -204,19 +194,16 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
         setPadPeekPlusButtonHeight(measuredHeight + PEEK_AMOUNT);
       }
     }
-  }, []); // Run once on mount to measure button panel
+  }, []);
 
   const handlePowerClick = useCallback(() => {
     setIsPadUp(prev => !prev);
   }, []);
 
-  // XP Calculation
   const currentLevelXp = XP_THRESHOLDS[playerStats.level] || 0;
   const nextLevelXpTarget = XP_THRESHOLDS[playerStats.level + 1] || (XP_THRESHOLDS[XP_THRESHOLDS.length -1] + (XP_THRESHOLDS[XP_THRESHOLDS.length - 1] - XP_THRESHOLDS[XP_THRESHOLDS.length - 2] || 100));
-
   const xpForCurrentLevel = playerStats.xp - currentLevelXp;
   const xpToNextLevelSpan = nextLevelXpTarget - currentLevelXp;
-
   const xpProgress = xpToNextLevelSpan > 0 ? Math.max(0, Math.min(100, (xpForCurrentLevel / xpToNextLevelSpan) * 100)) : 100;
 
   const renderPadScreenContent = () => {
@@ -227,34 +214,29 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
       default: return <AgentDossierView />;
     }
   };
-
-  // Dynamic styles for the PAD's position and height
+  
   const padDynamicStyle: React.CSSProperties = {
     top: isPadUp ? '0px' : `calc(100% - ${padPeekPlusButtonHeight}px)`,
     height: isPadUp ? '100%' : `${padPeekPlusButtonHeight}px`,
-  };
-
-  // Inline styles for PAD core appearance, using CSS variables from ThemeContext
-  const padCoreStyle: React.CSSProperties = {
-    backgroundColor: 'var(--pad-effective-background-color)',
-    borderColor: 'var(--pad-effective-border-color)',
-    borderRadius: '0.5rem', // Tailwind's rounded-lg
+    backgroundColor: 'var(--pad-effective-background-color)', 
+    borderColor: 'var(--pad-effective-border-color)', 
+    borderRadius: '0.5rem', 
     borderWidth: '1px',
     borderStyle: 'solid',
   };
 
-  const padButtonPanelStyle: React.CSSProperties = {
-    backgroundColor: 'var(--pad-effective-background-color)', // Match PAD bg
-    borderBottomColor: 'var(--pad-effective-button-panel-separator-color)',
+  const buttonPanelStyle: React.CSSProperties = {
+    backgroundColor: 'var(--pad-effective-background-color)', 
+    borderBottomColor: 'var(--pad-effective-button-panel-separator-color)', 
     borderBottomWidth: '1px',
     borderBottomStyle: 'solid',
-    borderTopLeftRadius: '0.5rem', // Match PAD's rounding
+    borderTopLeftRadius: '0.5rem', 
     borderTopRightRadius: '0.5rem',
   };
 
-  const padScreenWrapperStyle: React.CSSProperties = {
-    backgroundColor: 'var(--pad-effective-background-color)', // Match PAD bg
-    borderBottomLeftRadius: '0.5rem', // Match PAD's rounding
+  const screenWrapperStyle: React.CSSProperties = {
+    backgroundColor: 'var(--pad-effective-background-color)', 
+    borderBottomLeftRadius: '0.5rem', 
     borderBottomRightRadius: '0.5rem',
   };
 
@@ -268,13 +250,11 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
   }
 
   return (
-    // AgentSection Root: Static height, overflow hidden to prevent its own scrollbars.
-    <div className="relative h-full overflow-hidden">
-
+    <div className="relative h-full overflow-hidden"> {/* AgentSection Root */}
       {/* Static Background Layer (Title + Stats) */}
       <div
         ref={topContentRef}
-        className="absolute inset-0 flex flex-col z-10 pointer-events-none" // Fills section, behind PAD
+        className="absolute inset-0 flex flex-col z-10 pointer-events-none" 
       >
         <div ref={titleAreaContentRef} className="flex-grow flex flex-col items-center justify-center pt-4 md:pt-2 pb-2 text-center relative overflow-hidden">
           <div className="absolute inset-0 flex items-center justify-center -z-10 opacity-10">
@@ -308,29 +288,27 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
             </p>
           </div>
         </div>
-        {/* Invisible Spacer to reserve space for PAD button panel when PAD is "off" */}
         <div className="flex-shrink-0" style={{ height: `${padPeekPlusButtonHeight}px` }} />
       </div>
-
 
       {/* The PAD (Absolutely Positioned Sliding Layer) */}
       <div
         ref={thePadRef}
         className={cn(
           "absolute inset-x-0 w-[90%] mx-auto flex flex-col shadow-lg z-20",
-          "transition-all duration-500 ease-in-out", // For slide animation
-          "backdrop-blur-sm pad-gloss-effect" // Effects
+          "transition-all duration-500 ease-in-out",
+          "backdrop-blur-sm", 
+          "pad-gloss-effect" 
         )}
-        style={{...padDynamicStyle, ...padCoreStyle}} // Dynamic position/height + Core appearance
+        style={padDynamicStyle}
       >
         {/* PAD Button Panel */}
         <div
           ref={padButtonPanelRef}
           className={cn(
             "h-[60px] flex-shrink-0 flex items-center justify-between px-4"
-            // Rounded-t-lg handled by padCoreStyle on parent
           )}
-          style={padButtonPanelStyle} // Themed background and bottom border
+          style={buttonPanelStyle}
         >
           {isPadUp ? (
             <div className="flex-grow flex justify-center gap-4">
@@ -378,29 +356,26 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
         </div>
 
         {/* PAD Screen Area Wrapper */}
-        <div
+        <div 
           className={cn(
-            "flex-grow min-h-0"
-            // Rounded-b-lg handled by padCoreStyle on parent
+            "flex-grow min-h-0" 
           )}
-          style={padScreenWrapperStyle} // Themed background
+          style={screenWrapperStyle}
         >
           {/* Actual Scrollable Screen Grid Area */}
           {isPadUp ? (
             <div className="h-full w-full pad-screen-grid bg-accent/10 border border-primary/20 rounded-md m-2">
-              <ScrollArea className="h-full w-full">
+               <ScrollArea className="h-full w-full">
                 {renderPadScreenContent()}
               </ScrollArea>
             </div>
           ) : (
-            // Peek view: Show a small part of the grid
             <div
               className={cn(
                 "pad-screen-grid bg-accent/10 border border-primary/20 rounded-md m-2"
               )}
               style={{ height: `${PEEK_AMOUNT}px` }}
             >
-              {/* Empty for peek, or a subtle graphic */}
             </div>
           )}
         </div>
