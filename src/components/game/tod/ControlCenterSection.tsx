@@ -33,7 +33,8 @@ const CircularTimer: React.FC<CircularTimerProps> = ({
 }) => {
   // Inverted progress: 0 when currentTime is duration (timer full), 100 when currentTime is 0 (timer empty)
   const progress = duration > 0 ? ((duration - currentTime) / duration) * 100 : 0;
-  const size = Math.max(80, 150 - (progress * 0.5)); // Dynamic size: gets smaller as progress increases (time runs out)
+  // Dynamic size: gets larger as progress increases (time runs out)
+  const size = 80 + (progress * 0.7); 
 
   let borderColorClass = 'border-primary';
   let textColorClass = 'text-primary';
@@ -363,9 +364,8 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
             {(['All', 'HQ', 'Alerts', 'System'] as const).map(tab => (
               <HolographicButton 
                 key={tab}
-                variant="ghost"
                 size="sm"
-                className={cn("!text-xs !py-1 !px-2", activeCommsTab === tab && "bg-primary/30 text-accent")}
+                className={cn("!text-xs !py-1 !px-2", activeCommsTab === tab ? "active-pad-button" : "hover:bg-primary/10")}
                 onClick={() => setActiveCommsTab(tab)}
               >
                 {tab}
@@ -393,3 +393,5 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
 }
 
     
+
+      
