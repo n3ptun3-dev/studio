@@ -3,13 +3,13 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { HolographicButton } from '@/components/game/shared/HolographicPanel';
+import { HolographicButton } from '@/components/game/shared/HolographicPanel'; // Keep for icon buttons
 import { Progress } from "@/components/ui/progress";
 import { Fingerprint, Settings, BookOpen, Info, Power } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { XP_THRESHOLDS } from '@/lib/constants';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/contexts/ThemeContext'; // For theme-based styling if needed directly
 
 const PEEK_AMOUNT = 20; // Height of the screen area visible when PAD is "off"
 
@@ -92,7 +92,7 @@ AgentDossierView.displayName = 'AgentDossierView';
 
 const IntelFilesView = React.memo(() => {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const { theme: currentGlobalTheme } = useTheme(); 
+  const { theme: currentGlobalTheme } = useTheme();
 
   const categories = [
     { id: "briefing", title: "Briefing", heading: "Current Situation & Objectives", content: "Placeholder content for Briefing: Overview of the current game state, active global events, and primary objectives for agents." },
@@ -114,7 +114,7 @@ const IntelFilesView = React.memo(() => {
         <HolographicButton
           onClick={() => setActiveCategory(null)}
           className="mb-4 !py-1 !px-2 text-xs flex-shrink-0"
-          explicitTheme={currentGlobalTheme} 
+          explicitTheme={currentGlobalTheme}
         >
           &larr; Back to Intel Files
         </HolographicButton>
@@ -137,7 +137,7 @@ const IntelFilesView = React.memo(() => {
             <HolographicButton
               className="w-full justify-start text-left !bg-transparent hover:!bg-primary/10 !py-1.5"
               onClick={() => setActiveCategory(cat.id)}
-              explicitTheme={currentGlobalTheme} 
+              explicitTheme={currentGlobalTheme}
             >
               {cat.title}
             </HolographicButton>
@@ -150,7 +150,7 @@ const IntelFilesView = React.memo(() => {
 IntelFilesView.displayName = 'IntelFilesView';
 
 const SettingsView = React.memo(() => {
-  const { theme: currentGlobalTheme } = useTheme(); 
+  const { theme: currentGlobalTheme } = useTheme();
   return (
     <ScrollArea className="h-full p-3 font-rajdhani">
       <h3 className="text-xl font-orbitron mb-4 holographic-text">Settings</h3>
@@ -168,7 +168,7 @@ SettingsView.displayName = 'SettingsView';
 type PadScreenView = 'dossier' | 'intel' | 'settings';
 
 interface AgentSectionProps {
-  parallaxOffset: number; 
+  parallaxOffset: number;
 }
 
 export function AgentSection({ parallaxOffset }: AgentSectionProps) {
@@ -177,24 +177,24 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
 
   const [isPadUp, setIsPadUp] = useState(false);
   const [padScreenView, setPadScreenView] = useState<PadScreenView>('dossier');
-  const [padButtonPanelHeight, setPadButtonPanelHeight] = useState(60); 
+  const [padButtonPanelHeight, setPadButtonPanelHeight] = useState(60); // Initial estimate
   const [padPeekPlusButtonHeight, setPadPeekPlusButtonHeight] = useState(padButtonPanelHeight + PEEK_AMOUNT);
 
+  const topContentRef = useRef<HTMLDivElement>(null);
   const titleAreaContentRef = useRef<HTMLDivElement>(null);
   const statsAreaRef = useRef<HTMLDivElement>(null);
-  const topContentRef = useRef<HTMLDivElement>(null);
   const thePadRef = useRef<HTMLDivElement>(null);
   const padButtonPanelRef = useRef<HTMLDivElement>(null);
+
 
   useEffect(() => {
     if (padButtonPanelRef.current) {
       const measuredHeight = padButtonPanelRef.current.offsetHeight;
-      if (measuredHeight > 0 && measuredHeight !== padButtonPanelHeight) {
-        // console.log("Measured pad button panel height:", measuredHeight);
+      if (measuredHeight > 0) {
         setPadButtonPanelHeight(measuredHeight);
       }
     }
-  }, [padButtonPanelHeight]); // Re-run if padButtonPanelHeight itself is changed by an external factor
+  }, []); // Run once on mount to measure button panel
 
   useEffect(() => {
     setPadPeekPlusButtonHeight(padButtonPanelHeight + PEEK_AMOUNT);
@@ -219,25 +219,25 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
       default: return <AgentDossierView />;
     }
   };
-  
+
   const padDynamicStyle: React.CSSProperties = {
     top: isPadUp ? '0px' : `calc(100% - ${padPeekPlusButtonHeight}px)`,
     height: isPadUp ? '100%' : `${padPeekPlusButtonHeight}px`,
   };
 
-  // Inline styles for the PAD - using CSS variables set by ThemeContext
+  // Use CSS variables set on :root by ThemeContext for PAD styling
   const currentPadStyle: React.CSSProperties = {
     ...padDynamicStyle,
-    backgroundColor: 'var(--pad-effective-background-color)',
-    borderColor: 'var(--pad-effective-border-color)',
+    backgroundColor: `hsl(var(--pad-bg-hsl))`, // Opaque
+    borderColor: `hsl(var(--pad-border-hsl))`,
     borderRadius: '0.5rem', // Tailwind's rounded-lg
     borderWidth: '1px',
     borderStyle: 'solid',
   };
 
   const buttonPanelStyle: React.CSSProperties = {
-    backgroundColor: 'var(--pad-effective-background-color)', // Match PAD background
-    borderBottomColor: 'var(--pad-effective-button-panel-separator-color)',
+    backgroundColor: `hsl(var(--pad-bg-hsl))`, // Opaque
+    borderBottomColor: `hsl(var(--pad-button-panel-separator-hsl))`, // Opaque
     borderBottomWidth: '1px',
     borderBottomStyle: 'solid',
     borderTopLeftRadius: '0.5rem',
@@ -245,7 +245,7 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
   };
   
   const screenWrapperStyle: React.CSSProperties = {
-    backgroundColor: 'var(--pad-effective-background-color)', // Match PAD background
+    backgroundColor: `hsl(var(--pad-bg-hsl))`, // Opaque
     borderBottomLeftRadius: '0.5rem',
     borderBottomRightRadius: '0.5rem',
   };
@@ -258,13 +258,11 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
       </div>
     );
   }
-
+  
   return (
-    // AgentSection Root - No internal scroll, static container for layers
-    <div className="relative h-full overflow-hidden"> 
+    <div className="relative h-full overflow-hidden"> {/* AgentSection Root - No Scroll, Static Container */}
       {/* Layer 1: Static Background Content (Title + Stats) */}
       <div ref={topContentRef} className="absolute inset-0 flex flex-col z-10 pointer-events-none">
-        {/* Title Area - Takes available space above Stats */}
         <div ref={titleAreaContentRef} className="flex-grow flex flex-col items-center justify-center pt-4 md:pt-2 pb-2 text-center relative overflow-hidden">
           <div className="absolute inset-0 flex items-center justify-center -z-10 opacity-10">
             <Fingerprint className="w-48 h-48 md:w-64 md:h-64 text-primary icon-glow" />
@@ -272,7 +270,6 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
           <h1 className="text-3xl md:text-4xl font-orbitron holographic-text">{playerSpyName || "Agent"}</h1>
           <p className={`text-lg font-semibold ${faction === 'Cyphers' ? 'text-blue-400' : faction === 'Shadows' ? 'text-red-400' : 'text-gray-400'}`}>{faction}</p>
         </div>
-        {/* Stats Area - Sits at the bottom of the top content layer */}
         <div ref={statsAreaRef} className="flex-shrink-0 text-center pt-2 pb-4 px-2">
           <div className="w-full max-w-md mx-auto">
             <p className="text-sm text-muted-foreground">Agent Rank: {playerStats.level}</p>
@@ -298,7 +295,7 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
             </p>
           </div>
         </div>
-        {/* Invisible Spacer to push Stats Area up, ensuring PAD button panel doesn't overlap it */}
+        {/* Invisible Spacer to ensure PAD button panel doesn't overlap Stats Area when PAD is 'off' */}
         <div className="flex-shrink-0" style={{ height: `${padPeekPlusButtonHeight}px` }} />
       </div>
 
@@ -308,8 +305,8 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
         className={cn(
           "absolute inset-x-0 w-[90%] mx-auto flex flex-col shadow-lg z-20",
           "transition-all duration-500 ease-in-out"
-          // "backdrop-blur-sm", // Temporarily removed until background is stable
-          // "pad-gloss-effect"  // Temporarily removed until background is stable
+          // "backdrop-blur-sm", // Temporarily removed
+          // "pad-gloss-effect" // Temporarily removed
         )}
         style={currentPadStyle} 
       >
@@ -366,12 +363,15 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
 
         {/* PAD Screen Area Wrapper */}
         <div 
-          className="flex-grow min-h-0 rounded-b-lg" // Removed pad-screen-wrapper-style, background comes from currentPadStyle on parent
+          className={cn(
+            "flex-grow min-h-0", 
+            "rounded-b-lg" // Added to wrapper for consistent rounding with main PAD
+          )}
           style={screenWrapperStyle}
         >
           {/* Actual Scrollable Screen Grid Area */}
           {isPadUp ? (
-             <div className="h-full w-full pad-screen-grid bg-accent/10 border border-primary/20 rounded-md m-2">
+            <div className="h-full w-full pad-screen-grid bg-accent/10 border border-primary/20 rounded-md m-2">
                <ScrollArea className="h-full w-full">
                 {renderPadScreenContent()}
               </ScrollArea>
@@ -379,7 +379,7 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
           ) : (
             // Peek view when PAD is off
             <div className="h-[20px] pad-screen-grid bg-accent/10 border border-primary/20 rounded-md m-2">
-              {/* Empty or minimal content for peek state */}
+              {/* Empty for peek state, grid shows through from parent */}
             </div>
           )}
         </div>
@@ -387,4 +387,3 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
     </div>
   );
 }
-
