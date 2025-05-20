@@ -46,10 +46,10 @@ const themeHSLValues: Record<Theme, Record<string, string>> = {
     '--border-hsl': '130 60% 35%',
     '--input-hsl': '130 30% 25%',
     '--ring-hsl': '130 70% 50%',
-    '--hologram-glow-color-hsl': '130 90% 55%',
-    '--hologram-button-text-hsl': '130 85% 75%',
+    '--hologram-glow-color-hsl': '130 90% 55%', // Use accent for glow
+    '--hologram-button-text-hsl': '130 85% 75%', // Brighter green for button text
     '--terminal-green-debug-color': 'lime',
-    // PAD specific HSL sources
+    // PAD specific HSL sources - Lighter than main background for visibility when translucent
     '--pad-bg-hsl': '130 25% 15%', 
     '--pad-border-hsl': '130 60% 45%', 
     '--pad-button-panel-separator-hsl': '130 50% 25%',
@@ -74,7 +74,7 @@ const themeHSLValues: Record<Theme, Record<string, string>> = {
     '--border-hsl': '204 100% 60%',
     '--input-hsl': '210 40% 15%',
     '--ring-hsl': '204 100% 55%',
-    '--hologram-glow-color-hsl': 'hsl(204 100% 50%)', // Direct HSL
+    '--hologram-glow-color-hsl': '204 100% 50%', // Direct blue HSL for glow
     '--hologram-button-text-hsl': '0 0% 100%',
     '--cyphers-debug-color': 'blue',
     // PAD specific HSL sources
@@ -102,7 +102,7 @@ const themeHSLValues: Record<Theme, Record<string, string>> = {
     '--border-hsl': '0 100% 50%',
     '--input-hsl': '0 40% 15%',
     '--ring-hsl': '0 100% 55%',
-    '--hologram-glow-color-hsl': 'hsl(0 100% 40%)', // Direct HSL
+    '--hologram-glow-color-hsl': '0 100% 40%', // Direct red HSL for glow
     '--hologram-button-text-hsl': '0 0% 100%',
     '--shadows-debug-color': 'red',
     // PAD specific HSL sources
@@ -123,14 +123,14 @@ const themeHSLValues: Record<Theme, Record<string, string>> = {
     '--secondary-foreground-hsl': '220 10% 60%',
     '--muted-hsl': '220 15% 25%',
     '--muted-foreground-hsl': '220 10% 55%',
-    '--accent-hsl': '180 70% 60%',
+    '--accent-hsl': '180 70% 60%', 
     '--accent-foreground-hsl': '220 10% 10%',
     '--destructive-hsl': '0 70% 50%',
     '--destructive-foreground-hsl': '0 0% 100%',
     '--border-hsl': '220 20% 30%',
     '--input-hsl': '220 20% 25%',
     '--ring-hsl': '220 60% 55%',
-    '--hologram-glow-color-hsl': '180 70% 60%',
+    '--hologram-glow-color-hsl': '180 70% 60%', // Use accent for glow
     '--hologram-button-text-hsl': '220 10% 95%',
     '--neutral-debug-color': 'gray',
     // PAD specific HSL sources
@@ -146,12 +146,11 @@ const HSL_VARIABLES_TO_SET_ON_ROOT = [
   '--secondary-hsl', '--secondary-foreground-hsl', '--muted-hsl', '--muted-foreground-hsl',
   '--accent-hsl', '--accent-foreground-hsl', '--destructive-hsl', '--destructive-foreground-hsl',
   '--border-hsl', '--input-hsl', '--ring-hsl',
-  // Note: --hologram-glow-color-hsl is set as a direct HSL string for cyphers/shadows, or derived for others
-  // We will ensure it's set directly or through its HSL source for all themes.
-  '--hologram-button-text-hsl',
+  '--hologram-glow-color-hsl', // For components that might use it directly
+  '--hologram-button-text-hsl', // For components that might use it directly
   // PAD specific HSL sources
   '--pad-bg-hsl', '--pad-border-hsl', '--pad-button-panel-separator-hsl',
-  // Theme specific debug colors
+  // Theme specific debug colors (will only be set if defined for the theme)
   '--terminal-green-debug-color', '--cyphers-debug-color', '--shadows-debug-color', '--neutral-debug-color',
 ];
 
@@ -159,9 +158,9 @@ const HSL_VARIABLES_TO_SET_ON_ROOT = [
 export function ThemeProvider({ children, defaultTheme = "terminal-green" }: {
     children: ReactNode,
     defaultTheme?: Theme,
-    attribute?: string, 
-    enableSystem?: boolean, 
-    disableTransitionOnChange?: boolean, 
+    attribute?: string, // Kept for potential future use, not actively used by this logic
+    enableSystem?: boolean, // Kept for potential future use
+    disableTransitionOnChange?: boolean, // Kept for potential future use
 }) {
   const [currentThemeInternal, setThemeInternal] = useState<Theme>(() => {
     if (typeof window !== 'undefined') {
@@ -175,17 +174,17 @@ export function ThemeProvider({ children, defaultTheme = "terminal-green" }: {
   const [themeVersion, setThemeVersion] = useState(0); 
 
   const setTheme = useCallback((newTheme: Theme) => {
-    setThemeInternal(currentInternalTheme => {
+    setThemeInternal(prevTheme => {
       if (availableThemesList.includes(newTheme)) {
         console.log(`[ThemeContext] setTheme callback invoked with newTheme: ${newTheme}`);
-        if (currentInternalTheme !== newTheme) {
-          console.log(`[ThemeContext] Actually changing theme from ${currentInternalTheme} to ${newTheme}`);
+        if (prevTheme !== newTheme) {
+          console.log(`[ThemeContext] Actually changing theme from ${prevTheme} to ${newTheme}`);
           return newTheme;
         }
-        return currentInternalTheme; 
+        return prevTheme; 
       }
       console.warn(`[ThemeContext] Attempted to set invalid theme: ${newTheme}`);
-      return currentInternalTheme; 
+      return prevTheme; 
     });
   }, [setThemeInternal]); 
 
@@ -196,6 +195,7 @@ export function ThemeProvider({ children, defaultTheme = "terminal-green" }: {
       const htmlEl = document.documentElement;
       const style = htmlEl.style;
 
+      // Remove all theme classes before adding the new one
       availableThemesList.forEach(tName => {
         if (tName) htmlEl.classList.remove(`theme-${tName}`);
       });
@@ -212,28 +212,24 @@ export function ThemeProvider({ children, defaultTheme = "terminal-green" }: {
       if (themeColorsToSet) {
         console.log(`[ThemeContext] Setting :root HSL variables for theme: ${effectiveTheme}`);
         
+        // Set base HSL variables on :root
         HSL_VARIABLES_TO_SET_ON_ROOT.forEach(variableName => {
           if (themeColorsToSet[variableName]) {
             style.setProperty(variableName, themeColorsToSet[variableName]);
           } else {
+             // Clean up debug colors if not defined for the current theme
              if (variableName.endsWith('-debug-color')) {
                 style.removeProperty(variableName);
              }
           }
         });
-
-        // Ensure --hologram-glow-color-hsl is set if not directly in themeHSLValues (e.g. for terminal-green, neutral)
-        if (!themeColorsToSet['--hologram-glow-color-hsl'] && themeColorsToSet['--accent-hsl']) {
-          // Default glow to accent for themes like terminal-green/neutral if not explicitly set
-          style.setProperty('--hologram-glow-color-hsl', themeColorsToSet['--accent-hsl']);
-        } else if (themeColorsToSet['--hologram-glow-color-hsl']) {
-           // This handles cases where it's a direct HSL string like for cyphers/shadows
-           style.setProperty('--hologram-glow-color-hsl', themeColorsToSet['--hologram-glow-color-hsl']);
-        }
         
-        // Set PAD specific *effective* colors that include opacity
+        // Set "effective" color variables on :root (these combine base HSLs with opacity or are direct)
+        // This ensures components can use these directly if var(hsl(var())) is problematic
+
         const padEffectiveBg = `hsla(${themeColorsToSet['--pad-bg-hsl']}, 0.85)`;
         style.setProperty('--pad-effective-background-color', padEffectiveBg);
+        console.log(`[ThemeContext] Set --pad-effective-background-color to: ${padEffectiveBg}`);
 
         const padEffectiveBorder = `hsl(${themeColorsToSet['--pad-border-hsl']})`;
         style.setProperty('--pad-effective-border-color', padEffectiveBorder);
@@ -246,16 +242,17 @@ export function ThemeProvider({ children, defaultTheme = "terminal-green" }: {
       }
 
       setThemeVersion(v => v + 1);
-      // console.log(`[ThemeContext] Updated :root styles and themeVersion to ${themeVersion + 1} for theme ${effectiveTheme}`);
+      // The log for themeVersion update was here, but it uses a stale themeVersion value.
+      // It's better to log it in a separate effect or rely on components consuming themeVersion.
     }
-  }, [currentThemeInternal]); 
+  }, [currentThemeInternal]); // Only re-run when the internal theme state changes
 
 
   const contextValue = useMemo(() => ({
     theme: currentThemeInternal,
     setTheme,
     availableThemes: availableThemesList,
-    themeVersion,
+    themeVersion, // Provide themeVersion for consumers
   }), [currentThemeInternal, setTheme, themeVersion]); 
 
   return (
@@ -272,3 +269,5 @@ export function useTheme() {
   }
   return context;
 }
+
+    
