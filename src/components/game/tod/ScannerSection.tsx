@@ -45,40 +45,22 @@ const generateNodes = (count = 15): NetworkNode[] => {
   return nodes;
 };
 
-const NODE_AREA_SCROLL_SPEED = 0.15; // Adjusted scroll speed
-const BACKGROUND_IMAGE_PATH = "/backgrounds/Spi Vs Spi bg.jpg";
+// const NODE_AREA_SCROLL_SPEED = 0.15; // Not used in this reverted version
+// const BACKGROUND_IMAGE_PATH = "/backgrounds/Spi Vs Spi bg.jpg"; // Not used in this reverted version
 
 export function ScannerSection({ parallaxOffset }: SectionProps) {
   const { openTODWindow, faction } = useAppContext();
-  const { theme: currentGlobalTheme } = useTheme();
+  const { theme: currentGlobalTheme, themeVersion } = useTheme();
   const [nodes, setNodes] = useState<NetworkNode[]>(() => generateNodes());
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const nodeDisplayAreaRef = useRef<HTMLDivElement>(null);
-  const animationFrameIdRef = useRef<number | null>(null);
-  const currentPositionXRef = useRef(0);
+  // const nodeDisplayAreaRef = useRef<HTMLDivElement>(null); // Not used in this reverted version
+  // const animationFrameIdRef = useRef<number | null>(null); // Not used
+  // const currentPositionXRef = useRef(0); // Not used
 
   useEffect(() => {
-    const container = nodeDisplayAreaRef.current;
-    if (container) {
-      container.style.backgroundImage = `url('${BACKGROUND_IMAGE_PATH}')`;
-      container.style.backgroundRepeat = 'repeat-x';
-      container.style.backgroundSize = 'auto 100%'; // Cover height, auto width for aspect ratio
-
-      const animateScroll = () => {
-        currentPositionXRef.current -= NODE_AREA_SCROLL_SPEED;
-        container.style.backgroundPositionX = `${currentPositionXRef.current}px`;
-        animationFrameIdRef.current = requestAnimationFrame(animateScroll);
-      };
-      animateScroll();
-      
-      return () => {
-        if (animationFrameIdRef.current) {
-          cancelAnimationFrame(animationFrameIdRef.current);
-        }
-      };
-    }
+    // Removed map scrolling useEffect
   }, []);
 
   useEffect(() => {
@@ -125,12 +107,13 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
 
   return (
     <div className="flex flex-col h-full overflow-hidden p-4 md:p-6">
-      {/* Main content area with holographic border */}
+      {/* Main content area with bg-black/70 background */}
       <div
         className={cn(
-          "holographic-panel flex flex-col flex-grow overflow-hidden" // Removed pad-gloss-effect
+          "bg-black/70 flex flex-col flex-grow overflow-hidden rounded-lg" 
+          // No holographic-panel class here, no pad-gloss-effect
         )}
-        explicitTheme={currentGlobalTheme}
+        // No explicitTheme prop here as it's a plain div
       >
         {/* Title Area */}
         <div className="flex-none flex items-center justify-between p-3 md:p-4">
@@ -139,8 +122,8 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             <HolographicButton 
               onClick={handleScannerInfoClick}
               size="icon" 
-              className="!p-2" // Ensure consistent button size
-              explicitTheme={currentGlobalTheme}
+              className="!p-2"
+              explicitTheme={currentGlobalTheme} // HolographicButton needs this
               aria-label="Scanner Information"
             >
               <Info className="w-5 h-5 icon-glow" />
@@ -148,9 +131,9 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             <HolographicButton 
               onClick={refreshScanner} 
               disabled={isLoading} 
-              className="!p-2" // Ensure consistent button size
+              className="!p-2"
               size="icon"
-              explicitTheme={currentGlobalTheme}
+              explicitTheme={currentGlobalTheme} // HolographicButton needs this
               aria-label="Refresh Scanner"
             >
               <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''} icon-glow`} />
@@ -158,15 +141,19 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
           </div>
         </div>
 
-        {/* Node Display Area */}
+        {/* Node Display Area - Now a HolographicPanel with themed transparent background */}
         <HolographicPanel
-          ref={nodeDisplayAreaRef}
+          // ref={nodeDisplayAreaRef} // No longer needed for map scroll
           explicitTheme={currentGlobalTheme} 
           className={cn(
-            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md map-overlay", // Added map-overlay
-            "border-primary/30" // Retain themed border for the map area
+            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md map-overlay",
+            "bg-primary/10 border-primary/30" // Very transparent themed background and border
           )}
-          // Background image is set via JS useEffect
+           style={{ // Radial grid lines with themed color
+            backgroundImage: `radial-gradient(hsl(var(--primary-hsl)/0.1) 0.5px, transparent 0.5px), radial-gradient(hsl(var(--primary-hsl)/0.1) 0.5px, transparent 0.5px)`,
+            backgroundSize: '20px 20px',
+            backgroundPosition: '0 0, 10px 10px',
+          }}
         >
           {/* Connecting Lines - z-index 10 */}
           {nodes.map((node, i) => 
@@ -206,7 +193,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
               className={cn(
                 "absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80",
                 "p-3 md:p-4 z-20 animate-slide-in-bottom font-rajdhani rounded-lg shadow-lg",
-                "bg-black/40 backdrop-blur-sm" // Darker subtle background with blur
+                "bg-black/40 backdrop-blur-sm" 
               )}
             >
               <h3 className="text-lg font-orbitron mb-2 holographic-text">{selectedNode.title}</h3>
@@ -254,4 +241,3 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
     </div>
   );
 }
-
