@@ -6,7 +6,7 @@ import { HolographicButton, HolographicInput, HolographicPanel } from '@/compone
 import { RefreshCw, Info, MapPin, AlertTriangle, Gift } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { cn } from '@/lib/utils';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme, type Theme } from '@/contexts/ThemeContext';
 
 interface SectionProps {
   parallaxOffset: number;
@@ -18,11 +18,12 @@ interface NetworkNode {
   title: string;
   level?: number;
   owner?: string;
-  team?: string;
+  team?: string; // 'Cyphers' or 'Shadows' or 'Neutral/Unclaimed'
   elintAmount?: number;
-  position: { x: number; y: number };
+  position: { x: number; y: number }; // Percentage values
 }
 
+// Function to generate random nodes
 const generateNodes = (count = 15): NetworkNode[] => {
   const nodes: NetworkNode[] = [];
   const types: NetworkNode['type'][] = ['vault', 'highPriority', 'droppedItem'];
@@ -37,22 +38,24 @@ const generateNodes = (count = 15): NetworkNode[] => {
       team: type !== 'droppedItem' ? (Math.random() > 0.5 ? "Cyphers" : "Shadows") : undefined,
       elintAmount: type === 'highPriority' ? Math.floor(Math.random() * 5000) + 1000 : undefined,
       position: {
-        x: Math.random() * 80 + 10,
-        y: Math.random() * 70 + 15
+        x: Math.random() * 80 + 10, // Keep nodes away from extreme edges
+        y: Math.random() * 70 + 15  // Keep nodes away from top/bottom edges (title/details panel)
       },
     });
   }
   return nodes;
 };
 
-const NODE_AREA_SCROLL_SPEED = 0.15;
+const NODE_AREA_SCROLL_SPEED = 0.15; // Adjusted speed
 
 export function ScannerSection({ parallaxOffset }: SectionProps) {
-  const { openTODWindow, faction } = useAppContext();
+  const { openTODWindow, faction: currentAppFaction } = useAppContext();
   const { theme: currentGlobalTheme, themeVersion } = useTheme();
   const [nodes, setNodes] = useState<NetworkNode[]>(() => generateNodes());
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Ref for the node display area's background scrolling
   const nodeDisplayBgRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -61,28 +64,34 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
 
     let animationFrameId: number;
     let currentPositionX = 0;
+    // Set initial background properties
     container.style.backgroundImage = "url('/backgrounds/Spi Vs Spi bg.jpg')";
     container.style.backgroundRepeat = 'repeat-x';
-    container.style.backgroundSize = 'auto 100%';
+    container.style.backgroundSize = 'auto 100%'; // Cover the height, auto width
 
     const animateScroll = () => {
       currentPositionX -= NODE_AREA_SCROLL_SPEED;
-      if (container) { // Check if container is still mounted
-        container.style.backgroundPositionX = `${currentPositionX}px`;
+      if (nodeDisplayBgRef.current) { // Check if ref is still valid
+        nodeDisplayBgRef.current.style.backgroundPositionX = `${currentPositionX}px`;
       }
       animationFrameId = requestAnimationFrame(animateScroll);
     };
-    animateScroll();
-    return () => cancelAnimationFrame(animationFrameId);
-  }, []); // Empty dependency array: run once on mount
+
+    animateScroll(); // Start the animation loop
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, []); // Empty dependency array means this runs once on mount and cleans up on unmount
+
 
   const refreshScanner = () => {
     setIsLoading(true);
-    setSelectedNode(null);
+    setSelectedNode(null); // Deselect node on refresh
     setTimeout(() => {
       setNodes(generateNodes());
       setIsLoading(false);
-    }, 1000);
+    }, 1000); // Simulate network delay
   };
 
   const handleNodeClick = (node: NetworkNode) => {
@@ -110,16 +119,18 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
         </ul>
         <p className="mt-3">Use the refresh function to update targets. Note that network conditions may affect scanner accuracy.</p>
       </div>,
-      { showCloseButton: true }
+      { showCloseButton: true } 
     );
   };
 
   return (
     <div className="flex flex-col h-full overflow-hidden p-4 md:p-6">
-      {/* Main content area with black/70 background */}
+      {/* Main content area with custom border and glow */}
       <div
         className={cn(
-          "bg-black/70 flex flex-col flex-grow overflow-hidden rounded-lg" 
+          "bg-black/70 flex flex-col flex-grow overflow-hidden rounded-lg", // Base classes
+          "border border-[var(--hologram-panel-border)]", // Themed border
+          "shadow-[0_0_15px_var(--hologram-glow-color),_inset_0_0_10px_var(--hologram-glow-color)]" // Themed glow
         )}
       >
         {/* Title Area */}
@@ -129,7 +140,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             <HolographicButton
               onClick={handleScannerInfoClick}
               size="icon"
-              className="!p-2" // Ensure consistent button size
+              className="!p-2"
               explicitTheme={currentGlobalTheme}
               aria-label="Scanner Information"
             >
@@ -138,7 +149,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             <HolographicButton
               onClick={refreshScanner}
               disabled={isLoading}
-              className="!p-2" // Ensure consistent button size
+              className="!p-2"
               size="icon"
               explicitTheme={currentGlobalTheme}
               aria-label="Refresh Scanner"
@@ -148,25 +159,25 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
           </div>
         </div>
 
-        {/* Node Display Area - Uses HolographicPanel */}
+        {/* Node Display Area - Uses HolographicPanel for its default border/bg + map overlay + scrolling map */}
         <HolographicPanel
-          ref={nodeDisplayBgRef}
+          ref={nodeDisplayBgRef} // Ref for background manipulation
           explicitTheme={currentGlobalTheme}
-          key={`node-display-${currentGlobalTheme}-${themeVersion}`} // Re-key for theme changes
+          key={`node-display-${currentGlobalTheme}-${themeVersion}`}
           className={cn(
             "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md map-overlay"
-            // Removed bg-primary/10 and border-primary/30 to rely on HolographicPanel defaults + map-overlay
           )}
-          style={{ // Themed radial grid lines on top of the map background
-            backgroundImage: `radial-gradient(hsl(var(--primary-hsl)/0.05) 0.5px, transparent 0.5px), radial-gradient(hsl(var(--primary-hsl)/0.05) 0.5px, transparent 0.5px)`,
+          // Themed radial grid is applied here, on top of the panel's default bg
+          style={{
+            backgroundImage: `radial-gradient(hsl(var(--primary-hsl)/0.1) 0.5px, transparent 0.5px), radial-gradient(hsl(var(--primary-hsl)/0.1) 0.5px, transparent 0.5px)`,
             backgroundSize: '20px 20px',
             backgroundPosition: '0 0, 10px 10px',
           }}
         >
-          {/* Connecting Lines */}
+          {/* Connecting Lines - these need to be above the map background but below nodes */}
           {nodes.map((node, i) =>
             i < nodes.length - 1 && (
-              <svg key={`line-${i}`} className="absolute inset-0 w-full h-full z-[10]" style={{ pointerEvents: 'none' }}>
+              <svg key={`line-${i}`} className="absolute inset-0 w-full h-full z-[5]" style={{ pointerEvents: 'none' }}>
                 <line
                   x1={`${node.position.x}%`} y1={`${node.position.y}%`}
                   x2={`${nodes[i + 1].position.x}%`} y2={`${nodes[i + 1].position.y}%`}
@@ -175,7 +186,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             )
           )}
 
-          {/* Nodes */}
+          {/* Nodes - these need to be above lines and map overlay */}
           {nodes.map(node => (
             <div
               key={node.id}
@@ -202,7 +213,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
               className={cn(
                 "absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80",
                 "p-3 md:p-4 z-20 animate-slide-in-bottom font-rajdhani rounded-lg shadow-lg",
-                "backdrop-blur-sm bg-black/40" // Distinct background for details window
+                "bg-black/40 backdrop-blur-sm" 
               )}
             >
               <h3 className="text-lg font-orbitron mb-2 holographic-text">{selectedNode.title}</h3>
@@ -250,4 +261,3 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
     </div>
   );
 }
-
