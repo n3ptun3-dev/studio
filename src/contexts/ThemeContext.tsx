@@ -227,7 +227,7 @@ export function ThemeProvider({ children, defaultTheme = "terminal-green" }: {
         // These are used by components that need the final color string directly (like inline styles).
 
         // For PAD (AgentSection)
-        const padEffectiveBg = `hsla(${themeColorsToSet['--pad-bg-hsl']}, 0.85)`;
+        const padEffectiveBg = `hsla(${themeColorsToSet['--pad-bg-hsl']}, 0.7)`;
         style.setProperty('--pad-effective-background-color', padEffectiveBg);
         const padEffectiveBorder = `hsl(${themeColorsToSet['--pad-border-hsl']})`;
         style.setProperty('--pad-effective-border-color', padEffectiveBorder);

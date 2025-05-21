@@ -307,9 +307,7 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
         ref={thePadRef}
         className={cn(
           "absolute inset-x-0 w-[90%] mx-auto flex flex-col shadow-lg z-20",
-          "transition-all duration-500 ease-in-out",
-          "bg-black/70", // Fixed background color
-          "backdrop-blur-sm", 
+          "transition-all duration-500 ease-in-out", 
           "pad-gloss-effect" 
         )}
         style={currentPadInlineStyle}
@@ -372,7 +370,7 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
         <div
           className={cn(
             "flex-grow min-h-0",
-            "bg-black/70 rounded-b-lg" // Fixed background color, ensure bottom rounding
+ "pad-gloss-effect" 
           )}
           style={screenWrapperInlineStyle} 
         >

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -54,7 +53,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
   const [nodes, setNodes] = useState<NetworkNode[]>(() => generateNodes());
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Ref for the node display area's background scrolling
   const nodeDisplayBgRef = useRef<HTMLDivElement>(null);
 
@@ -119,7 +118,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
         </ul>
         <p className="mt-3">Use the refresh function to update targets. Note that network conditions may affect scanner accuracy.</p>
       </div>,
-      { showCloseButton: true } 
+      { showCloseButton: true }
     );
   };
 
@@ -213,8 +212,8 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
               className={cn(
                 "absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80",
                 "p-3 md:p-4 z-20 animate-slide-in-bottom font-rajdhani rounded-lg shadow-lg",
-                "bg-black/40 backdrop-blur-sm" 
-              )}
+                "bg-black/40 backdrop-blur-sm"
+              )} style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
             >
               <h3 className="text-lg font-orbitron mb-2 holographic-text">{selectedNode.title}</h3>
               {selectedNode.type === 'vault' && (
@@ -257,6 +256,8 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             </HolographicPanel>
           )}
         </HolographicPanel>
+        {/* Gloss Effect Layer */}
+        <div className="absolute inset-0 pad-gloss-effect pointer-events-none z-[1]"></div>
       </div>
     </div>
   );

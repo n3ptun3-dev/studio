@@ -44,13 +44,12 @@
     --hologram-panel-bg-hsl: 130 30% 15%; 
     --hologram-panel-border-hsl: 130 70% 45%; 
     --hologram-glow-color-hsl: 130 90% 55%;   
-    --hologram-button-text-hsl: 130 85% 75%;
+    --hologram-button-text-hsl: 130 85% 75%; /* Brighter green for button text */
 
     /* Debug color (optional, can be removed by JS if not in theme) */
     --terminal-green-debug-color: lime;
   }
 
-  /* Theme classes primarily act as markers for JS, but can define HSL overrides if JS fails */
   .theme-cyphers {
     --background-hsl: 210 60% 8%;
     --foreground-hsl: 200 100% 90%;
@@ -66,18 +65,23 @@
     --muted-foreground-hsl: 200 80% 70%;
     --accent-hsl: 0 0% 100%;
     --accent-foreground-hsl: 210 60% 8%;
+    --destructive-hsl: 0 70% 50%;
+    --destructive-foreground-hsl: 0 0% 100%;
     --border-hsl: 204 100% 60%;
     --input-hsl: 210 40% 15%;
     --ring-hsl: 204 100% 55%;
+
     --pad-bg-hsl: 210 50% 18%; 
     --pad-border-hsl: 204 100% 70%;
     --pad-button-panel-separator-hsl: 204 100% 40%;
+    
     --hologram-panel-bg-hsl: 210 50% 15%; 
-    --hologram-panel-border-hsl: 204 100% 50%;
+    --hologram-panel-border-hsl: 204 100% 50%; 
     --hologram-glow-color-hsl: 204 100% 50%;
     --hologram-button-text-hsl: 0 0% 100%;
     --cyphers-debug-color: blue;
   }
+
   .theme-shadows {
     --background-hsl: 0 60% 8%;
     --foreground-hsl: 0 0% 90%;
@@ -93,18 +97,23 @@
     --muted-foreground-hsl: 0 0% 70%;
     --accent-hsl: 0 0% 100%;
     --accent-foreground-hsl: 0 60% 8%;
+    --destructive-hsl: 0 70% 50%;
+    --destructive-foreground-hsl: 0 0% 100%;
     --border-hsl: 0 100% 50%;
     --input-hsl: 0 40% 15%;
     --ring-hsl: 0 100% 55%;
+
     --pad-bg-hsl: 0 50% 18%; 
     --pad-border-hsl: 0 100% 60%;
     --pad-button-panel-separator-hsl: 0 100% 25%;
+
     --hologram-panel-bg-hsl: 0 50% 15%; 
-    --hologram-panel-border-hsl: 0 100% 40%;
+    --hologram-panel-border-hsl: 0 100% 40%; 
     --hologram-glow-color-hsl: 0 100% 40%;
     --hologram-button-text-hsl: 0 0% 100%;
     --shadows-debug-color: red;
   }
+
    .theme-neutral { 
     --background-hsl: 220 10% 10%;
     --foreground-hsl: 220 10% 70%;
@@ -120,15 +129,19 @@
     --muted-foreground-hsl: 220 10% 55%;
     --accent-hsl: 180 70% 60%; 
     --accent-foreground-hsl: 220 10% 10%;
+    --destructive-hsl: 0 70% 50%;
+    --destructive-foreground-hsl: 0 0% 100%;
     --border-hsl: 220 20% 30%;
     --input-hsl: 220 20% 25%;
     --ring-hsl: 180 70% 55%;
+
     --pad-bg-hsl: 220 15% 18%;
     --pad-border-hsl: 220 20% 35%;
     --pad-button-panel-separator-hsl: 220 20% 25%;
+
     --hologram-panel-bg-hsl: 220 15% 18%; 
     --hologram-panel-border-hsl: 180 70% 50%;
-    --hologram-glow-color-hsl: 180 70% 60%;
+    --hologram-glow-color-hsl: 180 70% 60%; /* Corrected: was using 220 70% 60% which is almost white */
     --hologram-button-text-hsl: 220 10% 95%;
     --neutral-debug-color: gray;
   }
@@ -223,15 +236,13 @@
 }
 
 /* Custom holographic styles */
-/* Note: --hologram-panel-bg, --hologram-panel-border, --hologram-glow-color, --hologram-button-text
-   are all set on :root's inline style by ThemeContext.tsx */
 .holographic-panel {
-  background-color: var(--hologram-panel-bg); 
-  border-color: var(--hologram-panel-border); 
+  background-color: var(--hologram-panel-bg); /* Uses var set by JS on :root */
+  border-color: var(--hologram-panel-border); /* Uses var set by JS on :root */
   border-width: 1px;
   border-style: solid;
   border-radius: 0.5rem; 
-  box-shadow: 0 0 15px var(--hologram-glow-color), inset 0 0 10px var(--hologram-glow-color);
+  box-shadow: 0 0 15px var(--hologram-glow-color), inset 0 0 10px var(--hologram-glow-color); /* Uses var set by JS on :root */
   @apply p-4 md:p-6;
 }
 
@@ -241,13 +252,13 @@
 }
 
 .holographic-button {
-  border-color: var(--hologram-panel-border); /* Use panel border for button as default, can be overridden by specific button bg var if needed */
+  border-color: var(--hologram-panel-border); 
   color: var(--hologram-button-text) !important; 
   @apply bg-transparent border rounded-md px-4 py-2 transition-all duration-300;
   box-shadow: 0 0 8px var(--hologram-panel-border), inset 0 0 5px var(--hologram-panel-border);
 }
 .holographic-button:hover {
-  background-color: var(--hologram-panel-border); /* Use border color as hover bg */
+  background-color: var(--hologram-panel-border); 
   color: hsl(var(--background-hsl)) !important; 
   box-shadow: 0 0 15px var(--hologram-panel-border), 0 0 25px var(--hologram-panel-border);
 }
@@ -338,6 +349,42 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Cleaned up PAD gloss effect */
+.pad-gloss-effect {
+  position: relative;
+  overflow: hidden; /* Important to clip the pseudo-element */
+}
+
+.pad-gloss-effect::after { /* Changed from ::before, using a single ::after for the sweep */
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -150%; /* Start off-screen to the left */
+  width: 75%;  /* Width of the sheen */
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    hsla(0,0%,100%,0) 0%,    /* Transparent start */
+    hsla(0,0%,100%,0.05) 50%, /* Faint white center (original value) */
+    hsla(0,0%,100%,0) 100%   /* Transparent end */
+  );
+  transform: skewX(-25deg);
+  animation: gloss-sweep 7s infinite linear; /* Using the new keyframe name */
+  z-index: 1; /* Should be above the parent's direct background */
+  pointer-events: none; /* Allows clicks to pass through */
+  border-radius: inherit; /* Ensures gloss respects parent's rounding */
+}
+
+@keyframes gloss-sweep { /* Renamed from sweep for clarity */
+  0% {
+    left: -150%; /* Matches initial left of ::after */
+  }
+  100% {
+    left: 150%; /* Sweeps across and off-screen to the right */
+  }
+}
+
 
 @keyframes slide-up-from-bottom {
   from {
