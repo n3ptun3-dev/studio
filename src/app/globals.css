@@ -33,9 +33,9 @@
     --pad-button-panel-separator-hsl: 130 50% 25%;
     
     /* Holographic HSLs - also set by JS on :root */
-    --hologram-panel-bg-hsl: 130 30% 20%; /* Made slightly lighter for visibility */
-    --hologram-glow-color-hsl: 130 90% 55%; /* Theme's accent */
-    --hologram-button-text-hsl: 130 85% 75%; /* Brighter green for button text */
+    --hologram-panel-bg-hsl: 130 30% 20%;
+    --hologram-glow-color-hsl: hsl(130 90% 55%); /* Direct HSL for glow */
+    --hologram-button-text-hsl: hsl(130 85% 75%);
     --terminal-green-debug-color: lime;
 
      /* Effective colors set by JS - For PAD styling */
@@ -153,7 +153,7 @@
     --pad-button-panel-separator-hsl: 220 20% 25%;
 
     /* Holographic */
-    --hologram-panel-bg-hsl: 220 15% 18%;
+    --hologram-panel-bg-hsl: 220 15% 18%; 
     --hologram-glow-color-hsl: hsl(180 70% 60%); 
     --hologram-button-text-hsl: hsl(220 10% 95%);
     --neutral-debug-color: gray;
@@ -187,13 +187,12 @@
     --ring: hsl(var(--ring-hsl));
 
     /* Holographic Variables - HSL sources are set by JS on :root */
-    /* Default fallback for --hologram-panel-bg-hsl is --card-hsl. Opacity is 0.6 */
     --hologram-panel-bg: hsla(var(--hologram-panel-bg-hsl, var(--card-hsl)), 0.6);
     --hologram-panel-border: hsl(var(--primary-hsl)); 
-    --hologram-glow-color: hsl(var(--hologram-glow-color-hsl));
+    /* --hologram-glow-color is set directly in theme HSLs */
     --hologram-base-text-color: hsl(var(--foreground-hsl));
     --hologram-button-bg: hsl(var(--primary-hsl));
-    --hologram-button-text: hsl(var(--hologram-button-text-hsl));
+    /* --hologram-button-text is set directly in theme HSLs */
     
     /* Item Level Colors HSL (remain globally available) */
     --level-1-color-hsl: 0 100% 50%;
@@ -269,18 +268,18 @@
   border-width: 1px;
   border-style: solid;
   border-radius: 0.5rem; /* rounded-lg */
-  box-shadow: 0 0 15px var(--hologram-glow-color), inset 0 0 10px var(--hologram-glow-color);
+  box-shadow: 0 0 15px var(--hologram-glow-color-hsl), inset 0 0 10px var(--hologram-glow-color-hsl); /* Uses HSL var for glow */
   @apply p-4 md:p-6;
 }
 
 .holographic-text {
   color: var(--hologram-base-text-color);
-  text-shadow: 0 0 5px var(--hologram-glow-color), 0 0 10px var(--hologram-glow-color);
+  text-shadow: 0 0 5px var(--hologram-glow-color-hsl), 0 0 10px var(--hologram-glow-color-hsl); /* Uses HSL var for glow */
 }
 
 .holographic-button {
   border-color: var(--hologram-button-bg);
-  color: var(--hologram-button-text) !important;
+  color: var(--hologram-button-text-hsl) !important; /* Uses HSL var for text */
   @apply bg-transparent border rounded-md px-4 py-2 transition-all duration-300;
   box-shadow: 0 0 8px var(--hologram-button-bg), inset 0 0 5px var(--hologram-button-bg);
 }
@@ -325,10 +324,8 @@
     repeating-linear-gradient(90deg, hsl(var(--foreground-hsl) / 0.1) 0px 1px, transparent 1px 20px);
 }
 
-/* Removed .pad-gloss-effect and @keyframes gloss-sweep as it's being disabled */
-
 .icon-glow {
-  filter: drop-shadow(0 0 3px var(--hologram-glow-color));
+  filter: drop-shadow(0 0 3px var(--hologram-glow-color-hsl)); /* Uses HSL var for glow */
 }
 
 .network-tap-light {
@@ -378,7 +375,6 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-
 
 @keyframes slide-up-from-bottom {
   from {
@@ -431,9 +427,9 @@
   );
   transform: skewX(-25deg);
   animation: gloss-sweep 7s infinite linear;
-  z-index: 1; /* Ensure it's above the main background but below content if any */
-  pointer-events: none; /* Allows clicks to pass through */
-  border-radius: inherit; /* Makes the gloss follow the parent's rounding */
+  z-index: 1; 
+  pointer-events: none;
+  border-radius: inherit;
 }
 
 @keyframes gloss-sweep {
@@ -443,4 +439,14 @@
   100% {
     left: 150%;
   }
+}
+
+.map-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0; /* Cover the entire parent */
+  background-color: rgba(0, 0, 0, 0.2); /* 20% black overlay */
+  z-index: 5; /* Ensure it's above the map background image but below nodes/lines */
+  pointer-events: none; /* Allow clicks to pass through to the map elements */
+  border-radius: inherit; /* Match parent's rounding if any */
 }

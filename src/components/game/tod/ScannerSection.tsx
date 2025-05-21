@@ -3,7 +3,7 @@
 
 import { HolographicButton, HolographicInput, HolographicPanel } from '@/components/game/shared/HolographicPanel';
 import { RefreshCw, MapPin, AlertTriangle, Gift, Info } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react'; // Added useRef
+import { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -45,8 +45,8 @@ const generateNodes = (count = 15): NetworkNode[] => {
   return nodes;
 };
 
-const NODE_AREA_SCROLL_SPEED = 0.2; // Speed for node area background scroll
-const BACKGROUND_IMAGE_PATH = "/backgrounds/Spi Vs Spi bg.jpg"; // Path to background image
+const NODE_AREA_SCROLL_SPEED = 0.1; // Slowed down scroll speed
+const BACKGROUND_IMAGE_PATH = "/backgrounds/Spi Vs Spi bg.jpg";
 
 export function ScannerSection({ parallaxOffset }: SectionProps) {
   const { openTODWindow, faction } = useAppContext();
@@ -65,7 +65,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
     if (container) {
       container.style.backgroundImage = `url('${BACKGROUND_IMAGE_PATH}')`;
       container.style.backgroundRepeat = 'repeat-x';
-      container.style.backgroundSize = 'auto 100%'; // Cover height, auto width for aspect ratio
+      container.style.backgroundSize = 'auto 100%';
 
       const animateScroll = () => {
         currentPositionX -= NODE_AREA_SCROLL_SPEED;
@@ -73,19 +73,18 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
         animationFrameId = requestAnimationFrame(animateScroll);
       };
       animateScroll();
+      
+      return () => {
+        if (animationFrameId) {
+          cancelAnimationFrame(animationFrameId);
+        }
+      };
     }
-    return () => {
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-      }
-    };
   }, []);
-
 
   useEffect(() => {
     // Example: could add logic here to refresh nodes if faction changes
   }, [faction]);
-
 
   const refreshScanner = () => {
     setIsLoading(true);
@@ -111,9 +110,9 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
 
   const handleScannerInfoClick = () => {
     openTODWindow(
-        "Network Scanner Intel", 
+        "Scanner Intel", 
         <div className="font-rajdhani text-muted-foreground space-y-2 p-2">
-            <p>The Network Scanner pings the local digital vicinity for active targets:</p>
+            <p>The Scanner pings the local digital vicinity for active targets:</p>
             <ul className="list-disc list-inside space-y-1">
                 <li><MapPin className="inline w-4 h-4 mr-1 text-primary" /> Secure Vaults: Indicates other agents' ELINT storage. Higher level vaults may offer greater rewards but pose significant challenges.</li>
                 <li><AlertTriangle className="inline w-4 h-4 mr-1 text-destructive" /> High-Priority Transfers: Time-sensitive ELINT movements. Intercepting these can yield substantial gains but may be heavily contested.</li>
@@ -125,21 +124,24 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
     );
   };
 
-
   return (
     <div className="flex flex-col h-full overflow-hidden p-4 md:p-6">
-      <div className={cn(
-        "flex flex-col flex-grow overflow-hidden rounded-lg border border-neutral-700", 
-        "bg-black/70"
-      )}>
+      {/* Main content area with holographic border and gloss */}
+      <div
+        className={cn(
+          "holographic-panel flex flex-col flex-grow overflow-hidden pad-gloss-effect" // Restored holographic-panel, removed bg-black/70
+        )}
+        // explicitTheme might be needed if holographic-panel uses theme vars not set on :root
+        // For now, relying on global theme class on <html>
+      >
         {/* Title Area */}
         <div className="flex-none flex items-center justify-between p-3 md:p-4">
-          <h2 className="text-2xl font-orbitron holographic-text">Network Scanner</h2>
+          <h2 className="text-2xl font-orbitron holographic-text">Scanner</h2> {/* Changed title */}
           <div className="flex items-center space-x-2">
             <HolographicButton 
               onClick={handleScannerInfoClick}
               size="icon" 
-              className="!p-2" // Ensure consistent button size
+              className="!p-2"
               explicitTheme={currentGlobalTheme}
               aria-label="Scanner Information"
             >
@@ -148,7 +150,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             <HolographicButton 
               onClick={refreshScanner} 
               disabled={isLoading} 
-              className="!p-2" // Ensure consistent button size
+              className="!p-2"
               size="icon"
               explicitTheme={currentGlobalTheme}
               aria-label="Refresh Scanner"
@@ -160,18 +162,18 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
 
         {/* Node Display Area */}
         <HolographicPanel
-          ref={nodeDisplayAreaRef} // Added ref here
-          explicitTheme={currentGlobalTheme}
+          ref={nodeDisplayAreaRef}
+          explicitTheme={currentGlobalTheme} 
           className={cn(
             "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md",
-            "border-primary/30" // Keep themed border, remove specific bg class
+            "border-primary/30 map-overlay" // Added map-overlay class
           )}
-          // Removed inline style for radial-gradient, background will be image
+          // Background image is set via JS useEffect
         >
-          {/* Connecting Lines */}
+          {/* Connecting Lines - z-index 10 */}
           {nodes.map((node, i) => 
             i < nodes.length -1 && ( 
-              <svg key={`line-${i}`} className="absolute inset-0 w-full h-full" style={{ pointerEvents: 'none' }}>
+              <svg key={`line-${i}`} className="absolute inset-0 w-full h-full z-10" style={{ pointerEvents: 'none' }}>
                 <line 
                   x1={`${node.position.x}%`} y1={`${node.position.y}%`} 
                   x2={`${nodes[i+1].position.x}%`} y2={`${nodes[i+1].position.y}%`} 
@@ -180,11 +182,11 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             )
           )}
 
-          {/* Nodes */}
+          {/* Nodes - z-index 10 */}
           {nodes.map(node => (
             <div
               key={node.id}
-              className="absolute w-10 h-10 md:w-12 md:h-12 p-1 rounded-full border-2 border-transparent hover:border-accent cursor-pointer group transition-all"
+              className="absolute w-10 h-10 md:w-12 md:h-12 p-1 rounded-full border-2 border-transparent hover:border-accent cursor-pointer group transition-all z-10"
               style={{ 
                 left: `${node.position.x}%`, 
                 top: `${node.position.y}%`, 
@@ -206,7 +208,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
               className={cn(
                 "absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80",
                 "p-3 md:p-4 z-20 animate-slide-in-bottom font-rajdhani rounded-lg shadow-lg",
-                "bg-black/30 backdrop-blur-sm"
+                "backdrop-blur-sm bg-black/40" // Darker subtle background
               )}
             >
               <h3 className="text-lg font-orbitron mb-2 holographic-text">{selectedNode.title}</h3>
@@ -254,5 +256,3 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
     </div>
   );
 }
-
-    
