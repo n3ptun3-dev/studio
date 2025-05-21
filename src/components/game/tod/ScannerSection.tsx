@@ -1,13 +1,13 @@
 
 "use client";
 
-import { HolographicButton, HolographicPanel } from '@/components/game/shared/HolographicPanel';
+import { HolographicButton } from '@/components/game/shared/HolographicPanel'; // Keep HolographicButton
 import { RefreshCw, MapPin, AlertTriangle, Gift, Info } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // Added useEffect
 import { useAppContext } from '@/contexts/AppContext';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/contexts/ThemeContext';
-
+import { HolographicInput } from '@/components/game/shared/HolographicPanel'; // Keep HolographicInput
 
 interface SectionProps {
   parallaxOffset: number;
@@ -49,10 +49,17 @@ const generateNodes = (count = 15): NetworkNode[] => {
 
 export function ScannerSection({ parallaxOffset }: SectionProps) {
   const { openTODWindow, faction } = useAppContext();
-  const { theme: currentGlobalTheme } = useTheme();
-  const [nodes, setNodes] = useState<NetworkNode[]>(generateNodes());
+  const { theme: currentGlobalTheme, themeVersion } = useTheme(); // Added themeVersion
+  const [nodes, setNodes] = useState<NetworkNode[]>(() => generateNodes()); // Initialize directly
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Added useEffect to regenerate nodes if needed, e.g., on faction change or for a refresh mechanism
+  useEffect(() => {
+    // Example: could add logic here to refresh nodes if faction changes, or if a manual refresh is triggered
+    // For now, it's just a placeholder if more complex refresh logic is needed later.
+  }, [faction]);
+
 
   const refreshScanner = () => {
     setIsLoading(true);
@@ -76,54 +83,75 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
     }
   };
 
+  const handleScannerInfoClick = () => {
+    openTODWindow(
+        "Network Scanner Intel", 
+        <div className="font-rajdhani text-muted-foreground space-y-2 p-2">
+            <p>The Network Scanner pings the local digital vicinity for active targets:</p>
+            <ul className="list-disc list-inside space-y-1">
+                <li><MapPin className="inline w-4 h-4 mr-1 text-primary" /> Secure Vaults: Indicates other agents' ELINT storage. Higher level vaults may offer greater rewards but pose significant challenges.</li>
+                <li><AlertTriangle className="inline w-4 h-4 mr-1 text-destructive" /> High-Priority Transfers: Time-sensitive ELINT movements. Intercepting these can yield substantial gains but may be heavily contested.</li>
+                <li><Gift className="inline w-4 h-4 mr-1 text-yellow-400" /> Dropped Items: Caches of equipment or ELINT left by other agents. Requires the correct Daily Team Code (DTC) to claim.</li>
+            </ul>
+            <p className="mt-3">Use the refresh function to update targets. Note that network conditions may affect scanner accuracy.</p>
+        </div>, 
+        { showCloseButton: true }, 
+        currentGlobalTheme // Use current theme for the TODWindow
+    );
+  };
+
+
   return (
     <div className="flex flex-col h-full overflow-hidden p-4 md:p-6">
-      {/* Main Scanner Content Area - Uses direct opaque background for testing */}
+      {/* Main Scanner Content Area - Changed bg-neutral-900 to bg-black/70 */}
       <div className={cn(
-        "flex flex-col flex-grow overflow-hidden rounded-lg border", // Basic structure + rounding + border
-        "bg-neutral-900 border-neutral-700" // Opaque test background and border
+        "flex flex-col flex-grow overflow-hidden rounded-lg border border-neutral-700", 
+        "bg-black/70" // << ONE CHANGE: Main background set to translucent black
         // "pad-gloss-effect" // Temporarily removed
+        // "backdrop-blur-sm" // Temporarily removed
       )}>
         {/* Title Area */}
-        <div className="flex-none mb-4 flex items-center justify-between p-3 md:p-4">
+        <div className="flex-none flex items-center justify-between p-3 md:p-4"> {/* Removed border-b border-neutral-700 */}
           <h2 className="text-2xl font-orbitron holographic-text">Network Scanner</h2>
           <div className="flex items-center space-x-2">
             <HolographicButton 
-              onClick={() => openTODWindow("Scanner Intel", <p className="font-rajdhani text-muted-foreground">The Network Scanner pings the local digital vicinity for active vaults, high-priority ELINT transfers, and dropped item caches. Use Team Codes to claim dropped items for your faction.</p>, {showCloseButton: true}, currentGlobalTheme)} 
+              onClick={handleScannerInfoClick}
               size="icon" 
-              className="!p-2"
+              className="!p-2" // Ensure consistent button size
               explicitTheme={currentGlobalTheme}
+              aria-label="Scanner Information"
             >
               <Info className="w-5 h-5 icon-glow" />
             </HolographicButton>
             <HolographicButton 
               onClick={refreshScanner} 
               disabled={isLoading} 
-              className="!p-2"
+              className="!p-2" // Ensure consistent button size
               size="icon"
               explicitTheme={currentGlobalTheme}
+              aria-label="Refresh Scanner"
             >
               <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
             </HolographicButton>
           </div>
         </div>
 
-        {/* Node Display Area - Uses direct opaque background and border for testing */}
+        {/* Node Display Area - Opaque background for now */}
         <div 
           className={cn(
-            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md border", // Added margin and its own border/rounding
-            "bg-neutral-800 border-neutral-700" // Opaque test background and border
+            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md border border-neutral-700",
+            "bg-neutral-800" // Opaque background for node area
           )}
-          // Removed inline style with radial-gradient for this test
+          // style={{ backgroundImage: `radial-gradient(hsl(var(--primary-hsl)/0.1) 0.5px, transparent 0.5px), radial-gradient(hsl(var(--primary-hsl)/0.1) 0.5px, transparent 0.5px)`, backgroundSize: '15px 15px', backgroundPosition: '0 0, 7.5px 7.5px'}}
         >
-          {/* Stylized Network Map Background (simplified for test) */}
-          <div className="absolute inset-0 opacity-10" style={{
+          {/* Stylized Network Map Background (grid lines) */}
+          <div className="absolute inset-0 opacity-20" style={{
               backgroundImage: `
-                radial-gradient(hsl(var(--primary-hsl)) 0.5px, transparent 0.5px),
-                radial-gradient(hsl(var(--primary-hsl)) 0.5px, transparent 0.5px)
+                radial-gradient(hsl(var(--foreground-hsl)) 0.5px, transparent 0.5px),
+                radial-gradient(hsl(var(--foreground-hsl)) 0.5px, transparent 0.5px)
               `,
-              backgroundSize: '15px 15px',
-              backgroundPosition: '0 0, 7.5px 7.5px',
+              backgroundSize: '20px 20px', // Slightly larger grid
+              backgroundPosition: '0 0, 10px 10px',
             }}></div>
           
           {/* Connecting Lines */}
@@ -133,7 +161,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
                 <line 
                   x1={`${node.position.x}%`} y1={`${node.position.y}%`} 
                   x2={`${nodes[i+1].position.x}%`} y2={`${nodes[i+1].position.y}%`} 
-                  stroke="hsl(var(--primary-hsl) / 0.2)" strokeWidth="0.5" strokeDasharray="3 2" />
+                  stroke="hsl(var(--primary-hsl) / 0.3)" strokeWidth="1" strokeDasharray="4 2" />
               </svg>
             )
           )}
@@ -157,16 +185,15 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             </div>
           ))}
 
-          {/* Selected Node Details Overlay - Uses direct opaque background and border for testing */}
+          {/* Selected Node Details Overlay - Opaque background for now */}
           {selectedNode && (
             <div 
               className={cn(
                 "absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80",
                 "p-3 md:p-4 z-20 animate-slide-in-bottom font-rajdhani rounded-lg border shadow-lg",
-                "bg-neutral-950 border-neutral-700" // Opaque test background and border
+                "bg-neutral-950 border-neutral-700" // Opaque background for details window
                 // "backdrop-blur-sm" // Temporarily removed
               )}
-              // Using div instead of HolographicPanel for this test
             >
               <h3 className="text-lg font-orbitron mb-2 holographic-text">{selectedNode.title}</h3>
               {selectedNode.type === 'vault' && (
@@ -210,3 +237,6 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
     </div>
   );
 }
+
+
+    
