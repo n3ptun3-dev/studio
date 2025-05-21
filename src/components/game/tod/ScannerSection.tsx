@@ -49,35 +49,11 @@ const NODE_AREA_SCROLL_SPEED = 0.15;
 
 export function ScannerSection({ parallaxOffset }: SectionProps) {
   const { openTODWindow, faction } = useAppContext();
-  const { theme: currentGlobalTheme } = useTheme(); // For explicit theming of HolographicPanel if needed
+  const { theme: currentGlobalTheme, themeVersion } = useTheme();
   const [nodes, setNodes] = useState<NetworkNode[]>(() => generateNodes());
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const nodeDisplayAreaRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const container = nodeDisplayAreaRef.current;
-    let animationFrameId: number;
-    let currentPositionX = 0;
-
-    if (container) {
-      container.style.backgroundImage = "url('/backgrounds/Spi Vs Spi bg.jpg')";
-      container.style.backgroundRepeat = 'repeat-x';
-      container.style.backgroundSize = 'auto 100%';
-      container.style.overflow = 'hidden'; // Ensure the image is clipped
-
-      const animateScroll = () => {
-        currentPositionX -= NODE_AREA_SCROLL_SPEED;
-        container.style.backgroundPositionX = `${currentPositionX}px`;
-        animationFrameId = requestAnimationFrame(animateScroll);
-      };
-      animateScroll();
-      return () => {
-        cancelAnimationFrame(animationFrameId);
-      };
-    }
-  }, []);
-
+  
   const refreshScanner = () => {
     setIsLoading(true);
     setSelectedNode(null);
@@ -112,7 +88,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             </ul>
             <p className="mt-3">Use the refresh function to update targets. Note that network conditions may affect scanner accuracy.</p>
         </div>, 
-        { showCloseButton: true } // TODWindow uses its own theme from context
+        { showCloseButton: true }
     );
   };
 
@@ -121,7 +97,8 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
       {/* Main content area with holographic border */}
       <HolographicPanel
         explicitTheme={currentGlobalTheme}
-        className="flex flex-col flex-grow overflow-hidden" // This is the main panel
+        key={`scanner-main-panel-${currentGlobalTheme}-${themeVersion}`}
+        className="flex flex-col flex-grow overflow-hidden" 
       >
         {/* Title Area */}
         <div className="flex-none flex items-center justify-between p-3 md:p-4">
@@ -130,7 +107,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             <HolographicButton 
               onClick={handleScannerInfoClick}
               size="icon" 
-              className="!p-2"
+              className="!p-2" // Ensure consistent size
               explicitTheme={currentGlobalTheme}
               aria-label="Scanner Information"
             >
@@ -139,7 +116,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             <HolographicButton 
               onClick={refreshScanner} 
               disabled={isLoading} 
-              className="!p-2"
+              className="!p-2" // Ensure consistent size
               size="icon"
               explicitTheme={currentGlobalTheme}
               aria-label="Refresh Scanner"
@@ -149,20 +126,25 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
           </div>
         </div>
 
-        {/* Node Display Area - Now a HolographicPanel with themed transparent background */}
+        {/* Node Display Area */}
         <HolographicPanel
-          ref={nodeDisplayAreaRef}
           explicitTheme={currentGlobalTheme}
+          key={`scanner-node-display-${currentGlobalTheme}-${themeVersion}`}
           className={cn(
-            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md map-overlay" 
-            // bg-primary/10 and border-primary/30 removed to rely on HolographicPanel's default themed bg
+            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md",
+            // This panel will get its background from .holographic-panel via var(--hologram-panel-bg)
+            // The var(--hologram-panel-bg) is now set by ThemeContext with opacity.
           )}
-          // The radial gradient is removed as the map image will be the background
+          style={{ // Grid lines on top of the panel's background
+            backgroundImage: `radial-gradient(hsl(var(--primary-hsl)/0.1) 0.5px, transparent 0.5px), radial-gradient(hsl(var(--primary-hsl)/0.1) 0.5px, transparent 0.5px)`,
+            backgroundSize: '20px 20px',
+            backgroundPosition: '0 0, 10px 10px',
+          }}
         >
-          {/* Connecting Lines - z-index 10 */}
+          {/* Connecting Lines */}
           {nodes.map((node, i) => 
             i < nodes.length -1 && ( 
-              <svg key={`line-${i}`} className="absolute inset-0 w-full h-full z-10" style={{ pointerEvents: 'none' }}>
+              <svg key={`line-${i}`} className="absolute inset-0 w-full h-full z-[5]" style={{ pointerEvents: 'none' }}>
                 <line 
                   x1={`${node.position.x}%`} y1={`${node.position.y}%`} 
                   x2={`${nodes[i+1].position.x}%`} y2={`${nodes[i+1].position.y}%`} 
@@ -171,7 +153,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             )
           )}
 
-          {/* Nodes - z-index 10 */}
+          {/* Nodes */}
           {nodes.map(node => (
             <div
               key={node.id}
@@ -194,10 +176,11 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
           {selectedNode && (
             <HolographicPanel 
               explicitTheme={currentGlobalTheme}
+              key={`scanner-details-panel-${selectedNode.id}-${currentGlobalTheme}-${themeVersion}`}
               className={cn(
                 "absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80",
                 "p-3 md:p-4 z-20 animate-slide-in-bottom font-rajdhani rounded-lg shadow-lg",
-                "bg-black/40 backdrop-blur-sm" 
+                "backdrop-blur-sm bg-black/30" // Darker translucent background for details panel
               )}
             >
               <h3 className="text-lg font-orbitron mb-2 holographic-text">{selectedNode.title}</h3>
