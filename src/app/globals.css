@@ -386,7 +386,17 @@
 }
 
 /* Static Top Border Gloss - REMOVED as we use a single sweeping gloss */
-/* .pad-gloss-effect::after { ... } */
+ .pad-gloss-effect::before { /* Changed from ::before to ::after to match previous good state */
+ content: "";
+ position: absolute;
+ top: 0;
+ left: 0;
+ width: 100%;
+ height: 8px; /* Adjust height for the desired thickness of the top gloss */
+ background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 100%);
+ pointer-events: none;
+ z-index: 2; /* Above the animated sweeping gloss */
+}
 
 
 @keyframes slide-up-from-bottom {
