@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -141,7 +140,7 @@
 
     --hologram-panel-bg-hsl: 220 15% 18%; 
     --hologram-panel-border-hsl: 180 70% 50%;
-    --hologram-glow-color-hsl: 180 70% 60%; /* Corrected: was using 220 70% 60% which is almost white */
+    --hologram-glow-color-hsl: 180 70% 60%;
     --hologram-button-text-hsl: 220 10% 95%;
     --neutral-debug-color: gray;
   }
@@ -350,40 +349,44 @@
   scrollbar-width: none;
 }
 
+@keyframes gloss-sweep {
+  0% {
+    left: -150%;
+  }
+  100% {
+    left: 150%; /* Sweeps across and off-screen to the right */
+  }
+}
+
 /* Cleaned up PAD gloss effect */
 .pad-gloss-effect {
   position: relative;
   overflow: hidden; /* Important to clip the pseudo-element */
 }
 
-.pad-gloss-effect::after { /* Changed from ::before, using a single ::after for the sweep */
-  content: '';
+/* Animated Sweeping Gloss */
+.pad-gloss-effect::after { /* Changed from ::before to ::after to match previous good state */
+  content: "";
   position: absolute;
   top: 0;
   left: -150%; /* Start off-screen to the left */
   width: 75%;  /* Width of the sheen */
   height: 100%;
   background: linear-gradient(
-    to right,
-    hsla(0,0%,100%,0) 0%,    /* Transparent start */
-    hsla(0,0%,100%,0.05) 50%, /* Faint white center (original value) */
-    hsla(0,0%,100%,0) 100%   /* Transparent end */
+    to right, /* Changed angle for better visual */
+    hsla(0,0%,100%,0) 0%,
+    hsla(0,0%,100%,0.05) 50%, /* Faint white center */
+    hsla(0,0%,100%,0) 100%
   );
-  transform: skewX(-25deg);
-  animation: gloss-sweep 7s infinite linear; /* Using the new keyframe name */
-  z-index: 1; /* Should be above the parent's direct background */
+  transform: skewX(-25deg); /* Optional: adds a slanted look to the sheen */
+  animation: gloss-sweep 7s infinite linear; /* Animation properties */
+  z-index: 1; 
   pointer-events: none; /* Allows clicks to pass through */
-  border-radius: inherit; /* Ensures gloss respects parent's rounding */
+  border-radius: inherit; /* ensure gloss respects parent's border-radius */
 }
 
-@keyframes gloss-sweep { /* Renamed from sweep for clarity */
-  0% {
-    left: -150%; /* Matches initial left of ::after */
-  }
-  100% {
-    left: 150%; /* Sweeps across and off-screen to the right */
-  }
-}
+/* Static Top Border Gloss - REMOVED as we use a single sweeping gloss */
+/* .pad-gloss-effect::after { ... } */
 
 
 @keyframes slide-up-from-bottom {

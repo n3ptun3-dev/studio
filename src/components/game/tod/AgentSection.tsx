@@ -308,7 +308,6 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
         className={cn(
           "absolute inset-x-0 w-[90%] mx-auto flex flex-col shadow-lg z-20",
           "transition-all duration-500 ease-in-out", 
-          "pad-gloss-effect" 
         )}
         style={currentPadInlineStyle}
       >
@@ -317,7 +316,8 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
           ref={padButtonPanelRef}
           className={cn(
             "h-[60px] flex-shrink-0 flex items-center justify-between px-4",
-            "bg-black/70 rounded-t-lg" // Fixed background color, ensure top rounding
+            "bg-black/70 rounded-t-lg", // Fixed background color, ensure top rounding
+            "pad-gloss-effect"
           )}
            style={buttonPanelInlineStyle}
         >
@@ -370,21 +370,21 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
         <div
           className={cn(
             "flex-grow min-h-0",
- "pad-gloss-effect" 
+            "bg-black/70 rounded-b-lg", // Fixed background color, ensure bottom rounding
           )}
           style={screenWrapperInlineStyle} 
         >
           {/* Actual Screen Grid with inset margin */}
           {isPadUp ? (
-             <ScrollArea className="h-full w-full pad-screen-grid bg-accent/10 border border-primary/20 rounded-md m-2">
+             <ScrollArea className="h-full w-full pad-screen-grid bg-accent/10 border border-primary/20 rounded-md m-2 pad-gloss-effect">
                {renderPadScreenContent()}
              </ScrollArea>
            ) : (
              <div className={cn(
                 "h-full w-full pad-screen-grid bg-accent/10 border border-primary/20 rounded-md m-2",
                 `h-[${PEEK_AMOUNT}px]`
-             )}>
-                {/* Peek state, grid shows through, no content */}
+             )} > {/* Added closing parenthesis */}
+                {/* Peek state, grid shows through, no content */}{/* Add pad-gloss-effect here if needed */}
              </div>
            )}
         </div>
