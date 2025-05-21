@@ -4,16 +4,15 @@
 @tailwind utilities;
 
 /* 
-  :root (and each .theme-*) will have HSL source variables set by JS.
+  :root will have HSL source variables set by JS.
   Then, composite variables like --background, --primary are defined using these HSL sources.
   The .holographic-panel class uses --hologram-panel-bg, which is ALSO set by JS on :root's inline style.
 */
 
 @layer base {
   :root, .theme-terminal-green { /* Default theme values if no JS or specific theme class */
-    --theme-name: "terminal-green";
-    /* HSL variables (source of truth for JS to set on :root's inline style) */
-    /* JS will set these on :root directly. These are defaults. */
+    /* HSL source variables are set by ThemeContext.tsx directly on document.documentElement.style */
+    /* These are effectively fallbacks if JS fails or for base HTML before hydration. */
     --background-hsl: 130 20% 5%;
     --foreground-hsl: 130 80% 70%;
     --card-hsl: 130 25% 8%;
@@ -33,117 +32,22 @@
     --border-hsl: 130 60% 35%;
     --input-hsl: 130 30% 25%;
     --ring-hsl: 130 70% 50%;
-
-    /* PAD specific HSL sources, also set by JS on :root */
-    --pad-bg-hsl: 130 25% 15%;
-    --pad-border-hsl: 130 60% 45%;
-    --pad-button-panel-separator-hsl: 130 50% 25%;
     
-    /* Hologram panel HSL source - set by JS on :root */
-    --hologram-panel-bg-hsl: 130 30% 15%; /* Base HSL for hologram panel background */
-    
-    /* These will be set directly by JS on :root's inline style to final HSL/HSLA values */
-    /* --hologram-panel-bg: hsla(var(--hologram-panel-bg-hsl), 0.7); /* Example, JS sets this */
-    /* --hologram-glow-color: hsl(130 90% 55%); /* Example, JS sets this */
-    /* --hologram-button-text: hsl(130 85% 75%); /* Example, JS sets this */
-    /* --pad-effective-background-color: hsla(var(--pad-bg-hsl), 0.85); /* Example, JS sets this */
-    
-    --terminal-green-debug-color: lime;
+    /* Specific variables set by JS on :root's inline style */
+    /* --pad-effective-background-color: hsla(var(--pad-bg-hsl, 130 25% 15%), 0.85); */ /* Example fallback */
+    /* --pad-effective-border-color: hsl(var(--pad-border-hsl, 130 60% 45%)); */
+    /* --pad-effective-button-panel-separator-color: hsla(var(--pad-button-panel-separator-hsl, 130 50% 25%), 0.5); */
+    /* --hologram-panel-bg: hsla(var(--hologram-panel-bg-hsl, 130 30% 15%), 0.7); */
+    /* --hologram-panel-border: hsl(var(--hologram-panel-border-hsl, var(--primary-hsl))); */
+    /* --hologram-glow-color: hsl(var(--hologram-glow-color-hsl, var(--accent-hsl))); */
+    /* --hologram-button-text: hsl(var(--hologram-button-text-hsl, var(--primary-foreground-hsl))); */
   }
 
-  /* Theme overrides for HSL source variables. JS will pick these up from themeHSLValues and set them on :root */
-  .theme-cyphers {
-    --theme-name: "cyphers";
-    /* JS will set these on :root */
-    --background-hsl: 210 60% 8%;
-    --foreground-hsl: 200 100% 90%;
-    --card-hsl: 210 50% 12%;
-    --card-foreground-hsl: 200 100% 90%;
-    --popover-hsl: 210 50% 15%;
-    --popover-foreground-hsl: 200 100% 90%;
-    --primary-hsl: 204 100% 50%;
-    --primary-foreground-hsl: 0 0% 100%;
-    --secondary-hsl: 180 100% 35%;
-    --secondary-foreground-hsl: 200 100% 90%;
-    --muted-hsl: 210 50% 18%;
-    --muted-foreground-hsl: 200 80% 70%;
-    --accent-hsl: 0 0% 100%; 
-    --accent-foreground-hsl: 210 60% 8%;
-    --destructive-hsl: 0 70% 50%;
-    --destructive-foreground-hsl: 0 0% 100%;
-    --border-hsl: 204 100% 60%;
-    --input-hsl: 210 40% 15%;
-    --ring-hsl: 204 100% 55%;
-    --pad-bg-hsl: 210 50% 18%;
-    --pad-border-hsl: 204 100% 70%;
-    --pad-button-panel-separator-hsl: 204 100% 40%;
-    --hologram-panel-bg-hsl: 210 50% 15%;
-    /* --hologram-glow-color: hsl(204 100% 50%); /* JS sets this on :root */
-    /* --hologram-button-text: hsl(0 0% 100%);  /* JS sets this on :root */
-    --cyphers-debug-color: blue;
-  }
-
-  .theme-shadows {
-    --theme-name: "shadows";
-    /* JS will set these on :root */
-    --background-hsl: 0 60% 8%;
-    --foreground-hsl: 0 0% 90%;
-    --card-hsl: 0 50% 12%;
-    --card-foreground-hsl: 0 0% 90%;
-    --popover-hsl: 0 50% 15%;
-    --popover-foreground-hsl: 0 0% 90%;
-    --primary-hsl: 0 100% 40%;
-    --primary-foreground-hsl: 0 0% 100%;
-    --secondary-hsl: 16 100% 71%; 
-    --secondary-foreground-hsl: 0 0% 90%;
-    --muted-hsl: 0 50% 18%;
-    --muted-foreground-hsl: 0 0% 70%;
-    --accent-hsl: 0 0% 100%; 
-    --accent-foreground-hsl: 0 60% 8%;
-    --destructive-hsl: 0 70% 50%;
-    --destructive-foreground-hsl: 0 0% 100%;
-    --border-hsl: 0 100% 50%;
-    --input-hsl: 0 40% 15%;
-    --ring-hsl: 0 100% 55%;
-    --pad-bg-hsl: 0 50% 18%;
-    --pad-border-hsl: 0 100% 60%;
-    --pad-button-panel-separator-hsl: 0 100% 25%;
-    --hologram-panel-bg-hsl: 0 50% 15%;
-    /* --hologram-glow-color: hsl(0 100% 40%); /* JS sets this on :root */
-    /* --hologram-button-text: hsl(0 0% 100%); /* JS sets this on :root */
-    --shadows-debug-color: red;
-  }
-
-  .theme-neutral { 
-    --theme-name: "neutral";
-    /* JS will set these on :root */
-    --background-hsl: 220 10% 10%;
-    --foreground-hsl: 220 10% 70%;
-    --card-hsl: 220 15% 12%; 
-    --card-foreground-hsl: 220 10% 75%;
-    --popover-hsl: 220 15% 15%;
-    --popover-foreground-hsl: 220 10% 75%;
-    --primary-hsl: 180 70% 50%; 
-    --primary-foreground-hsl: 220 10% 95%;
-    --secondary-hsl: 220 20% 20%;
-    --secondary-foreground-hsl: 220 10% 60%;
-    --muted-hsl: 220 15% 25%;
-    --muted-foreground-hsl: 220 10% 55%;
-    --accent-hsl: 180 70% 60%; 
-    --accent-foreground-hsl: 220 10% 10%;
-    --destructive-hsl: 0 70% 50%;
-    --destructive-foreground-hsl: 0 0% 100%;
-    --border-hsl: 220 20% 30%;
-    --input-hsl: 220 20% 25%;
-    --ring-hsl: 180 70% 55%;
-    --pad-bg-hsl: 220 15% 18%;
-    --pad-border-hsl: 220 20% 35%;
-    --pad-button-panel-separator-hsl: 220 20% 25%;
-    --hologram-panel-bg-hsl: 220 15% 18%; 
-    /* --hologram-glow-color: hsl(180 70% 60%); /* JS sets this on :root */
-    /* --hologram-button-text: hsl(220 10% 95%); /* JS sets this on :root */
-    --neutral-debug-color: gray;
-  }
+  /* Theme classes just act as selectors for JS to pick up the HSL values from themeHSLValues map */
+  /* Actual HSL values are applied via inline styles on :root by ThemeContext.tsx */
+  .theme-cyphers { /* Marker class */ }
+  .theme-shadows { /* Marker class */ }
+  .theme-neutral { /* Marker class */ }
 
  :root {
     /* Core Theme Colors - Resolved from HSL vars set by JS on :root's inline style */
@@ -167,15 +71,13 @@
     --input: hsl(var(--input-hsl));
     --ring: hsl(var(--ring-hsl));
     
-    /* Holographic Variables - These are set on :root's inline style by ThemeContext.tsx */
-    /* --hologram-panel-bg: hsla(var(--hologram-panel-bg-hsl), 0.7); /* Set by JS */
-    /* --hologram-glow-color: hsl(var(--primary-hsl)); /* Set by JS */
-    /* --hologram-button-text: hsl(var(--primary-foreground-hsl)); /* Set by JS */
-    
-    /* HolographicPanel CSS class uses these for its defaults */
-    --hologram-panel-border-default: hsl(var(--primary-hsl)); /* Default if not overridden by a more specific panel type */
-    --hologram-base-text-color-default: hsl(var(--foreground-hsl));
-    --hologram-button-bg-default: hsl(var(--primary-hsl));
+    /* Holographic Panel variables below are set by JS on :root's inline style to their FINAL hsla/hsl values */
+    /* --hologram-panel-bg: hsla(var(--hologram-panel-bg-hsl), 0.7); /* This is set by JS */
+    /* --hologram-panel-border: hsl(var(--hologram-panel-border-hsl)); /* This is set by JS */
+    /* --hologram-glow-color: hsl(var(--hologram-glow-color-hsl)); /* This is set by JS */
+    /* --hologram-button-text: hsl(var(--hologram-button-text-hsl)); /* This is set by JS */
+    /* --pad-effective-background-color, etc. are also set directly by JS */
+
 
     /* Item Level Colors HSL (globally available for item rarity etc.) */
     --level-1-color-hsl: 0 100% 50%;
@@ -246,8 +148,8 @@
 
 /* Custom holographic styles */
 .holographic-panel {
-  background-color: var(--hologram-panel-bg); /* Uses var set by JS for themed translucent bg */
-  border-color: var(--hologram-panel-border, var(--hologram-panel-border-default)); /* Uses var set by JS, or default */
+  background-color: var(--hologram-panel-bg); /* Uses var set by JS on :root for themed translucent bg */
+  border-color: var(--hologram-panel-border); 
   border-width: 1px;
   border-style: solid;
   border-radius: 0.5rem; 
@@ -256,20 +158,20 @@
 }
 
 .holographic-text {
-  color: var(--hologram-base-text-color, var(--hologram-base-text-color-default)); /* Uses var set by JS, or default */
+  color: hsl(var(--foreground-hsl)); /* Uses foreground from current theme context */
   text-shadow: 0 0 5px var(--hologram-glow-color), 0 0 10px var(--hologram-glow-color); /* Glow uses var set by JS */
 }
 
 .holographic-button {
-  border-color: var(--hologram-button-bg, var(--hologram-button-bg-default)); /* Uses var set by JS, or default */
+  border-color: var(--hologram-button-bg, hsl(var(--primary-hsl)) ); /* Uses var set by JS, or default primary */
   color: var(--hologram-button-text) !important; /* Uses var set by JS */
   @apply bg-transparent border rounded-md px-4 py-2 transition-all duration-300;
-  box-shadow: 0 0 8px var(--hologram-button-bg, var(--hologram-button-bg-default)), inset 0 0 5px var(--hologram-button-bg, var(--hologram-button-bg-default));
+  box-shadow: 0 0 8px var(--hologram-button-bg, hsl(var(--primary-hsl))), inset 0 0 5px var(--hologram-button-bg, hsl(var(--primary-hsl)));
 }
 .holographic-button:hover {
-  background-color: var(--hologram-button-bg, var(--hologram-button-bg-default));
+  background-color: var(--hologram-button-bg, hsl(var(--primary-hsl)));
   color: hsl(var(--background-hsl)) !important; /* Text color on hover relative to main background */
-  box-shadow: 0 0 15px var(--hologram-button-bg, var(--hologram-button-bg-default)), 0 0 25px var(--hologram-button-bg, var(--hologram-button-bg-default));
+  box-shadow: 0 0 15px var(--hologram-button-bg, hsl(var(--primary-hsl))), 0 0 25px var(--hologram-button-bg, hsl(var(--primary-hsl)));
 }
 .holographic-button:disabled {
   @apply opacity-50 cursor-not-allowed;

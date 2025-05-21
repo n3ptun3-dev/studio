@@ -45,14 +45,36 @@ const generateNodes = (count = 15): NetworkNode[] => {
   return nodes;
 };
 
-const NODE_AREA_SCROLL_SPEED = 0.15; 
+const NODE_AREA_SCROLL_SPEED = 0.1; // Adjusted speed
 
 export function ScannerSection({ parallaxOffset }: SectionProps) {
   const { openTODWindow, faction } = useAppContext();
-  const { theme: currentGlobalTheme, themeVersion } = useTheme();
+  const { theme: currentGlobalTheme } = useTheme();
   const [nodes, setNodes] = useState<NetworkNode[]>(() => generateNodes());
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const nodeDisplayAreaRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = nodeDisplayAreaRef.current;
+    let animationFrameId: number;
+    let currentPositionX = 0;
+
+    if (container) {
+      container.style.backgroundImage = "url('/backgrounds/Spi Vs Spi bg.jpg')";
+      container.style.backgroundRepeat = 'repeat-x';
+      container.style.backgroundSize = 'auto 100%';
+      container.style.overflow = 'hidden'; // Ensure background doesn't spill
+
+      const animateScroll = () => {
+        currentPositionX -= NODE_AREA_SCROLL_SPEED;
+        container.style.backgroundPositionX = `${currentPositionX}px`;
+        animationFrameId = requestAnimationFrame(animateScroll);
+      };
+      animateScroll();
+      return () => cancelAnimationFrame(animationFrameId);
+    }
+  }, []);
   
   const refreshScanner = () => {
     setIsLoading(true);
@@ -97,7 +119,6 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
       {/* Main content area with holographic border */}
       <HolographicPanel
         explicitTheme={currentGlobalTheme}
-        key={`scanner-main-panel-${currentGlobalTheme}-${themeVersion}`}
         className="flex flex-col flex-grow overflow-hidden" 
       >
         {/* Title Area */}
@@ -107,7 +128,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             <HolographicButton 
               onClick={handleScannerInfoClick}
               size="icon" 
-              className="!p-2" // Ensure consistent size
+              className="!p-2"
               explicitTheme={currentGlobalTheme}
               aria-label="Scanner Information"
             >
@@ -116,7 +137,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             <HolographicButton 
               onClick={refreshScanner} 
               disabled={isLoading} 
-              className="!p-2" // Ensure consistent size
+              className="!p-2" 
               size="icon"
               explicitTheme={currentGlobalTheme}
               aria-label="Refresh Scanner"
@@ -126,25 +147,20 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
           </div>
         </div>
 
-        {/* Node Display Area */}
+        {/* Node Display Area - Now a HolographicPanel */}
         <HolographicPanel
+          ref={nodeDisplayAreaRef}
           explicitTheme={currentGlobalTheme}
-          key={`scanner-node-display-${currentGlobalTheme}-${themeVersion}`}
           className={cn(
-            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md",
-            // This panel will get its background from .holographic-panel via var(--hologram-panel-bg)
-            // The var(--hologram-panel-bg) is now set by ThemeContext with opacity.
+            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md map-overlay"
+            // bg-primary/10 and border-primary/30 removed as background comes from holographic-panel and map
           )}
-          style={{ // Grid lines on top of the panel's background
-            backgroundImage: `radial-gradient(hsl(var(--primary-hsl)/0.1) 0.5px, transparent 0.5px), radial-gradient(hsl(var(--primary-hsl)/0.1) 0.5px, transparent 0.5px)`,
-            backgroundSize: '20px 20px',
-            backgroundPosition: '0 0, 10px 10px',
-          }}
+          // The style for radial-gradient is removed as the map is the background
         >
           {/* Connecting Lines */}
           {nodes.map((node, i) => 
             i < nodes.length -1 && ( 
-              <svg key={`line-${i}`} className="absolute inset-0 w-full h-full z-[5]" style={{ pointerEvents: 'none' }}>
+              <svg key={`line-${i}`} className="absolute inset-0 w-full h-full z-[10]" style={{ pointerEvents: 'none' }}>
                 <line 
                   x1={`${node.position.x}%`} y1={`${node.position.y}%`} 
                   x2={`${nodes[i+1].position.x}%`} y2={`${nodes[i+1].position.y}%`} 
@@ -157,7 +173,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
           {nodes.map(node => (
             <div
               key={node.id}
-              className="absolute w-10 h-10 md:w-12 md:h-12 p-1 rounded-full border-2 border-transparent hover:border-accent cursor-pointer group transition-all z-10"
+              className="absolute w-10 h-10 md:w-12 md:h-12 p-1 rounded-full border-2 border-transparent hover:border-accent cursor-pointer group transition-all z-[10]"
               style={{ 
                 left: `${node.position.x}%`, 
                 top: `${node.position.y}%`, 
@@ -176,11 +192,10 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
           {selectedNode && (
             <HolographicPanel 
               explicitTheme={currentGlobalTheme}
-              key={`scanner-details-panel-${selectedNode.id}-${currentGlobalTheme}-${themeVersion}`}
               className={cn(
                 "absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80",
                 "p-3 md:p-4 z-20 animate-slide-in-bottom font-rajdhani rounded-lg shadow-lg",
-                "backdrop-blur-sm bg-black/30" // Darker translucent background for details panel
+                "backdrop-blur-sm bg-black/40" 
               )}
             >
               <h3 className="text-lg font-orbitron mb-2 holographic-text">{selectedNode.title}</h3>
@@ -228,3 +243,4 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
     </div>
   );
 }
+
