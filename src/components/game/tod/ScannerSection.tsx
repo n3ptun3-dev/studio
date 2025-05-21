@@ -1,13 +1,15 @@
 
 "use client";
 
-import { HolographicButton } from '@/components/game/shared/HolographicPanel'; // Keep HolographicButton
+import { HolographicButton } from '@/components/game/shared/HolographicPanel';
 import { RefreshCw, MapPin, AlertTriangle, Gift, Info } from 'lucide-react';
-import { useState, useEffect } from 'react'; // Added useEffect
+import { useState, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/contexts/ThemeContext';
-import { HolographicInput } from '@/components/game/shared/HolographicPanel'; // Keep HolographicInput
+import { HolographicInput } from '@/components/game/shared/HolographicPanel';
+import { HolographicPanel } from '@/components/game/shared/HolographicPanel';
+
 
 interface SectionProps {
   parallaxOffset: number;
@@ -49,15 +51,13 @@ const generateNodes = (count = 15): NetworkNode[] => {
 
 export function ScannerSection({ parallaxOffset }: SectionProps) {
   const { openTODWindow, faction } = useAppContext();
-  const { theme: currentGlobalTheme, themeVersion } = useTheme(); // Added themeVersion
-  const [nodes, setNodes] = useState<NetworkNode[]>(() => generateNodes()); // Initialize directly
+  const { theme: currentGlobalTheme } = useTheme();
+  const [nodes, setNodes] = useState<NetworkNode[]>(() => generateNodes());
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Added useEffect to regenerate nodes if needed, e.g., on faction change or for a refresh mechanism
   useEffect(() => {
-    // Example: could add logic here to refresh nodes if faction changes, or if a manual refresh is triggered
-    // For now, it's just a placeholder if more complex refresh logic is needed later.
+    // Example: could add logic here to refresh nodes if faction changes
   }, [faction]);
 
 
@@ -95,29 +95,26 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             </ul>
             <p className="mt-3">Use the refresh function to update targets. Note that network conditions may affect scanner accuracy.</p>
         </div>, 
-        { showCloseButton: true }, 
-        currentGlobalTheme // Use current theme for the TODWindow
+        { showCloseButton: true }
     );
   };
 
 
   return (
     <div className="flex flex-col h-full overflow-hidden p-4 md:p-6">
-      {/* Main Scanner Content Area - Changed bg-neutral-900 to bg-black/70 */}
       <div className={cn(
         "flex flex-col flex-grow overflow-hidden rounded-lg border border-neutral-700", 
-        "bg-black/70" // << ONE CHANGE: Main background set to translucent black
+        "bg-black/70" 
         // "pad-gloss-effect" // Temporarily removed
-        // "backdrop-blur-sm" // Temporarily removed
       )}>
         {/* Title Area */}
-        <div className="flex-none flex items-center justify-between p-3 md:p-4"> {/* Removed border-b border-neutral-700 */}
+        <div className="flex-none flex items-center justify-between p-3 md:p-4">
           <h2 className="text-2xl font-orbitron holographic-text">Network Scanner</h2>
           <div className="flex items-center space-x-2">
             <HolographicButton 
               onClick={handleScannerInfoClick}
               size="icon" 
-              className="!p-2" // Ensure consistent button size
+              className="!p-2"
               explicitTheme={currentGlobalTheme}
               aria-label="Scanner Information"
             >
@@ -126,34 +123,29 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             <HolographicButton 
               onClick={refreshScanner} 
               disabled={isLoading} 
-              className="!p-2" // Ensure consistent button size
+              className="!p-2"
               size="icon"
               explicitTheme={currentGlobalTheme}
               aria-label="Refresh Scanner"
             >
-              <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''} icon-glow`} />
             </HolographicButton>
           </div>
         </div>
 
-        {/* Node Display Area - Opaque background for now */}
-        <div 
+        {/* Node Display Area */}
+        <HolographicPanel
+          explicitTheme={currentGlobalTheme}
           className={cn(
-            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md border border-neutral-700",
-            "bg-neutral-800" // Opaque background for node area
+            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md",
+            "bg-primary/10 border border-primary/30" // Themed transparent background and border
           )}
-          // style={{ backgroundImage: `radial-gradient(hsl(var(--primary-hsl)/0.1) 0.5px, transparent 0.5px), radial-gradient(hsl(var(--primary-hsl)/0.1) 0.5px, transparent 0.5px)`, backgroundSize: '15px 15px', backgroundPosition: '0 0, 7.5px 7.5px'}}
+          style={{
+            backgroundImage: `radial-gradient(hsl(var(--primary-hsl)/0.1) 0.5px, transparent 0.5px), radial-gradient(hsl(var(--primary-hsl)/0.1) 0.5px, transparent 0.5px)`,
+            backgroundSize: '20px 20px',
+            backgroundPosition: '0 0, 10px 10px',
+          }}
         >
-          {/* Stylized Network Map Background (grid lines) */}
-          <div className="absolute inset-0 opacity-20" style={{
-              backgroundImage: `
-                radial-gradient(hsl(var(--foreground-hsl)) 0.5px, transparent 0.5px),
-                radial-gradient(hsl(var(--foreground-hsl)) 0.5px, transparent 0.5px)
-              `,
-              backgroundSize: '20px 20px', // Slightly larger grid
-              backgroundPosition: '0 0, 10px 10px',
-            }}></div>
-          
           {/* Connecting Lines */}
           {nodes.map((node, i) => 
             i < nodes.length -1 && ( 
@@ -185,14 +177,14 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             </div>
           ))}
 
-          {/* Selected Node Details Overlay - Opaque background for now */}
+          {/* Selected Node Details Overlay */}
           {selectedNode && (
-            <div 
+            <HolographicPanel 
+              explicitTheme={currentGlobalTheme}
               className={cn(
                 "absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80",
-                "p-3 md:p-4 z-20 animate-slide-in-bottom font-rajdhani rounded-lg border shadow-lg",
-                "bg-neutral-950 border-neutral-700" // Opaque background for details window
-                // "backdrop-blur-sm" // Temporarily removed
+                "p-3 md:p-4 z-20 animate-slide-in-bottom font-rajdhani rounded-lg shadow-lg",
+                "bg-black/30 backdrop-blur-sm"
               )}
             >
               <h3 className="text-lg font-orbitron mb-2 holographic-text">{selectedNode.title}</h3>
@@ -210,7 +202,10 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
                   <p className="text-sm text-muted-foreground">Source: {selectedNode.owner}</p>
                   <p className="text-sm text-muted-foreground">Team: {selectedNode.team}</p>
                   <p className="text-sm text-muted-foreground">ELINT Transfer: {selectedNode.elintAmount}</p>
-                  <HolographicButton className="w-full mt-3 border-destructive text-destructive hover:bg-destructive hover:text-background" explicitTheme={currentGlobalTheme}>
+                  <HolographicButton 
+                    className="w-full mt-3 !border-destructive !text-destructive hover:!bg-destructive hover:!text-background" 
+                    explicitTheme={currentGlobalTheme}
+                  >
                     Initiate Counter Hack
                   </HolographicButton>
                 </>
@@ -225,18 +220,15 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
                <HolographicButton 
                 variant="ghost" 
                 onClick={() => setSelectedNode(null)} 
-                className="absolute top-1 right-1 !p-1 text-xs hover:bg-primary/20"
+                className="absolute top-1 right-1 !p-1 text-xs hover:!bg-primary/20 !text-muted-foreground hover:!text-foreground"
                 explicitTheme={currentGlobalTheme}
                >
                 Close
                </HolographicButton>
-            </div>
+            </HolographicPanel>
           )}
-        </div>
+        </HolographicPanel>
       </div>
     </div>
   );
 }
-
-
-    
