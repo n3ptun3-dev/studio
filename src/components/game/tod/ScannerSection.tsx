@@ -1,15 +1,12 @@
 
 "use client";
 
-import { HolographicButton } from '@/components/game/shared/HolographicPanel';
+import { HolographicButton, HolographicInput, HolographicPanel } from '@/components/game/shared/HolographicPanel';
 import { RefreshCw, MapPin, AlertTriangle, Gift, Info } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react'; // Added useRef
 import { useAppContext } from '@/contexts/AppContext';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/contexts/ThemeContext';
-import { HolographicInput } from '@/components/game/shared/HolographicPanel';
-import { HolographicPanel } from '@/components/game/shared/HolographicPanel';
-
 
 interface SectionProps {
   parallaxOffset: number;
@@ -48,6 +45,8 @@ const generateNodes = (count = 15): NetworkNode[] => {
   return nodes;
 };
 
+const NODE_AREA_SCROLL_SPEED = 0.2; // Speed for node area background scroll
+const BACKGROUND_IMAGE_PATH = "/backgrounds/Spi Vs Spi bg.jpg"; // Path to background image
 
 export function ScannerSection({ parallaxOffset }: SectionProps) {
   const { openTODWindow, faction } = useAppContext();
@@ -55,6 +54,33 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
   const [nodes, setNodes] = useState<NetworkNode[]>(() => generateNodes());
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const nodeDisplayAreaRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = nodeDisplayAreaRef.current;
+    let animationFrameId: number;
+    let currentPositionX = 0;
+
+    if (container) {
+      container.style.backgroundImage = `url('${BACKGROUND_IMAGE_PATH}')`;
+      container.style.backgroundRepeat = 'repeat-x';
+      container.style.backgroundSize = 'auto 100%'; // Cover height, auto width for aspect ratio
+
+      const animateScroll = () => {
+        currentPositionX -= NODE_AREA_SCROLL_SPEED;
+        container.style.backgroundPositionX = `${currentPositionX}px`;
+        animationFrameId = requestAnimationFrame(animateScroll);
+      };
+      animateScroll();
+    }
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
+  }, []);
+
 
   useEffect(() => {
     // Example: could add logic here to refresh nodes if faction changes
@@ -104,8 +130,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
     <div className="flex flex-col h-full overflow-hidden p-4 md:p-6">
       <div className={cn(
         "flex flex-col flex-grow overflow-hidden rounded-lg border border-neutral-700", 
-        "bg-black/70" 
-        // "pad-gloss-effect" // Temporarily removed
+        "bg-black/70"
       )}>
         {/* Title Area */}
         <div className="flex-none flex items-center justify-between p-3 md:p-4">
@@ -114,7 +139,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             <HolographicButton 
               onClick={handleScannerInfoClick}
               size="icon" 
-              className="!p-2"
+              className="!p-2" // Ensure consistent button size
               explicitTheme={currentGlobalTheme}
               aria-label="Scanner Information"
             >
@@ -123,7 +148,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             <HolographicButton 
               onClick={refreshScanner} 
               disabled={isLoading} 
-              className="!p-2"
+              className="!p-2" // Ensure consistent button size
               size="icon"
               explicitTheme={currentGlobalTheme}
               aria-label="Refresh Scanner"
@@ -135,16 +160,13 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
 
         {/* Node Display Area */}
         <HolographicPanel
+          ref={nodeDisplayAreaRef} // Added ref here
           explicitTheme={currentGlobalTheme}
           className={cn(
             "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md",
-            "bg-primary/10 border border-primary/30" // Themed transparent background and border
+            "border-primary/30" // Keep themed border, remove specific bg class
           )}
-          style={{
-            backgroundImage: `radial-gradient(hsl(var(--primary-hsl)/0.1) 0.5px, transparent 0.5px), radial-gradient(hsl(var(--primary-hsl)/0.1) 0.5px, transparent 0.5px)`,
-            backgroundSize: '20px 20px',
-            backgroundPosition: '0 0, 10px 10px',
-          }}
+          // Removed inline style for radial-gradient, background will be image
         >
           {/* Connecting Lines */}
           {nodes.map((node, i) => 
@@ -232,3 +254,5 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
     </div>
   );
 }
+
+    
