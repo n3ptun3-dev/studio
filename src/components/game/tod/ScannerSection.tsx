@@ -2,7 +2,7 @@
 "use client";
 
 import { HolographicButton, HolographicInput, HolographicPanel } from '@/components/game/shared/HolographicPanel';
-import { RefreshCw, MapPin, AlertTriangle, Gift, Info } from 'lucide-react';
+import { RefreshCw, Info, MapPin, AlertTriangle, Gift } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { cn } from '@/lib/utils';
@@ -45,7 +45,7 @@ const generateNodes = (count = 15): NetworkNode[] => {
   return nodes;
 };
 
-const NODE_AREA_SCROLL_SPEED = 0.1; // Slowed down scroll speed
+const NODE_AREA_SCROLL_SPEED = 0.15; // Adjusted scroll speed
 const BACKGROUND_IMAGE_PATH = "/backgrounds/Spi Vs Spi bg.jpg";
 
 export function ScannerSection({ parallaxOffset }: SectionProps) {
@@ -56,27 +56,26 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   const nodeDisplayAreaRef = useRef<HTMLDivElement>(null);
+  const animationFrameIdRef = useRef<number | null>(null);
+  const currentPositionXRef = useRef(0);
 
   useEffect(() => {
     const container = nodeDisplayAreaRef.current;
-    let animationFrameId: number;
-    let currentPositionX = 0;
-
     if (container) {
       container.style.backgroundImage = `url('${BACKGROUND_IMAGE_PATH}')`;
       container.style.backgroundRepeat = 'repeat-x';
-      container.style.backgroundSize = 'auto 100%';
+      container.style.backgroundSize = 'auto 100%'; // Cover height, auto width for aspect ratio
 
       const animateScroll = () => {
-        currentPositionX -= NODE_AREA_SCROLL_SPEED;
-        container.style.backgroundPositionX = `${currentPositionX}px`;
-        animationFrameId = requestAnimationFrame(animateScroll);
+        currentPositionXRef.current -= NODE_AREA_SCROLL_SPEED;
+        container.style.backgroundPositionX = `${currentPositionXRef.current}px`;
+        animationFrameIdRef.current = requestAnimationFrame(animateScroll);
       };
       animateScroll();
       
       return () => {
-        if (animationFrameId) {
-          cancelAnimationFrame(animationFrameId);
+        if (animationFrameIdRef.current) {
+          cancelAnimationFrame(animationFrameIdRef.current);
         }
       };
     }
@@ -126,22 +125,21 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
 
   return (
     <div className="flex flex-col h-full overflow-hidden p-4 md:p-6">
-      {/* Main content area with holographic border and gloss */}
+      {/* Main content area with holographic border */}
       <div
         className={cn(
-          "holographic-panel flex flex-col flex-grow overflow-hidden pad-gloss-effect" // Restored holographic-panel, removed bg-black/70
+          "holographic-panel flex flex-col flex-grow overflow-hidden" // Removed pad-gloss-effect
         )}
-        // explicitTheme might be needed if holographic-panel uses theme vars not set on :root
-        // For now, relying on global theme class on <html>
+        explicitTheme={currentGlobalTheme}
       >
         {/* Title Area */}
         <div className="flex-none flex items-center justify-between p-3 md:p-4">
-          <h2 className="text-2xl font-orbitron holographic-text">Scanner</h2> {/* Changed title */}
+          <h2 className="text-2xl font-orbitron holographic-text">Scanner</h2>
           <div className="flex items-center space-x-2">
             <HolographicButton 
               onClick={handleScannerInfoClick}
               size="icon" 
-              className="!p-2"
+              className="!p-2" // Ensure consistent button size
               explicitTheme={currentGlobalTheme}
               aria-label="Scanner Information"
             >
@@ -150,7 +148,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             <HolographicButton 
               onClick={refreshScanner} 
               disabled={isLoading} 
-              className="!p-2"
+              className="!p-2" // Ensure consistent button size
               size="icon"
               explicitTheme={currentGlobalTheme}
               aria-label="Refresh Scanner"
@@ -165,8 +163,8 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
           ref={nodeDisplayAreaRef}
           explicitTheme={currentGlobalTheme} 
           className={cn(
-            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md",
-            "border-primary/30 map-overlay" // Added map-overlay class
+            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md map-overlay", // Added map-overlay
+            "border-primary/30" // Retain themed border for the map area
           )}
           // Background image is set via JS useEffect
         >
@@ -208,7 +206,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
               className={cn(
                 "absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80",
                 "p-3 md:p-4 z-20 animate-slide-in-bottom font-rajdhani rounded-lg shadow-lg",
-                "backdrop-blur-sm bg-black/40" // Darker subtle background
+                "bg-black/40 backdrop-blur-sm" // Darker subtle background with blur
               )}
             >
               <h3 className="text-lg font-orbitron mb-2 holographic-text">{selectedNode.title}</h3>
@@ -227,7 +225,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
                   <p className="text-sm text-muted-foreground">Team: {selectedNode.team}</p>
                   <p className="text-sm text-muted-foreground">ELINT Transfer: {selectedNode.elintAmount}</p>
                   <HolographicButton 
-                    className="w-full mt-3 !border-destructive !text-destructive hover:!bg-destructive hover:!text-background" 
+                    className="w-full mt-3 !border-destructive !text-destructive hover:!bg-destructive hover:!text-destructive-foreground" 
                     explicitTheme={currentGlobalTheme}
                   >
                     Initiate Counter Hack
@@ -256,3 +254,4 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
     </div>
   );
 }
+
