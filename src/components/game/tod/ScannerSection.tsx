@@ -6,6 +6,7 @@ import { RefreshCw, MapPin, AlertTriangle, Gift, Info } from 'lucide-react';
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { cn } from '@/lib/utils';
+import { useTheme } from '@/contexts/ThemeContext';
 
 
 interface SectionProps {
@@ -47,7 +48,8 @@ const generateNodes = (count = 15): NetworkNode[] => {
 
 
 export function ScannerSection({ parallaxOffset }: SectionProps) {
-  const { openTODWindow } = useAppContext();
+  const { openTODWindow, faction } = useAppContext();
+  const { theme: currentGlobalTheme } = useTheme();
   const [nodes, setNodes] = useState<NetworkNode[]>(generateNodes());
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -76,47 +78,52 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
 
   return (
     <div className="flex flex-col h-full overflow-hidden p-4 md:p-6">
+      {/* Main Scanner Content Area - Uses direct opaque background for testing */}
       <div className={cn(
-        "holographic-panel flex flex-col flex-grow overflow-hidden",
-        "bg-black/70 pad-gloss-effect" // Added dark background and gloss to the main scanner panel
+        "flex flex-col flex-grow overflow-hidden rounded-lg border", // Basic structure + rounding + border
+        "bg-neutral-900 border-neutral-700" // Opaque test background and border
+        // "pad-gloss-effect" // Temporarily removed
       )}>
-        {/* Title Area - Blends into the section panel */}
-        <div className="flex-none mb-4 flex items-center justify-between">
+        {/* Title Area */}
+        <div className="flex-none mb-4 flex items-center justify-between p-3 md:p-4">
           <h2 className="text-2xl font-orbitron holographic-text">Network Scanner</h2>
           <div className="flex items-center space-x-2">
             <HolographicButton 
-              onClick={() => openTODWindow("Scanner Intel", <p className="font-rajdhani text-muted-foreground">The Network Scanner pings the local digital vicinity for active vaults, high-priority ELINT transfers, and dropped item caches. Use Team Codes to claim dropped items for your faction.</p>)} 
-              variant="ghost" 
+              onClick={() => openTODWindow("Scanner Intel", <p className="font-rajdhani text-muted-foreground">The Network Scanner pings the local digital vicinity for active vaults, high-priority ELINT transfers, and dropped item caches. Use Team Codes to claim dropped items for your faction.</p>, {showCloseButton: true}, currentGlobalTheme)} 
               size="icon" 
-              className="!p-2" // Ensure consistent button size
+              className="!p-2"
+              explicitTheme={currentGlobalTheme}
             >
               <Info className="w-5 h-5 icon-glow" />
             </HolographicButton>
             <HolographicButton 
               onClick={refreshScanner} 
               disabled={isLoading} 
-              className="!p-2" // Ensure consistent button size
+              className="!p-2"
               size="icon"
+              explicitTheme={currentGlobalTheme}
             >
               <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
             </HolographicButton>
           </div>
         </div>
 
-        {/* Node Display Area - This IS a HolographicPanel component for layering effect, with reduced padding */}
-        <HolographicPanel 
-          className="flex-grow relative overflow-hidden p-1"
-          // Removed explicit bg-accent/10 from inline style, relies on holographic-panel default bg
-          // and radial-gradient for grid lines
+        {/* Node Display Area - Uses direct opaque background and border for testing */}
+        <div 
+          className={cn(
+            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md border", // Added margin and its own border/rounding
+            "bg-neutral-800 border-neutral-700" // Opaque test background and border
+          )}
+          // Removed inline style with radial-gradient for this test
         >
-          {/* Stylized Network Map Background */}
-          <div className="absolute inset-0 opacity-20" style={{
+          {/* Stylized Network Map Background (simplified for test) */}
+          <div className="absolute inset-0 opacity-10" style={{
               backgroundImage: `
-                radial-gradient(hsl(var(--primary-hsl)) 1px, transparent 1px),
-                radial-gradient(hsl(var(--primary-hsl)) 1px, transparent 1px)
+                radial-gradient(hsl(var(--primary-hsl)) 0.5px, transparent 0.5px),
+                radial-gradient(hsl(var(--primary-hsl)) 0.5px, transparent 0.5px)
               `,
-              backgroundSize: '20px 20px',
-              backgroundPosition: '0 0, 10px 10px',
+              backgroundSize: '15px 15px',
+              backgroundPosition: '0 0, 7.5px 7.5px',
             }}></div>
           
           {/* Connecting Lines */}
@@ -126,7 +133,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
                 <line 
                   x1={`${node.position.x}%`} y1={`${node.position.y}%`} 
                   x2={`${nodes[i+1].position.x}%`} y2={`${nodes[i+1].position.y}%`} 
-                  stroke="hsl(var(--primary-hsl) / 0.3)" strokeWidth="1" strokeDasharray="4 2" />
+                  stroke="hsl(var(--primary-hsl) / 0.2)" strokeWidth="0.5" strokeDasharray="3 2" />
               </svg>
             )
           )}
@@ -150,14 +157,16 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             </div>
           ))}
 
-          {/* Selected Node Details Overlay */}
+          {/* Selected Node Details Overlay - Uses direct opaque background and border for testing */}
           {selectedNode && (
-            <HolographicPanel 
+            <div 
               className={cn(
                 "absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80",
-                "p-4 z-20 animate-slide-in-bottom font-rajdhani",
-                "bg-black/30 backdrop-blur-sm" // Added darker bg and backdrop blur
+                "p-3 md:p-4 z-20 animate-slide-in-bottom font-rajdhani rounded-lg border shadow-lg",
+                "bg-neutral-950 border-neutral-700" // Opaque test background and border
+                // "backdrop-blur-sm" // Temporarily removed
               )}
+              // Using div instead of HolographicPanel for this test
             >
               <h3 className="text-lg font-orbitron mb-2 holographic-text">{selectedNode.title}</h3>
               {selectedNode.type === 'vault' && (
@@ -165,7 +174,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
                   <p className="text-sm text-muted-foreground">Owner: {selectedNode.owner}</p>
                   <p className="text-sm text-muted-foreground">Team: {selectedNode.team}</p>
                   <p className="text-sm text-muted-foreground">Level: {selectedNode.level}</p>
-                  <HolographicButton className="w-full mt-3">View Vault</HolographicButton>
+                  <HolographicButton className="w-full mt-3" explicitTheme={currentGlobalTheme}>View Vault</HolographicButton>
                 </>
               )}
               {selectedNode.type === 'highPriority' && (
@@ -174,7 +183,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
                   <p className="text-sm text-muted-foreground">Source: {selectedNode.owner}</p>
                   <p className="text-sm text-muted-foreground">Team: {selectedNode.team}</p>
                   <p className="text-sm text-muted-foreground">ELINT Transfer: {selectedNode.elintAmount}</p>
-                  <HolographicButton className="w-full mt-3 border-destructive text-destructive hover:bg-destructive hover:text-background">
+                  <HolographicButton className="w-full mt-3 border-destructive text-destructive hover:bg-destructive hover:text-background" explicitTheme={currentGlobalTheme}>
                     Initiate Counter Hack
                   </HolographicButton>
                 </>
@@ -182,14 +191,21 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
               {selectedNode.type === 'droppedItem' && (
                 <>
                   <p className="text-sm text-yellow-400">Dropped Item Detected</p>
-                  <input type="text" placeholder="Enter Team Code" className="holographic-input w-full my-2 text-sm" />
-                  <HolographicButton className="w-full mt-1">Claim Item</HolographicButton>
+                  <HolographicInput type="text" placeholder="Enter Team Code" className="w-full my-2 text-sm" explicitTheme={currentGlobalTheme} />
+                  <HolographicButton className="w-full mt-1" explicitTheme={currentGlobalTheme}>Claim Item</HolographicButton>
                 </>
               )}
-               <HolographicButton variant="ghost" onClick={() => setSelectedNode(null)} className="absolute top-1 right-1 !p-1 text-xs hover:bg-primary/20">Close</HolographicButton>
-            </HolographicPanel>
+               <HolographicButton 
+                variant="ghost" 
+                onClick={() => setSelectedNode(null)} 
+                className="absolute top-1 right-1 !p-1 text-xs hover:bg-primary/20"
+                explicitTheme={currentGlobalTheme}
+               >
+                Close
+               </HolographicButton>
+            </div>
           )}
-        </HolographicPanel>
+        </div>
       </div>
     </div>
   );
