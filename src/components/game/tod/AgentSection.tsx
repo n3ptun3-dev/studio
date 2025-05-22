@@ -350,7 +350,7 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
             </div>
           ) : (
             <div className="flex-grow text-center">
-              <p className="font-orbitron text-lg holographic-text">
+              <p className="font-orbitron text-base holographic-text">
                 {faction === 'Cyphers' ? "Cypher PAD" : faction === 'Shadows' ? "Shadow PAD" : "Agent PAD"}
               </p>
               <p className="text-xs text-muted-foreground">Personal Assistant Device</p>
