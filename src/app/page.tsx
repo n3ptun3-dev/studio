@@ -176,15 +176,15 @@ export default function HomePage() {
   if (!isClientMounted) {
     return (
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6">
-        <ParallaxBackground parallaxOffset={0} />
-        <div
- className="animate-pulse text-2xl font-orbitron holographic-text text-center"
-          style={{
-            color: 'lime',
- textShadow: '0 0 5px lime, 0 0 10px lime',
-          }}
-        >INITIALIZING TOD...</div>
-      </main>
+        <ParallaxBackground parallaxOffset={0} />
+        <div
+ className="animate-pulse text-2xl font-orbitron holographic-text text-center"
+          style={{
+            color: 'hsl(var(--foreground-hsl))',
+ textShadow: '0 0 5px hsl(var(--foreground-hsl)), 0 0 10px hsl(var(--foreground-hsl))',
+          }}
+        >INITIALIZING TOD...</div>
+      </main>
     );
   }
 
