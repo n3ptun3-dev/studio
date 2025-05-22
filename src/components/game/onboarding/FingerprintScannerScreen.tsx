@@ -97,7 +97,7 @@ export function FingerprintScannerScreen() {
           <>
             {/* Top content block for "Scanning" */}
             <div className="flex-shrink-0"> 
-              <h2 className="text-2xl font-orbitron mb-6 holographic-text">Spi Vs Spi: Biometric Authentication</h2>
+              <h2 className="text-2xl font-orbitron mb-6 holographic-text">Spi Vs Spi:<br />Biometric Authentication</h2>
               <p className="text-muted-foreground mb-8">Press and Hold to Authenticate.</p>
             </div>
             <div className="flex-grow" /> {/* Spacer */}

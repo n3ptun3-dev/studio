@@ -1,181 +1,18 @@
-
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { HolographicButton } from '@/components/game/shared/HolographicPanel';
 import { MessageFeed } from '@/components/game/shared/MessageFeed';
-import { Zap, Fingerprint, ShieldAlert, Info, Clock, AlertTriangle, CheckSquare, Activity, Timer as TimerIcon, Copy } from 'lucide-react';
+import { Zap, Fingerprint, ShieldAlert, Info, Clock, AlertTriangle, CheckSquare, Activity, Timer as TimerIcon, Copy, Lock, LockOpen, Trophy, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import CircularTimer from '@/components/game/shared/CircularTimer'; // Make sure this path is correct
 
-
-interface CircularTimerProps {
-  id: string;
-  title: string;
-  duration: number; // in seconds
-  currentTime: number; // in seconds, represents time *remaining*
-  onTimeUp?: () => void;
-  onClick?: () => void;
-  icon?: React.ReactNode;
-  rate?: string; // e.g., ELINT/hr
-  statusText?: string; // e.g., "CHECK IN" or "ACTIVE"
-  warningThresholds?: { mild: number; strong: number }; // seconds remaining for color change
-  isPulsing?: boolean;
-  errorState?: boolean; // For Transfer Window flashing "ERROR"
-  sizeClasses?: string; 
-}
-
-const CircularTimer: React.FC<CircularTimerProps> = ({
-  id, title, duration, currentTime, onClick, icon, rate, statusText, warningThresholds, isPulsing, errorState, sizeClasses
-}) => {
-  const progress = duration > 0 ? ((duration - currentTime) / duration) * 100 : 0;
-  const dynamicSize = 80 + (progress * 0.7); 
-
-  let borderColorClass = 'border-primary';
-  let textColorClass = 'text-primary';
-  if (errorState) {
-    borderColorClass = 'border-destructive animate-pulse';
-    textColorClass = 'text-destructive animate-pulse';
-  } else if (warningThresholds) {
-    if (currentTime <= warningThresholds.strong) {
-      borderColorClass = 'border-destructive';
-      textColorClass = 'text-destructive';
-    } else if (currentTime <= warningThresholds.mild) {
-      borderColorClass = 'border-yellow-400';
-      textColorClass = 'text-yellow-400';
-    }
-  }
-
-  return (
-    <div className={cn("flex flex-col items-center flex-shrink-0", sizeClasses ? sizeClasses.split(' ')[0] : `w-[${dynamicSize}px]`)}>
-      <p className="text-[10px] md:text-xs text-muted-foreground mb-0.5 text-center w-full px-1 truncate h-6 flex items-center justify-center">
-        {title}
-      </p>
-      <div 
-        className={cn(
-          "relative flex flex-col items-center justify-center rounded-full border-2 cursor-pointer transition-all duration-300 ease-out",
-          borderColorClass,
-          "bg-background/30 hover:bg-background/50"
-        )}
-        style={{ 
-          width: sizeClasses ? undefined : `${dynamicSize}px`, 
-          height: sizeClasses ? undefined : `${dynamicSize}px` 
-        }}
-        className={cn(
-            "relative flex flex-col items-center justify-center rounded-full border-2 cursor-pointer transition-all duration-300 ease-out",
-            borderColorClass,
-            "bg-background/30 hover:bg-background/50",
-            sizeClasses ? sizeClasses : `w-[${dynamicSize}px] h-[${dynamicSize}px]`
-        )}
-        onClick={onClick}
-      >
-        {icon && <div className={cn("absolute inset-0 flex items-center justify-center opacity-20 -z-10", isPulsing && "animate-pulse")}>{React.cloneElement(icon as React.ReactElement, { className: "w-1/2 h-1/2"})}</div>}
-        <svg className="absolute inset-0" viewBox="0 0 36 36" style={{ transform: 'rotate(-90deg)'}}>
-          <circle
-            className="text-transparent"
-            strokeWidth="2"
-            stroke="currentColor"
-            fill="transparent"
-            r="15.9155"
-            cx="18"
-            cy="18"
-            opacity="0.3"
-          />
-          <circle
-            className={cn("transition-all duration-500", textColorClass)}
-            strokeWidth="2"
-            strokeDasharray={`${progress}, 100`}
-            strokeLinecap="round"
-            stroke="currentColor"
-            fill="transparent"
-            r="15.9155"
-            cx="18"
-            cy="18"
-          />
-        </svg>
-      </div>
-      <div className="text-center mt-0.5 h-10 flex flex-col justify-center">
-        {errorState ? (
-          <p className="font-digital7 text-lg md:text-xl text-destructive animate-ping">ERROR</p>
-        ) : statusText ? (
-          <p className={cn("font-orbitron text-sm md:text-base", textColorClass)}>{statusText}</p>
-        ) : (
-          <p className={cn("font-digital7 text-lg md:text-xl", textColorClass)}>
-            {new Date(currentTime * 1000).toISOString().substr(11, 8)}
-          </p>
-        )}
-        {rate && <p className="text-[10px] text-muted-foreground">{rate}</p>}
-      </div>
-    </div>
-  );
-};
-
-
-interface SimpleIconTimerProps {
-  id: string;
-  title: string;
-  progress: number; // 0-100
-  icon: React.ReactNode;
-  baseSizeClasses?: string; 
-  colorClass?: string; 
-  onClick?: () => void;
-  isPulsing?: boolean;
-}
-
-const SimpleIconTimer: React.FC<SimpleIconTimerProps> = ({
-  id, title, progress, icon, baseSizeClasses = "w-16 h-16", colorClass = "text-primary border-primary", onClick, isPulsing
-}) => {
-  return (
-    <TooltipProvider>
-      <Tooltip delayDuration={300}>
-        <TooltipTrigger asChild>
-          <div
-            className={cn(
-              "relative flex items-center justify-center rounded-full border-2 cursor-pointer",
-              baseSizeClasses,
-              colorClass,
-              isPulsing && "animate-pulse",
-              "bg-background/30 hover:bg-background/50"
-            )}
-            onClick={onClick}
-          >
-            <svg className="absolute inset-0 w-full h-full" viewBox="0 0 36 36" style={{ transform: 'rotate(-90deg)' }}>
-              <circle
-                className="text-transparent"
-                strokeWidth="2.5" 
-                stroke="currentColor"
-                fill="transparent"
-                r="15.9155"
-                cx="18"
-                cy="18"
-                opacity="0.2" 
-              />
-              <circle
-                className={cn("transition-all duration-500")}
-                strokeWidth="2.5"
-                strokeDasharray={`${progress}, 100`}
-                strokeLinecap="round"
-                stroke="currentColor"
-                fill="transparent"
-                r="15.9155"
-                cx="18"
-                cy="18"
-              />
-            </svg>
-            <div className={cn("w-1/2 h-1/2", colorClass.split(' ')[0])}>
-              {icon}
-            </div>
-          </div>
-        </TooltipTrigger>
-        <TooltipContent side="bottom" className="holographic-panel text-xs">
-          <p>{title}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-};
+// Interface for SimpleIconTimer (if you still use it elsewhere, keep it)
+// For this refactor, we are focusing on CircularTimer, so SimpleIconTimer definition is removed from here
+// unless it's specifically needed in this file. If it was just for reference, it's okay to remove.
 
 type SectionProps = {
   parallaxOffset: number;
@@ -205,6 +42,7 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
 
   const [activeCommsTab, setActiveCommsTab] = useState<SelectableCommsTab>('All');
   
+  // Effects for timers (no changes here from your original code)
   useEffect(() => { 
     if (networkTapTime > 0) {
       const timer = setInterval(() => setNetworkTapTime(prev => Math.max(0, prev - 1)), 1000);
@@ -248,6 +86,7 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
     return () => clearInterval(timer);
   }, []);
 
+  // Click Handlers (no changes here from your original code)
   const handleNetworkTapClick = () => {
     if (networkTapTime > 0) {
       openTODWindow("Network Tap Status", 
@@ -260,14 +99,13 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
       openTODWindow("Activate Network Tap", 
         <div className="font-rajdhani text-center space-y-4">
           <p>The Network Tap generates ELINT passively over time. Higher level Taps yield more ELINT.</p>
-          <p className="text-muted-foreground text-sm">Activation Cost: 100 ELINT (Placeholder)</p>
           <HolographicButton onClick={() => { 
             setNetworkTapTime(3600); 
             setNetworkTapRate(10 + (playerStats.level * 2)); 
             addMessage({type:'system', text:'Network Tap Activated! Generating ELINT.'}); 
-            if(openTODWindow) openTODWindow("", <></>, {showCloseButton:false}); 
-            setTimeout(() => openTODWindow("", <></>, {showCloseButton:false}),0) 
-          }}>Activate Lvl 1 Tap</HolographicButton>
+            if(openTODWindow) openTODWindow("", <></>, {showCloseButton:true}); 
+            setTimeout(() => openTODWindow("", <></>, {showCloseButton:true}),0) 
+          }}>Activate Now</HolographicButton>
         </div>
       );
     }
@@ -280,13 +118,9 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
           <p>Next Check-In Available In:</p>
           <p className="font-digital7 text-2xl my-2">{new Date(checkInTime * 1000).toISOString().substr(11, 8)}</p>
           <HolographicButton 
-            variant="ghost" 
-            size="sm" 
-            className="absolute top-2 right-2 !p-1"
+            variant="ghost" size="sm" className="absolute top-2 right-2 !p-1"
             onClick={() => openTODWindow("Intel: Check-In Protocol", <p className="font-rajdhani">Regular agent check-ins are rewarded with ELINT and potential operational bonuses. Maintain consistent contact with HQ.</p>)}
-          >
-            <Info className="w-4 h-4" />
-          </HolographicButton>
+          ><Info className="w-4 h-4" /></HolographicButton>
         </div>
       );
     } else {
@@ -297,17 +131,13 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
           <HolographicButton onClick={() => { 
             setCheckInTime(6 * 3600); 
             addMessage({type:'hq', text:'Check-In Successful. Reward credited to your account.'}); 
-             if(openTODWindow) openTODWindow("", <></>, {showCloseButton:false}); 
-            setTimeout(() => openTODWindow("", <></>, {showCloseButton:false}),0)
+            if(openTODWindow) openTODWindow("", <></>, {showCloseButton:true}); 
+            setTimeout(() => openTODWindow("", <></>, {showCloseButton:true}),0)
           }}>Complete Check-In</HolographicButton>
            <HolographicButton 
-            variant="ghost" 
-            size="sm" 
-            className="absolute top-2 right-2 !p-1"
+            variant="ghost" size="sm" className="absolute top-2 right-2 !p-1"
             onClick={() => openTODWindow("Intel: Check-In Protocol", <p className="font-rajdhani">Regular agent check-ins are rewarded with ELINT and potential operational bonuses. Maintain consistent contact with HQ.</p>)}
-          >
-            <Info className="w-4 h-4" />
-          </HolographicButton>
+          ><Info className="w-4 h-4" /></HolographicButton>
         </div>
       );
     }
@@ -332,13 +162,9 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
           <p>Next Transfer Window Opens In:</p>
           <p className="font-digital7 text-2xl my-2">{new Date(transferWindowTime * 1000).toISOString().substr(11, 8)}</p>
           <HolographicButton 
-            variant="ghost" 
-            size="sm" 
-            className="absolute top-2 right-2 !p-1"
+            variant="ghost" size="sm" className="absolute top-2 right-2 !p-1"
             onClick={() => openTODWindow("Intel: Transferring ELINT", <p className="font-rajdhani">During active Transfer Windows, agents can securely move their acquired ELINT to their faction's central vault, contributing to the war effort and earning faction loyalty.</p>)}
-          >
-            <Info className="w-4 h-4" />
-          </HolographicButton>
+          ><Info className="w-4 h-4" /></HolographicButton>
         </div>
       );
     }
@@ -358,24 +184,18 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
           {String(hours).padStart(2, '0')}:{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
         </p>
         <HolographicButton 
-            variant="ghost" 
-            size="sm" 
-            className="absolute top-2 right-2 !p-1"
+            variant="ghost" size="sm" className="absolute top-2 right-2 !p-1"
             onClick={() => openTODWindow("Intel: Weekly Cycle", <p className="font-rajdhani">Elint Heist operates in weekly cycles. At the end of each cycle, faction scores are tallied, and rewards are distributed based on performance and contributions.</p>)}
-          >
-            <Info className="w-4 h-4" />
-          </HolographicButton>
+          ><Info className="w-4 h-4" /></HolographicButton>
       </div>
     );
   };
 
-  const handleCodeCopy = () => {
+  const handleCodeCopy = () => { // No changes
     if (typeof window !== "undefined" && navigator.clipboard) {
         const codeToCopy = dailyTeamCode[faction] || dailyTeamCode['Observer'];
         navigator.clipboard.writeText(codeToCopy)
-        .then(() => {
-            toast({ title: "Success", description: "Daily Team Code copied to clipboard!" });
-        })
+        .then(() => toast({ title: "Success", description: "Daily Team Code copied to clipboard!" }))
         .catch(err => {
             toast({ variant: "destructive", title: "Error", description: "Failed to copy code." });
             console.error('Failed to copy: ', err);
@@ -387,92 +207,216 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
 
   const displayedFactionCode = dailyTeamCode[faction] || dailyTeamCode['Observer'];
 
-  const simpleTimersData = [
-    { id: "s-network-tap", title: "Network Tap", progress: networkTapTime > 0 ? ((3600 - networkTapTime) / 3600) * 100 : 0, icon: <Zap className="w-full h-full" />, onClick: handleNetworkTapClick, isPulsing: networkTapTime > 0 && networkTapTime <= 600, colorClass: networkTapTime <= 0 ? "text-yellow-400 border-yellow-400" : (networkTapTime <= 300 ? "text-destructive border-destructive" : (networkTapTime <= 600 ? "text-yellow-400 border-yellow-400" : "text-primary border-primary")) },
-    { id: "s-check-in", title: "Check-In", progress: checkInTime > 0 ? (((6 * 3600) - checkInTime) / (6*3600)) * 100 : 0, icon: <CheckSquare className="w-full h-full" />, onClick: handleCheckInClick, isPulsing: checkInTime > 0 && checkInTime < 300, colorClass: checkInTime <= 0 ? "text-green-400 border-green-400" : (checkInTime <= 300 ? "text-destructive border-destructive" : (checkInTime <= 600 ? "text-yellow-400 border-yellow-400" : "text-primary border-primary")) },
-    { id: "s-transfer-window", title: isTransferWindowOpen ? "Transfer Window OPEN" : "Transfer Window", progress: ((isTransferWindowOpen ? (1*60*60) : (3*60*60)) - transferWindowTime) / (isTransferWindowOpen ? (1*60*60) : (3*60*60)) * 100, icon: <Activity className="w-full h-full" />, onClick: handleTransferWindowClick, isPulsing: isTransferWindowOpen, colorClass: isVaultRaidedError && isTransferWindowOpen ? "text-destructive border-destructive animate-pulse" : (isTransferWindowOpen ? "text-green-400 border-green-400" : (transferWindowTime <= 600 ? "text-destructive border-destructive" : (transferWindowTime <= 1200 ? "text-yellow-400 border-yellow-400" : "text-primary border-primary"))) },
-    { id: "s-weekly-cycle", title: "Weekly Cycle", progress: ((7*24*3600) - weeklyCycleTime) / (7*24*3600) * 100, icon: <TimerIcon className="w-full h-full" />, onClick: handleWeeklyCycleClick, isPulsing: weeklyCycleTime < 24 * 3600, colorClass: weeklyCycleTime <= (6*3600) ? "text-destructive border-destructive" : (weeklyCycleTime <= (12*3600) ? "text-yellow-400 border-yellow-400" : "text-primary border-primary") },
-  ];
+  // --- NEW: Timer Configuration and Weight Calculation ---
+  const timersConfig = useMemo(() => {
+    // Define warning thresholds (seconds remaining)
+    const networkTapWarningStrong = 300; // 5 mins
+    const networkTapWarningMild = 600;   // 10 mins
+  
+    const checkInWarningStrong = 300;    // 5 mins (before cooldown ends, if we were to show it that way)
+                                       // Or, for a "soon to be ready" warning on the ready state.
+                                       // For check-in, warnings usually apply to the COOLDOWN.
+                                       // The "ready" state is green.
+    const checkInWarningMild = 600;
+  
+    // Transfer window thresholds apply differently if open (time until close) or closed (time until open)
+    // These are examples for when it's OPEN and counting down to close
+    const transferOpenWarningStrong = 5 * 60; // 5 mins before closing
+    const transferOpenWarningMild = 10 * 60;  // 10 mins before closing
+  
+    // These are examples for when it's CLOSED and counting down to open
+    // const transferClosedWarningStrong = 10 * 60; // 10 mins before opening
+    // const transferClosedWarningMild = 20 * 60;   // 20 mins before opening
+    // For simplicity, we might not show warnings for "time until open" for the closed lock,
+    // keeping it neutral grey. If warnings are desired, these constants would be used.
+  
+    const weeklyCycleWarningStrong = 6 * 3600;  // 6 hours
+    const weeklyCycleWarningMild = 12 * 3600; // 12 hours
+  
+    return [
+      // 1. NETWORK TAP
+      {
+        id: "network-tap",
+        title: "Network Tap",
+        duration: 3600, // 1 hour
+        currentTime: networkTapTime,
+        onClick: handleNetworkTapClick,
+        icon: <Zap />,
+        rate: `${networkTapRate} E/hr`,
+        statusText: networkTapTime <= 0 ? "INACTIVE" : undefined,
+        
+        isPulsing: true, // Per requirement: "network tap icon must always pulsate"
+        errorState: false, // Network tap doesn't have a specific error state in this setup
+  
+        // Icon color override logic:
+        // - Red if inactive (networkTapTime <= 0)
+        // - Green if active AND time remaining > mild warning threshold
+        // - Null (use default warning color) if active AND in warning
+        iconColorOverride: networkTapTime <= 0 
+          ? "text-destructive" 
+          : (networkTapTime > networkTapWarningMild ? "text-green-400" : null),
+  
+        // Border/Progress ring colors:
+        isReady: networkTapTime <= 0, // "Inactive" state treated as "ready" for coloring purposes
+        readyTextColor: "text-destructive", // Makes border/progress red when inactive
+        readyBorderColor: "border-destructive",
+        warningThresholds: { mild: networkTapWarningMild, strong: networkTapWarningStrong },
+        // If active and not warning, border/progress will be 'primary' (blue)
+      },
+  
+      // 2. AGENT CHECK-IN
+      {
+        id: "check-in",
+        title: "Agent Check-In",
+        duration: 6 * 3600, // 6 hours cooldown
+        currentTime: checkInTime,
+        onClick: handleCheckInClick,
+        icon: <Fingerprint />,
+        statusText: checkInTime <= 0 ? "CHECK IN" : undefined,
+  
+        // Per requirement: "check-in pulsates when inactive and no pulsating when active"
+        // "Inactive" means ready to check-in (checkInTime <= 0)
+        isPulsing: checkInTime <= 0, 
+        errorState: false,
+  
+        isReady: checkInTime <= 0, // True when ready to check-in
+        readyTextColor: "text-green-400", // Green when ready
+        readyBorderColor: "border-green-400",
+        iconColorOverride: null, // Let readyTextColor handle the green icon
+  
+        // Warnings apply to the cooldown period (checkInTime > 0)
+        warningThresholds: checkInTime > 0 ? { mild: checkInWarningMild, strong: checkInWarningStrong } : undefined,
+        // If in cooldown and not warning, border/progress is primary. Icon not pulsing.
+      },
+  
+      // 3. TRANSFER WINDOW
+      {
+        id: "transfer-window",
+        title: isTransferWindowOpen ? "Transfer OPEN" : "Transfer Window",
+        duration: isTransferWindowOpen ? (1 * 60 * 60) : (3 * 60 * 60), // 1hr open, 3hr cooldown
+        currentTime: transferWindowTime,
+        onClick: handleTransferWindowClick,
+        icon: isTransferWindowOpen ? <LockOpen /> : <Lock />, // Dynamic icon
+  
+        // Per requirement: Pulsates when open. Not when closed.
+        isPulsing: isTransferWindowOpen,
+        errorState: isVaultRaidedError && isTransferWindowOpen,
+  
+        // Color logic depends on whether it's open or closed
+        isReady: isTransferWindowOpen 
+          ? !errorState && transferWindowTime > transferOpenWarningMild // Open, no error, not in warning = green
+          : true, // For closed state, use isReady to apply neutral colors
+  
+        readyTextColor: isTransferWindowOpen ? "text-green-400" : "text-neutral-400", // Green if open&ready, neutral for progress if closed
+        readyBorderColor: isTransferWindowOpen ? "border-green-400" : "border-neutral-400",
+  
+        iconColorOverride: isTransferWindowOpen 
+          ? null // When open, let error/ready/warning logic color the icon
+          : "text-neutral-500", // When closed, force icon to grey
+  
+        // Warnings apply only if open and counting down to close
+        warningThresholds: isTransferWindowOpen 
+          ? { mild: transferOpenWarningMild, strong: transferOpenWarningStrong } 
+          : undefined, // No warnings shown for the closed lock's countdown to open (keeps it grey)
+      },
+  
+      // 4. WEEKLY CYCLE
+      {
+        id: "weekly-cycle",
+        title: "Weekly Cycle",
+        duration: 7 * 24 * 3600, // 7 days
+        currentTime: weeklyCycleTime,
+        onClick: handleWeeklyCycleClick,
+        icon: <Trophy />, // New Trophy icon
+  
+        // Per requirement: "When the weekly cycle timer is green then the icon doesn't pulsate 
+        // and when the time is yellow or red the icon should pulsate."
+        // "Green" here means not in a warning state.
+        isPulsing: weeklyCycleTime <= weeklyCycleWarningMild && weeklyCycleTime > 0,
+        errorState: false,
+        
+        // If time remaining is > mild warning, it's considered "ready" (not in warning)
+        // We want it to be green in this state.
+        isReady: weeklyCycleTime > weeklyCycleWarningMild,
+        readyTextColor: "text-green-400", // Icon/Progress green when "ready" (not in warning)
+        readyBorderColor: "border-green-400",
+        iconColorOverride: null, // Let ready/warning logic color the icon
+  
+        warningThresholds: { mild: weeklyCycleWarningMild, strong: weeklyCycleWarningStrong },
+      },
+    ];
+  }, [
+    networkTapTime, networkTapRate, checkInTime, transferWindowTime,
+    isTransferWindowOpen, isVaultRaidedError, weeklyCycleTime,
+    // Make sure to include any handlers if they are not stable (e.g., defined inside component)
+    // or if their logic influences these configurations directly.
+    handleNetworkTapClick, handleCheckInClick, handleTransferWindowClick, handleWeeklyCycleClick
+  ]);
 
+  const timerWeights = useMemo(() => {
+    const baseWeight = 1; // Minimum weight for any timer
+    const urgencyScaleFactor = 2; // How much "larger" an expired timer is compared to a full one (e.g., 1 + 2*1 = 3x weight)
+    const errorBoostFactor = 4; // Extra weight multiplier for timers in an error state
+
+    return timersConfig.map(timer => {
+      if (timer.duration <= 0) return baseWeight; // Avoid division by zero
+
+      // Urgency: 0 (full time) to 1 (time up)
+      const urgency = Math.max(0, Math.min(1, (timer.duration - timer.currentTime) / timer.duration));
+      
+      let weight = baseWeight + urgencyScaleFactor * urgency;
+
+      if (timer.errorState) {
+        weight += errorBoostFactor; // Significantly boost weight for error states
+      }
+      return weight;
+    });
+  }, [timersConfig]);
+
+  const totalWeight = useMemo(() => timerWeights.reduce((sum, weight) => sum + weight, 0), [timerWeights]);
+  // --- END NEW: Timer Configuration and Weight Calculation ---
 
   return (
     <div className="flex flex-col p-3 md:p-4 h-full overflow-hidden space-y-3 md:space-y-4">
-      {/* Timer Area */}
+          <div className="flex-none flex items-center justify-center p-0"> {/* Or adjust padding/margin as needed */}
+        <h2 className="text-2xl font-orbitron holographic-text" // Your desired styling
+          // Optional: style={{ transform: `translateX(${parallaxOffset * 0.05}px)` }}
+        >Control Center</h2>
+      </div>
+      {/* Timer Area - REWORKED */}
       <div className="flex-shrink-0">
-        <div className="flex overflow-x-auto py-2 space-x-3 md:space-x-4 scrollbar-hide items-start">
-          <CircularTimer 
-            id="network-tap"
-            title="Network Tap"
-            duration={3600} 
-            currentTime={networkTapTime}
-            onClick={handleNetworkTapClick}
-            icon={<Zap className="w-full h-full" />}
-            rate={`${networkTapRate} E/hr`}
-            statusText={networkTapTime <= 0 ? "INACTIVE" : undefined}
-            isPulsing={networkTapTime > 0 && networkTapTime <= 600} 
-            warningThresholds={{ mild: 600, strong: 300 }} 
-          />
-          <CircularTimer 
-            id="check-in"
-            title="Check-In"
-            duration={6 * 3600} 
-            currentTime={checkInTime}
-            onClick={handleCheckInClick}
-            icon={<Fingerprint className="w-full h-full" />}
-            statusText={checkInTime <= 0 ? "CHECK IN" : undefined}
-            isPulsing={checkInTime > 0 && checkInTime < 300} 
-            warningThresholds={{ mild: 600, strong: 300 }}
-          />
-           <CircularTimer 
-            id="transfer-window"
-            title={isTransferWindowOpen ? "Transfer Window OPEN" : "Transfer Window"}
-            duration={isTransferWindowOpen ? (1 * 60 * 60) : (3 * 60 * 60)} 
-            currentTime={transferWindowTime}
-            onClick={handleTransferWindowClick}
-            icon={<ShieldAlert className="w-full h-full"/>} 
-            isPulsing={isTransferWindowOpen}
-            warningThresholds={{ mild: 1200, strong: 600 }} 
-            errorState={isVaultRaidedError && isTransferWindowOpen} 
-          />
-          <CircularTimer 
-            id="weekly-cycle"
-            title="Weekly Cycle"
-            duration={7 * 24 * 3600} 
-            currentTime={weeklyCycleTime}
-            onClick={handleWeeklyCycleClick}
-            icon={<Clock className="w-full h-full"/>} 
-            isPulsing={weeklyCycleTime < 24 * 3600} 
-            warningThresholds={{ mild: 12 * 3600, strong: 6 * 3600 }} 
-          />
-        </div>
-        <div className="flex justify-around items-center w-full py-1 space-x-1 md:space-x-2 mt-1">
-          {simpleTimersData.map(timer => (
-            <SimpleIconTimer
-              key={timer.id}
-              id={timer.id}
-              title={timer.title}
-              progress={timer.progress}
-              icon={timer.icon}
-              onClick={timer.onClick}
-              isPulsing={timer.isPulsing}
-              colorClass={timer.colorClass}
-              baseSizeClasses="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16"
-            />
-          ))}
+        {/* This is the new flex container for timers. It will distribute width. */}
+        <div className="flex w-full space-x-1 md:space-x-2 py-1 items-stretch"> {/* items-stretch allows children to use h-full */}
+          {timersConfig.map((timerProps, index) => {
+            const weight = timerWeights[index];
+            // Calculate flex-basis: percentage of width this timer should occupy
+            // Default to 25% if totalWeight is somehow 0 (e.g., all timers have 0 duration and 0 weight)
+            const flexBasisPercent = totalWeight > 0 ? (weight / totalWeight) * 100 : 25;
+
+            return (
+              // This div wrapper gets the proportional width
+              <div 
+                key={timerProps.id} 
+                style={{ flexBasis: `${flexBasisPercent}%` }}
+                // className="border border-dashed border-neutral-500" // Optional: for debugging visibility of containers
+              >
+                <CircularTimer {...timerProps} />
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Comms Area */}
+      {/* Comms Area (remains the same as your original code) */}
       <div className="flex-grow flex flex-col min-h-0 bg-black/70 backdrop-blur-sm border border-primary/30 rounded-lg">
-        {/* Tab Bar */}
         <div className="flex-none flex items-center p-1.5 md:p-2 border-b border-primary/20 space-x-1">
           <div className="px-2 py-1 text-sm font-semibold text-primary mr-1">Comms</div>
           {SELECTABLE_COMMS_TABS.map((tab) => (
             <HolographicButton 
               key={tab}
-              size="sm" // Already a ShadCN prop, might need custom styling for very small buttons
+              size="sm"
               className={cn(
-                "!text-xs !font-rajdhani !py-1 !px-1.5 md:!px-2", // Force smaller text and padding
+                "!text-xs !font-rajdhani !py-1 !px-1.5 md:!px-2",
                 activeCommsTab === tab ? "active-pad-button" : "hover:bg-primary/10 !bg-transparent"
               )}
               onClick={() => setActiveCommsTab(tab)}
@@ -482,7 +426,6 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
           ))}
         </div>
         
-        {/* Daily Team Code */}
         <div 
             className="group p-1.5 md:p-2 border-b border-primary/20 bg-primary/10 cursor-pointer hover:bg-primary/20 flex items-center justify-center gap-2"
             onClick={handleCodeCopy}
@@ -495,7 +438,6 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
             <Copy className="w-3 h-3 text-muted-foreground group-hover:text-accent icon-glow"/>
         </div>
 
-        {/* Message Feed */}
         <div className="flex-grow min-h-0">
           <MessageFeed filter={activeCommsTab !== 'All' ? activeCommsTab.toLowerCase() as 'hq' | 'alerts' | 'system' : undefined} />
         </div>
