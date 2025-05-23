@@ -438,3 +438,29 @@
   pointer-events: none; 
   border-radius: inherit; 
 }
+/* CSS Background Animations */
+@keyframes parallaxScroll {
+   0% {
+    background-position-x: 0%;
+    }
+    100% {
+      background-position-x: -100%;
+      }
+    }
+  
+  .parallax-background {
+    animation: parallaxScroll 60s linear infinite;
+  }
+  
+  @keyframes scannerScroll {
+     0% {
+      background-position-x: 0%;
+      }
+      100% {
+        background-position-x: -100%;
+        }
+  }
+  
+  .scanner-background {
+    animation: scannerScroll 40s linear infinite;
+  }

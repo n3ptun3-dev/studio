@@ -45,7 +45,7 @@ const generateNodes = (count = 15): NetworkNode[] => {
   return nodes;
 };
 
-const NODE_AREA_SCROLL_SPEED = 0.15; // Adjusted speed
+// NODE_AREA_SCROLL_SPEED constant removed as it's no longer needed for JS animation
 
 export function ScannerSection({ parallaxOffset }: SectionProps) {
   const { openTODWindow, faction: currentAppFaction } = useAppContext();
@@ -54,35 +54,9 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Ref for the node display area's background scrolling
-  const nodeDisplayBgRef = useRef<HTMLDivElement>(null);
+  // nodeDisplayBgRef useRef removed as it's no longer needed for JavaScript manipulation
 
-  useEffect(() => {
-    const container = nodeDisplayBgRef.current;
-    if (!container) return;
-
-    let animationFrameId: number;
-    let currentPositionX = 0;
-    // Set initial background properties
-    container.style.backgroundImage = "url('/backgrounds/Spi Vs Spi bg.jpg')";
-    container.style.backgroundRepeat = 'repeat-x';
-    container.style.backgroundSize = 'auto 100%'; // Cover the height, auto width
-
-    const animateScroll = () => {
-      currentPositionX -= NODE_AREA_SCROLL_SPEED;
-      if (nodeDisplayBgRef.current) { // Check if ref is still valid
-        nodeDisplayBgRef.current.style.backgroundPositionX = `${currentPositionX}px`;
-      }
-      animationFrameId = requestAnimationFrame(animateScroll);
-    };
-
-    animateScroll(); // Start the animation loop
-
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, []); // Empty dependency array means this runs once on mount and cleans up on unmount
-
+  // useEffect for JS animation removed as per instructions
 
   const refreshScanner = () => {
     setIsLoading(true);
@@ -159,18 +133,20 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
         </div>
 
         {/* Node Display Area - Uses HolographicPanel for its default border/bg + map overlay + scrolling map */}
+        {/* The ref has been removed and scanner-background class added */}
         <HolographicPanel
-          ref={nodeDisplayBgRef} // Ref for background manipulation
           explicitTheme={currentGlobalTheme}
           key={`node-display-${currentGlobalTheme}-${themeVersion}`}
           className={cn(
-            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md map-overlay"
+            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md map-overlay",
+            "scanner-background" // Added the new CSS class here
           )}
           // Themed radial grid is applied here, on top of the panel's default bg
           style={{
-            backgroundImage: `radial-gradient(hsl(var(--primary-hsl)/0.1) 0.5px, transparent 0.5px), radial-gradient(hsl(var(--primary-hsl)/0.1) 0.5px, transparent 0.5px)`,
-            backgroundSize: '20px 20px',
-            backgroundPosition: '0 0, 10px 10px',
+            backgroundImage: `url('/backgrounds/Spi Vs Spi bg.jpg'), radial-gradient(hsl(var(--primary-hsl)/0.1) 0.5px, transparent 0.5px), radial-gradient(hsl(var(--primary-hsl)/0.1) 0.5px, transparent 0.5px)`,
+            backgroundSize: 'auto 100%, 20px 20px, 20px 20px', // Updated backgroundSize to account for multiple backgrounds
+            backgroundRepeat: 'repeat-x, repeat, repeat', // Updated backgroundRepeat for multiple backgrounds
+            backgroundPosition: '0 0, 0 0, 10px 10px', // Initial positions
           }}
         >
           {/* Connecting Lines - these need to be above the map background but below nodes */}
@@ -180,7 +156,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
                 <line
                   x1={`${node.position.x}%`} y1={`${node.position.y}%`}
                   x2={`${nodes[i + 1].position.x}%`} y2={`${nodes[i + 1].position.y}%`}
-                  stroke="hsl(var(--primary-hsl) / 0.3)" strokeWidth="1" strokeDasharray="4 2" />
+                  stroke="hsl(var(--primary-hsl) / 0.5)" strokeWidth="1" strokeDasharray="4 2" />
               </svg>
             )
           )}
