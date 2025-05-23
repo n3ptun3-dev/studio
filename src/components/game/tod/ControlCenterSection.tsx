@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { HolographicButton } from '@/components/game/shared/HolographicPanel';
+import { HolographicButton, HolographicPanel } from '@/components/game/shared/HolographicPanel';
+import { CopyToClipboard } from 'react-copy-to-clipboard';
 import { MessageFeed } from '@/components/game/shared/MessageFeed';
 import { Zap, Fingerprint, ShieldAlert, Info, Clock, AlertTriangle, CheckSquare, Activity, Timer as TimerIcon, Copy, Lock, LockOpen, Trophy, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -41,6 +42,7 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
   const [weeklyCycleTime, setWeeklyCycleTime] = useState(7 * 24 * 60 * 60); 
 
   const [activeCommsTab, setActiveCommsTab] = useState<SelectableCommsTab>('All');
+  const [copiedCode, setCopiedCode] = useState(false);
   
   // Effects for timers (no changes here from your original code)
   useEffect(() => { 
@@ -191,18 +193,12 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
     );
   };
 
-  const handleCodeCopy = () => { // No changes
-    if (typeof window !== "undefined" && navigator.clipboard) {
-        const codeToCopy = dailyTeamCode[faction] || dailyTeamCode['Observer'];
-        navigator.clipboard.writeText(codeToCopy)
-        .then(() => toast({ title: "Success", description: "Daily Team Code copied to clipboard!" }))
-        .catch(err => {
-            toast({ variant: "destructive", title: "Error", description: "Failed to copy code." });
-            console.error('Failed to copy: ', err);
-        });
-    } else {
-        toast({ variant: "destructive", title: "Error", description: "Clipboard not available."});
-    }
+  const handleCodeCopySuccess = () => {
+    setCopiedCode(true);
+    setTimeout(() => {
+      setCopiedCode(false);
+    }, 2000); // Show checkmark for 2 seconds
+    // No toast needed if using icon change
   };
 
   const displayedFactionCode = dailyTeamCode[faction] || dailyTeamCode['Observer'];
@@ -293,31 +289,31 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
       {
         id: "transfer-window",
         title: isTransferWindowOpen ? "Transfer OPEN" : "Transfer Window",
-        duration: isTransferWindowOpen ? (1 * 60 * 60) : (3 * 60 * 60), // 1hr open, 3hr cooldown
+        duration: isTransferWindowOpen ? (1 * 60 * 60) : (3 * 60 * 60),
         currentTime: transferWindowTime,
         onClick: handleTransferWindowClick,
-        icon: isTransferWindowOpen ? <LockOpen /> : <Lock />, // Dynamic icon
+        icon: isTransferWindowOpen ? <LockOpen /> : <Lock />,
   
-        // Per requirement: Pulsates when open. Not when closed.
         isPulsing: isTransferWindowOpen,
+        // This is the correct 'errorState' prop for the CircularTimer component
         errorState: isVaultRaidedError && isTransferWindowOpen,
   
         // Color logic depends on whether it's open or closed
-        isReady: isTransferWindowOpen 
-          ? !errorState && transferWindowTime > transferOpenWarningMild // Open, no error, not in warning = green
-          : true, // For closed state, use isReady to apply neutral colors
+        isReady: isTransferWindowOpen
+          // Use the actual error condition for this timer here:
+          ? !(isVaultRaidedError && isTransferWindowOpen) && transferWindowTime > transferOpenWarningMild 
+          : true, 
   
-        readyTextColor: isTransferWindowOpen ? "text-green-400" : "text-neutral-400", // Green if open&ready, neutral for progress if closed
+        readyTextColor: isTransferWindowOpen ? "text-green-400" : "text-neutral-400",
         readyBorderColor: isTransferWindowOpen ? "border-green-400" : "border-neutral-400",
   
-        iconColorOverride: isTransferWindowOpen 
-          ? null // When open, let error/ready/warning logic color the icon
-          : "text-neutral-500", // When closed, force icon to grey
+        iconColorOverride: isTransferWindowOpen
+          ? null 
+          : "text-neutral-500",
   
-        // Warnings apply only if open and counting down to close
-        warningThresholds: isTransferWindowOpen 
-          ? { mild: transferOpenWarningMild, strong: transferOpenWarningStrong } 
-          : undefined, // No warnings shown for the closed lock's countdown to open (keeps it grey)
+        warningThresholds: isTransferWindowOpen
+          ? { mild: transferOpenWarningMild, strong: transferOpenWarningStrong }
+          : undefined,
       },
   
       // 4. WEEKLY CYCLE
@@ -377,7 +373,7 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
   // --- END NEW: Timer Configuration and Weight Calculation ---
 
   return (
-    <div className="flex flex-col p-3 md:p-4 h-full overflow-hidden space-y-3 md:space-y-4">
+  <div className="flex flex-col p-3 md:p-4 h-full overflow-hidden space-y-3 md:space-y-4">
           <div className="flex-none flex items-center justify-center p-0"> {/* Or adjust padding/margin as needed */}
         <h2 className="text-2xl font-orbitron holographic-text" // Your desired styling
           // Optional: style={{ transform: `translateX(${parallaxOffset * 0.05}px)` }}
@@ -407,41 +403,87 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
         </div>
       </div>
 
-      {/* Comms Area (remains the same as your original code) */}
-      <div className="flex-grow flex flex-col min-h-0 bg-black/70 backdrop-blur-sm border border-primary/30 rounded-lg">
-        <div className="flex-none flex items-center p-1.5 md:p-2 border-b border-primary/20 space-x-1">
-          <div className="px-2 py-1 text-sm font-semibold text-primary mr-1">Comms</div>
-          {SELECTABLE_COMMS_TABS.map((tab) => (
-            <HolographicButton 
-              key={tab}
-              size="sm"
-              className={cn(
-                "!text-xs !font-rajdhani !py-1 !px-1.5 md:!px-2",
-                activeCommsTab === tab ? "active-pad-button" : "hover:bg-primary/10 !bg-transparent"
-              )}
-              onClick={() => setActiveCommsTab(tab)}
-            >
-              {tab}
-            </HolographicButton>
-          ))}
+      {/* Comms Area */}
+      <div className="flex-grow flex flex-col min-h-0 bg-black/70 backdrop-blur-sm border border-primary/30 rounded-lg overflow-hidden">
+        
+        {/* Tab Bar Area */}
+        <div className="flex-none flex items-end border-b border-primary/20"> {/* Main tab bar container */}
+          
+          {/* "Comms" Title Pseudo-Tab (Not Clickable) */}
+          {/* Using the version with backdrop-blur and consistent tab styling from earlier discussion */}
+          <div 
+            className={cn(
+              "px-3 py-1.5 md:px-4 md:py-2 text-base font-semibold text-primary font-orbitron", // Or your preferred size for "Comms"
+              "bg-black/70 backdrop-blur-sm", 
+              "border-t border-l border-primary/20 rounded-tl-lg" 
+              // No right border, next tab's left border will provide separation
+            )}
+          >
+            Comms
+          </div>
+
+          {/* Container for Clickable Tabs */}
+          <div className="flex flex-grow">
+            {SELECTABLE_COMMS_TABS.map((tab, index) => ( // Added index here
+              <button
+                key={tab}
+                className={cn(
+                  "flex-1 text-xs font-rajdhani py-1.5 px-2 md:px-3 md:py-2 text-center",
+                  "focus:outline-none transition-colors duration-150",
+                  // Base borders for inactive tabs or tabs that aren't the active one
+                  // Each tab gets a top and a left border (which acts as separator)
+                  // The last tab also gets a right border.
+                  "border-t border-l border-primary/20",
+                  index === SELECTABLE_COMMS_TABS.length - 1 && "border-r border-primary/20",
+                  index === SELECTABLE_COMMS_TABS.length - 1 && "rounded-tr-lg", // Round top-right of last tab
+
+                  activeCommsTab === tab
+                    ? // Active Tab Styling:
+                      "bg-black/70 text-primary border-b-transparent -mb-px z-10 " + 
+                      "border-t-[hsl(var(--primary-hsl))] " +
+                      "border-l-[hsl(var(--primary-hsl))] " +
+                      // Active tab also needs a right border if it's the last tab,
+                      // otherwise its right border should be transparent or match the next inactive tab's left.
+                      // For simplicity and stronger active look, let's give it a primary right border too,
+                      // unless it would look better transparent when not last.
+                      (index === SELECTABLE_COMMS_TABS.length - 1 
+                        ? "border-r-[hsl(var(--primary-hsl))]" 
+                        : "border-r-[hsl(var(--primary-hsl))]" // Or border-r-transparent if preferred next to an inactive tab
+                      )
+                    : // Inactive Tab Styling:
+                      "bg-transparent text-muted-foreground hover:text-primary hover:bg-primary/10 border-b-primary/20"
+                      // Inactive tabs already have border-t and border-l (and border-r if last) from above.
+                      // They specifically need the border-b.
+                )}
+                onClick={() => setActiveCommsTab(tab)}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
         </div>
         
-        <div 
-            className="group p-1.5 md:p-2 border-b border-primary/20 bg-primary/10 cursor-pointer hover:bg-primary/20 flex items-center justify-center gap-2"
-            onClick={handleCodeCopy}
-            title="Click to copy Daily Team Code"
-          >
-            <p className="text-xs md:text-sm font-rajdhani text-center">
-              <span className="font-semibold text-primary">DTC ({faction.substring(0,3)}): </span> 
-              <span className="text-accent font-digital7 tracking-wider">{displayedFactionCode}</span>
-            </p>
-            <Copy className="w-3 h-3 text-muted-foreground group-hover:text-accent icon-glow"/>
-        </div>
+        {/* Content Below Tabs ... (rest of your comms area) ... */}
+        <div className="flex flex-col flex-grow min-h-0">
+          {/* Daily Team Code Area - Wrapped with CopyToClipboard */}
+          <CopyToClipboard text={displayedFactionCode} onCopy={handleCodeCopySuccess}>
+            <div 
+              className="group p-1.5 md:p-2 border-b border-primary/20 bg-primary/10 cursor-pointer hover:bg-primary/20 flex items-center justify-center gap-2"
+              title="Click to copy Daily Team Code"
+            >
+              <p className="text-xs md:text-sm font-rajdhani text-center">
+                <span className="font-semibold text-yellow-400">DTC ({faction.substring(0,3)}): </span>
+                <span className="text-yellow-400 font-digital7 tracking-wider">{displayedFactionCode}</span>
+              </p>
+              {copiedCode ? <CheckSquare className="w-3 h-3 text-green-400 icon-glow" /> : <Copy className="w-3 h-3 text-muted-foreground group-hover:text-accent icon-glow"/>}
+            </div>
+          </CopyToClipboard>
 
-        <div className="flex-grow min-h-0">
-          <MessageFeed filter={activeCommsTab !== 'All' ? activeCommsTab.toLowerCase() as 'hq' | 'alerts' | 'system' : undefined} />
+          <div className="flex-grow min-h-0">
+            <MessageFeed filter={activeCommsTab !== 'All' ? activeCommsTab.toLowerCase() as 'hq' | 'alerts' | 'system' : undefined} />
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
+</div>
+);
+}  

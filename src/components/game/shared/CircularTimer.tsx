@@ -79,7 +79,8 @@ const CircularTimer: React.FC<CircularTimerProps> = ({
           "relative flex flex-col items-center justify-center rounded-full border-2 cursor-pointer transition-all duration-300 ease-out",
           currentBorderColorClass, // Apply the calculated border color
           "bg-background/70 hover:bg-background/100", // Main background of the circle
-          "w-full aspect-square"
+          "w-full aspect-square",
+          "shadow-[0_0_15px_5px_rgba(0,0,0,0.7)]"
         )}
         onClick={onClick}
       >
