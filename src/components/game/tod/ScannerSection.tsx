@@ -91,7 +91,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
         radial-gradient(hsl(${gridColorHsl} / 0.7) 0.5px, transparent 0.5px),
         url('/backgrounds/${mapImageFilename}')
       `;
-      nodeDisplayArea.style.backgroundSize = `20px 20px, 20px 20px, auto 100%`;
+      nodeDisplayArea.style.backgroundSize = `20px 20px, 20px 20px, auto 102%`;
       nodeDisplayArea.style.backgroundPosition = `0 0, 10px 10px, ${currentPositionXRef.current}px 0`;
       nodeDisplayArea.style.backgroundRepeat = 'repeat, repeat, repeat-x';
 
