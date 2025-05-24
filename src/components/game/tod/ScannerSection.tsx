@@ -87,8 +87,8 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
 
 
       nodeDisplayArea.style.backgroundImage = `
-        radial-gradient(hsl(${gridColorHsl} / 0.1) 0.5px, transparent 0.5px), 
-        radial-gradient(hsl(${gridColorHsl} / 0.1) 0.5px, transparent 0.5px),
+        radial-gradient(hsl(${gridColorHsl} / 0.7) 0.5px, transparent 0.5px), 
+        radial-gradient(hsl(${gridColorHsl} / 0.7) 0.5px, transparent 0.5px),
         url('/backgrounds/${mapImageFilename}')
       `;
       nodeDisplayArea.style.backgroundSize = `20px 20px, 20px 20px, auto 100%`;
