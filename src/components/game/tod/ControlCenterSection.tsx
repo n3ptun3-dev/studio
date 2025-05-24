@@ -381,20 +381,32 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
       </div>
       {/* Timer Area - REWORKED */}
       <div className="flex-shrink-0">
-        {/* This is the new flex container for timers. It will distribute width. */}
-        <div className="flex w-full sm:w-4/5 sm:mx-auto space-x-1 md:space-x-2 py-1 items-stretch"> {/* items-stretch allows children to use h-full */}
+        {/*
+          MODIFIED: Removed 'items-stretch' from this container.
+          Individual timer wrappers will now control their own vertical alignment.
+        */}
+        <div className="flex w-full sm:w-4/5 sm:mx-auto space-x-1 md:space-x-2 py-1 items-end"> {/* Changed to items-end initially, then individual alignment */}
           {timersConfig.map((timerProps, index) => {
             const weight = timerWeights[index];
             // Calculate flex-basis: percentage of width this timer should occupy
             // Default to 25% if totalWeight is somehow 0 (e.g., all timers have 0 duration and 0 weight)
             const flexBasisPercent = totalWeight > 0 ? (weight / totalWeight) * 100 : 25;
 
+            // Determine vertical alignment based on index
+            const verticalAlignmentClass = 
+              index === 0 || index === 2 // First and third timers
+                ? 'self-end' // Align to bottom
+                : 'self-start'; // Align to top (for second and fourth timers)
+
             return (
-              // This div wrapper gets the proportional width
+              // This div wrapper gets the proportional width and vertical alignment
               <div 
                 key={timerProps.id} 
                 style={{ flexBasis: `${flexBasisPercent}%` }}
-                // className="border border-dashed border-neutral-500" // Optional: for debugging visibility of containers
+                className={cn(
+                  "flex-grow flex justify-center", // Ensure content is centered within its proportional width
+                  verticalAlignmentClass
+                )} 
               >
                 <CircularTimer {...timerProps} />
               </div>
