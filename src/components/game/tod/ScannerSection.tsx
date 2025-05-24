@@ -2,13 +2,13 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { HolographicPanel } from '@/components/game/shared/HolographicPanel'; // Keep for Node Display & Details
+import { HolographicPanel, HolographicButton, HolographicInput } from '@/components/game/shared/HolographicPanel'; // Added HolographicButton here
 import { RefreshCw, Info, MapPin, AlertTriangle, Gift } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { cn } from '@/lib/utils';
 import { useTheme, type Theme } from '@/contexts/ThemeContext';
 
-const NODE_AREA_SCROLL_SPEED = 0.15; // Adjusted scroll speed
+const NODE_AREA_SCROLL_SPEED = 0.15; 
 
 interface SectionProps {
   parallaxOffset: number;
@@ -70,23 +70,30 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
       const deltaTime = timestamp - lastTime;
       lastTime = timestamp;
 
-      currentPositionXRef.current -= NODE_AREA_SCROLL_SPEED * (deltaTime / 16.67); // Normalize speed
+      currentPositionXRef.current -= NODE_AREA_SCROLL_SPEED * (deltaTime / 16.67); 
       
-      let mapImageFilename = "World Map Green.jpg"; // Default for terminal-green or unknown
+      let mapImageFilename = "World Map Green.jpg"; 
+      let gridColorHsl = "var(--terminal-green-debug-color)"; // Default for terminal-green or unknown
+      
       if (currentGlobalTheme === 'cyphers') {
         mapImageFilename = "World Map Blue.jpg";
+        gridColorHsl = "var(--primary-hsl)"; // Use cyphers primary for grid
       } else if (currentGlobalTheme === 'shadows') {
         mapImageFilename = "World Map Red.jpg";
+        gridColorHsl = "var(--primary-hsl)"; // Use shadows primary for grid
+      } else if (currentGlobalTheme === 'terminal-green') {
+        gridColorHsl = "var(--primary-hsl)"; // Use terminal-green primary for grid
       }
-      // Note: Observer theme uses terminal-green, so green map is fine.
+
 
       nodeDisplayArea.style.backgroundImage = `
-        radial-gradient(hsl(var(--foreground-hsl)/0.9) 0.5px, transparent 0.5px),
+        radial-gradient(hsl(${gridColorHsl} / 0.1) 0.5px, transparent 0.5px), 
+        radial-gradient(hsl(${gridColorHsl} / 0.1) 0.5px, transparent 0.5px),
         url('/backgrounds/${mapImageFilename}')
       `;
-      nodeDisplayArea.style.backgroundSize = `15px 15px, auto 100%`;
-      nodeDisplayArea.style.backgroundPosition = `0 0, ${currentPositionXRef.current}px 0`;
-      nodeDisplayArea.style.backgroundRepeat = 'repeat, repeat-x';
+      nodeDisplayArea.style.backgroundSize = `20px 20px, 20px 20px, auto 100%`;
+      nodeDisplayArea.style.backgroundPosition = `0 0, 10px 10px, ${currentPositionXRef.current}px 0`;
+      nodeDisplayArea.style.backgroundRepeat = 'repeat, repeat, repeat-x';
 
       animationFrameIdRef.current = requestAnimationFrame(animateScroll);
     };
@@ -98,7 +105,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
         cancelAnimationFrame(animationFrameIdRef.current);
       }
     };
-  }, [currentGlobalTheme]); // Re-run if theme changes to update map image and dot color
+  }, [currentGlobalTheme]); 
 
   const refreshScanner = () => {
     setIsLoading(true);
@@ -139,13 +146,13 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
 
   return (
     <div className="flex flex-col h-full overflow-hidden p-4 md:p-6">
-      {/* Main content area with custom holographic-like border and specific background */}
+      {/* Main content area with holographic border */}
       <div
         className={cn(
           "flex flex-col flex-grow overflow-hidden rounded-lg",
-          "bg-black/70", // The desired dark translucent background
-          "border border-[var(--hologram-panel-border)]", // Themed border
-          "shadow-[0_0_15px_var(--hologram-glow-color),_inset_0_0_10px_var(--hologram-glow-color)]" // Themed glow
+          "border border-[var(--hologram-panel-border)]",
+          "shadow-[0_0_15px_var(--hologram-glow-color),_inset_0_0_10px_var(--hologram-glow-color)]",
+          "bg-black/70" 
         )}
       >
         {/* Title Area */}
@@ -175,14 +182,12 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
         {/* Node Display Area - This IS a HolographicPanel for its own styling */}
         <HolographicPanel
           ref={nodeDisplayAreaRef}
-          explicitTheme={currentGlobalTheme} // So its internal border/glow uses the theme
-          key={`node-display-panel-${currentGlobalTheme}-${themeVersion}`} // Force re-render on theme change
+          explicitTheme={currentGlobalTheme} 
+          key={`node-display-panel-${currentGlobalTheme}-${themeVersion}`} 
           className={cn(
-            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md map-overlay"
-            // Its background is now the scrolling map + dot grid + map-overlay tint
-            // Its border and glow will come from its holographic-panel nature + explicitTheme
+            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md map-overlay" 
           )}
-          // The style prop for background image is managed by the useEffect hook
+         // The style prop for background image is managed by the useEffect hook
         >
           {/* Connecting Lines */}
           {nodes.map((node, i) =>
@@ -223,7 +228,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
               className={cn(
                 "absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80",
                 "p-3 md:p-4 z-20 animate-slide-in-bottom font-rajdhani rounded-lg shadow-lg",
-                "bg-black/40 backdrop-blur-sm" // Darker overlay for details window
+                "bg-black/40 backdrop-blur-sm" 
               )}
             >
               <h3 className="text-lg font-orbitron mb-2 holographic-text">{selectedNode.title}</h3>
@@ -257,9 +262,8 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
                 </>
               )}
               <HolographicButton
-                variant="ghost"
                 onClick={() => setSelectedNode(null)}
-                className="absolute top-1 right-1 !p-1 text-xs hover:!bg-primary/20 !text-muted-foreground hover:!text-foreground"
+                className="absolute top-1 right-1 !p-1 text-xs !text-muted-foreground hover:!text-foreground !bg-transparent hover:!bg-primary/20"
                 explicitTheme={currentGlobalTheme}
               >
                 Close
