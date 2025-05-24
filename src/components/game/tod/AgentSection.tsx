@@ -260,7 +260,9 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
   }
 
   return (
-    <div className="relative h-full overflow-hidden"> {/* AgentSection Root */}
+    <div className="relative h-full overflow-hidden 
+      max-w-4xl mx-auto 
+      flex flex-col"> {/* AgentSection Root */}
       {/* Static Background Layer (Title + Stats) */}
       <div
         ref={topContentRef}

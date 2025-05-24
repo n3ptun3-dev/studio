@@ -152,7 +152,9 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
           "flex flex-col flex-grow overflow-hidden rounded-lg",
           "border border-[var(--hologram-panel-border)]",
           "shadow-[0_0_15px_var(--hologram-glow-color),_inset_0_0_10px_var(--hologram-glow-color)]",
-          "bg-black/70" 
+          "bg-black/70", 
+          "max-w-4xl",
+          "w-full mx-auto"
         )}
       >
         {/* Title Area */}
@@ -228,7 +230,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
               className={cn(
                 "absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80",
                 "p-3 md:p-4 z-20 animate-slide-in-bottom font-rajdhani rounded-lg shadow-lg",
-                "bg-black/40 backdrop-blur-sm" 
+                "bg-black/50 backdrop-blur-sm" 
               )}
             >
               <h3 className="text-lg font-orbitron mb-2 holographic-text">{selectedNode.title}</h3>

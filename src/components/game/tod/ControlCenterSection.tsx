@@ -373,7 +373,7 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
   // --- END NEW: Timer Configuration and Weight Calculation ---
 
   return (
-  <div className="flex flex-col p-3 md:p-4 h-full overflow-hidden space-y-3 md:space-y-4">
+  <div className="flex flex-col p-3 md:p-4 h-full overflow-hidden space-y-3 md:space-y-4 max-w-4xl mx-auto">
           <div className="flex-none flex items-center justify-center p-0"> {/* Or adjust padding/margin as needed */}
         <h2 className="text-2xl font-orbitron holographic-text" // Your desired styling
           // Optional: style={{ transform: `translateX(${parallaxOffset * 0.05}px)` }}
@@ -382,7 +382,7 @@ export function ControlCenterSection({ parallaxOffset }: SectionProps) {
       {/* Timer Area - REWORKED */}
       <div className="flex-shrink-0">
         {/* This is the new flex container for timers. It will distribute width. */}
-        <div className="flex w-full space-x-1 md:space-x-2 py-1 items-stretch"> {/* items-stretch allows children to use h-full */}
+        <div className="flex w-full sm:w-4/5 sm:mx-auto space-x-1 md:space-x-2 py-1 items-stretch"> {/* items-stretch allows children to use h-full */}
           {timersConfig.map((timerProps, index) => {
             const weight = timerWeights[index];
             // Calculate flex-basis: percentage of width this timer should occupy
