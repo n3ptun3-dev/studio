@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -22,7 +23,6 @@ interface NetworkNode {
   position: { x: number; y: number }; // Percentage values
 }
 
-// Function to generate random nodes
 const generateNodes = (count = 15): NetworkNode[] => {
   const nodes: NetworkNode[] = [];
   const types: NetworkNode['type'][] = ['vault', 'highPriority', 'droppedItem'];
@@ -37,34 +37,81 @@ const generateNodes = (count = 15): NetworkNode[] => {
       team: type !== 'droppedItem' ? (Math.random() > 0.5 ? "Cyphers" : "Shadows") : undefined,
       elintAmount: type === 'highPriority' ? Math.floor(Math.random() * 5000) + 1000 : undefined,
       position: {
-        x: Math.random() * 80 + 10, // Keep nodes away from extreme edges
-        y: Math.random() * 70 + 15  // Keep nodes away from top/bottom edges (title/details panel)
+        x: Math.random() * 80 + 10, 
+        y: Math.random() * 70 + 15  
       },
     });
   }
   return nodes;
 };
 
-// NODE_AREA_SCROLL_SPEED constant removed as it's no longer needed for JS animation
+const NODE_AREA_SCROLL_SPEED = 0.15; // Adjusted scroll speed
 
 export function ScannerSection({ parallaxOffset }: SectionProps) {
-  const { openTODWindow, faction: currentAppFaction } = useAppContext();
+  const { openTODWindow, faction: currentAppContextFaction } = useAppContext();
   const { theme: currentGlobalTheme, themeVersion } = useTheme();
   const [nodes, setNodes] = useState<NetworkNode[]>(() => generateNodes());
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // nodeDisplayBgRef useRef removed as it's no longer needed for JavaScript manipulation
+  const nodeDisplayAreaRef = useRef<HTMLDivElement>(null);
+  const animationFrameIdRef = useRef<number | null>(null);
+  const currentPositionXRef = useRef(0);
 
-  // useEffect for JS animation removed as per instructions
+  useEffect(() => {
+    const nodeDisplayArea = nodeDisplayAreaRef.current;
+    if (!nodeDisplayArea) return;
+
+    let lastTime = 0;
+    const animateScroll = (timestamp: number) => {
+      if (!lastTime) lastTime = timestamp;
+      const deltaTime = timestamp - lastTime;
+      lastTime = timestamp;
+
+      currentPositionXRef.current -= NODE_AREA_SCROLL_SPEED * (deltaTime / 16.67); // Normalize speed
+      
+      // Determine map image based on currentGlobalTheme
+      let mapImageSrc = "url('/backgrounds/World Map Green.jpg')"; // Default
+      if (currentGlobalTheme === 'cyphers') {
+        mapImageSrc = "url('/backgrounds/World Map Blue.jpg')";
+      } else if (currentGlobalTheme === 'shadows') {
+        mapImageSrc = "url('/backgrounds/World Map Red.jpg')";
+      }
+      // Could add a neutral theme map if desired
+
+      nodeDisplayArea.style.backgroundImage = `
+        radial-gradient(hsl(var(--foreground-hsl)/0.9) 0.5px, transparent 0.5px), 
+        ${mapImageSrc}
+      `;
+      nodeDisplayArea.style.backgroundSize = `
+        15px 15px,
+        auto 100%
+      `;
+      nodeDisplayArea.style.backgroundPosition = `
+        0 0,
+        ${currentPositionXRef.current}px 0
+      `;
+      nodeDisplayArea.style.backgroundRepeat = 'repeat, repeat-x';
+
+      animationFrameIdRef.current = requestAnimationFrame(animateScroll);
+    };
+
+    animationFrameIdRef.current = requestAnimationFrame(animateScroll);
+
+    return () => {
+      if (animationFrameIdRef.current) {
+        cancelAnimationFrame(animationFrameIdRef.current);
+      }
+    };
+  }, [currentGlobalTheme]); // Re-run if theme changes to update map image
 
   const refreshScanner = () => {
     setIsLoading(true);
-    setSelectedNode(null); // Deselect node on refresh
+    setSelectedNode(null); 
     setTimeout(() => {
       setNodes(generateNodes());
       setIsLoading(false);
-    }, 1000); // Simulate network delay
+    }, 1000); 
   };
 
   const handleNodeClick = (node: NetworkNode) => {
@@ -86,11 +133,10 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
       <div className="font-rajdhani text-muted-foreground space-y-2 p-2">
         <p>The Scanner pings the local digital vicinity for active targets:</p>
         <ul className="list-disc list-inside space-y-1">
-          <li><MapPin className="inline w-4 h-4 mr-1 text-primary" /> Secure Vaults: Indicates other agents' ELINT storage. Higher level vaults may offer greater rewards but pose significant challenges.</li>
-          <li><AlertTriangle className="inline w-4 h-4 mr-1 text-destructive" /> High-Priority Transfers: Time-sensitive ELINT movements. Intercepting these can yield substantial gains but may be heavily contested.</li>
-          <li><Gift className="inline w-4 h-4 mr-1 text-yellow-400" /> Dropped Items: Caches of equipment or ELINT left by other agents. Requires the correct Daily Team Code (DTC) to claim.</li>
+          <li><MapPin className="inline w-4 h-4 mr-1 text-primary" /> Secure Vaults: Indicates other agents' ELINT storage.</li>
+          <li><AlertTriangle className="inline w-4 h-4 mr-1 text-destructive" /> High-Priority Transfers: Time-sensitive ELINT movements.</li>
+          <li><Gift className="inline w-4 h-4 mr-1 text-yellow-400" /> Dropped Items: Caches of equipment or ELINT.</li>
         </ul>
-        <p className="mt-3">Use the refresh function to update targets. Note that network conditions may affect scanner accuracy.</p>
       </div>,
       { showCloseButton: true }
     );
@@ -98,12 +144,10 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
 
   return (
     <div className="flex flex-col h-full overflow-hidden p-4 md:p-6">
-      {/* Main content area with custom border and glow */}
+      {/* Main content area with holographic border */}
       <div
         className={cn(
-          "bg-black/70 flex flex-col flex-grow overflow-hidden rounded-lg", // Base classes
-          "border border-[var(--hologram-panel-border)]", // Themed border
-          "shadow-[0_0_15px_var(--hologram-glow-color),_inset_0_0_10px_var(--hologram-glow-color)]" // Themed glow
+          "holographic-panel flex flex-col flex-grow overflow-hidden"
         )}
       >
         {/* Title Area */}
@@ -113,7 +157,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             <HolographicButton
               onClick={handleScannerInfoClick}
               size="icon"
-              className="!p-2"
+              className="!p-2" 
               explicitTheme={currentGlobalTheme}
               aria-label="Scanner Information"
             >
@@ -132,27 +176,20 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
           </div>
         </div>
 
-        {/* Node Display Area - Uses HolographicPanel for its default border/bg + map overlay + scrolling map */}
-        {/* The ref has been removed and scanner-background class added */}
+        {/* Node Display Area */}
         <HolographicPanel
+          ref={nodeDisplayAreaRef}
           explicitTheme={currentGlobalTheme}
-          key={`node-display-${currentGlobalTheme}-${themeVersion}`}
+          key={`node-display-panel-${currentGlobalTheme}-${themeVersion}`}
           className={cn(
-            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md map-overlay",
-            "scanner-background" // Added the new CSS class here
+            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md map-overlay" 
           )}
-          // Themed radial grid is applied here, on top of the panel's default bg
-          style={{
-            backgroundImage: `url('/backgrounds/Spi Vs Spi bg.jpg'), radial-gradient(hsl(var(--primary-hsl)/0.1) 0.5px, transparent 0.5px), radial-gradient(hsl(var(--primary-hsl)/0.1) 0.5px, transparent 0.5px)`,
-            backgroundSize: 'auto 100%, 20px 20px, 20px 20px', // Updated backgroundSize to account for multiple backgrounds
-            backgroundRepeat: 'repeat-x, repeat, repeat', // Updated backgroundRepeat for multiple backgrounds
-            backgroundPosition: '0 0, 0 0, 10px 10px', // Initial positions
-          }}
+          // Inline style for backgroundImage will be set by useEffect
         >
-          {/* Connecting Lines - these need to be above the map background but below nodes */}
+          {/* Connecting Lines */}
           {nodes.map((node, i) =>
             i < nodes.length - 1 && (
-              <svg key={`line-${i}`} className="absolute inset-0 w-full h-full z-[5]" style={{ pointerEvents: 'none' }}>
+              <svg key={`line-${i}`} className="absolute inset-0 w-full h-full z-[10]" style={{ pointerEvents: 'none' }}>
                 <line
                   x1={`${node.position.x}%`} y1={`${node.position.y}%`}
                   x2={`${nodes[i + 1].position.x}%`} y2={`${nodes[i + 1].position.y}%`}
@@ -161,7 +198,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             )
           )}
 
-          {/* Nodes - these need to be above lines and map overlay */}
+          {/* Nodes */}
           {nodes.map(node => (
             <div
               key={node.id}
@@ -189,7 +226,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
                 "absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80",
                 "p-3 md:p-4 z-20 animate-slide-in-bottom font-rajdhani rounded-lg shadow-lg",
                 "bg-black/40 backdrop-blur-sm"
-              )} style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
+              )}
             >
               <h3 className="text-lg font-orbitron mb-2 holographic-text">{selectedNode.title}</h3>
               {selectedNode.type === 'vault' && (
@@ -232,9 +269,8 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             </HolographicPanel>
           )}
         </HolographicPanel>
-        {/* Gloss Effect Layer */}
-        <div className="absolute inset-0 pad-gloss-effect pointer-events-none z-[1]"></div>
       </div>
     </div>
   );
 }
+
