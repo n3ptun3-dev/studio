@@ -2,11 +2,13 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { HolographicButton, HolographicInput, HolographicPanel } from '@/components/game/shared/HolographicPanel';
+import { HolographicPanel } from '@/components/game/shared/HolographicPanel'; // Keep for Node Display & Details
 import { RefreshCw, Info, MapPin, AlertTriangle, Gift } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { cn } from '@/lib/utils';
 import { useTheme, type Theme } from '@/contexts/ThemeContext';
+
+const NODE_AREA_SCROLL_SPEED = 0.15; // Adjusted scroll speed
 
 interface SectionProps {
   parallaxOffset: number;
@@ -18,9 +20,9 @@ interface NetworkNode {
   title: string;
   level?: number;
   owner?: string;
-  team?: string; // 'Cyphers' or 'Shadows' or 'Neutral/Unclaimed'
+  team?: string; 
   elintAmount?: number;
-  position: { x: number; y: number }; // Percentage values
+  position: { x: number; y: number }; 
 }
 
 const generateNodes = (count = 15): NetworkNode[] => {
@@ -45,8 +47,6 @@ const generateNodes = (count = 15): NetworkNode[] => {
   return nodes;
 };
 
-const NODE_AREA_SCROLL_SPEED = 0.15; // Adjusted scroll speed
-
 export function ScannerSection({ parallaxOffset }: SectionProps) {
   const { openTODWindow, faction: currentAppContextFaction } = useAppContext();
   const { theme: currentGlobalTheme, themeVersion } = useTheme();
@@ -64,33 +64,28 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
 
     let lastTime = 0;
     const animateScroll = (timestamp: number) => {
-      if (!lastTime) lastTime = timestamp;
+      if (!lastTime) {
+        lastTime = timestamp;
+      }
       const deltaTime = timestamp - lastTime;
       lastTime = timestamp;
 
       currentPositionXRef.current -= NODE_AREA_SCROLL_SPEED * (deltaTime / 16.67); // Normalize speed
       
-      // Determine map image based on currentGlobalTheme
-      let mapImageSrc = "url('/backgrounds/World Map Green.jpg')"; // Default
+      let mapImageFilename = "World Map Green.jpg"; // Default for terminal-green or unknown
       if (currentGlobalTheme === 'cyphers') {
-        mapImageSrc = "url('/backgrounds/World Map Blue.jpg')";
+        mapImageFilename = "World Map Blue.jpg";
       } else if (currentGlobalTheme === 'shadows') {
-        mapImageSrc = "url('/backgrounds/World Map Red.jpg')";
+        mapImageFilename = "World Map Red.jpg";
       }
-      // Could add a neutral theme map if desired
+      // Note: Observer theme uses terminal-green, so green map is fine.
 
       nodeDisplayArea.style.backgroundImage = `
-        radial-gradient(hsl(var(--foreground-hsl)/0.9) 0.5px, transparent 0.5px), 
-        ${mapImageSrc}
+        radial-gradient(hsl(var(--foreground-hsl)/0.9) 0.5px, transparent 0.5px),
+        url('/backgrounds/${mapImageFilename}')
       `;
-      nodeDisplayArea.style.backgroundSize = `
-        15px 15px,
-        auto 100%
-      `;
-      nodeDisplayArea.style.backgroundPosition = `
-        0 0,
-        ${currentPositionXRef.current}px 0
-      `;
+      nodeDisplayArea.style.backgroundSize = `15px 15px, auto 100%`;
+      nodeDisplayArea.style.backgroundPosition = `0 0, ${currentPositionXRef.current}px 0`;
       nodeDisplayArea.style.backgroundRepeat = 'repeat, repeat-x';
 
       animationFrameIdRef.current = requestAnimationFrame(animateScroll);
@@ -103,7 +98,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
         cancelAnimationFrame(animationFrameIdRef.current);
       }
     };
-  }, [currentGlobalTheme]); // Re-run if theme changes to update map image
+  }, [currentGlobalTheme]); // Re-run if theme changes to update map image and dot color
 
   const refreshScanner = () => {
     setIsLoading(true);
@@ -126,7 +121,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
       default: return <MapPin className="w-full h-full text-muted-foreground" />;
     }
   };
-
+  
   const handleScannerInfoClick = () => {
     openTODWindow(
       "Scanner Intel",
@@ -144,10 +139,13 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
 
   return (
     <div className="flex flex-col h-full overflow-hidden p-4 md:p-6">
-      {/* Main content area with holographic border */}
+      {/* Main content area with custom holographic-like border and specific background */}
       <div
         className={cn(
-          "holographic-panel flex flex-col flex-grow overflow-hidden"
+          "flex flex-col flex-grow overflow-hidden rounded-lg",
+          "bg-black/70", // The desired dark translucent background
+          "border border-[var(--hologram-panel-border)]", // Themed border
+          "shadow-[0_0_15px_var(--hologram-glow-color),_inset_0_0_10px_var(--hologram-glow-color)]" // Themed glow
         )}
       >
         {/* Title Area */}
@@ -156,7 +154,6 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
           <div className="flex items-center space-x-2">
             <HolographicButton
               onClick={handleScannerInfoClick}
-              size="icon"
               className="!p-2" 
               explicitTheme={currentGlobalTheme}
               aria-label="Scanner Information"
@@ -167,7 +164,6 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
               onClick={refreshScanner}
               disabled={isLoading}
               className="!p-2"
-              size="icon"
               explicitTheme={currentGlobalTheme}
               aria-label="Refresh Scanner"
             >
@@ -176,15 +172,17 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
           </div>
         </div>
 
-        {/* Node Display Area */}
+        {/* Node Display Area - This IS a HolographicPanel for its own styling */}
         <HolographicPanel
           ref={nodeDisplayAreaRef}
-          explicitTheme={currentGlobalTheme}
-          key={`node-display-panel-${currentGlobalTheme}-${themeVersion}`}
+          explicitTheme={currentGlobalTheme} // So its internal border/glow uses the theme
+          key={`node-display-panel-${currentGlobalTheme}-${themeVersion}`} // Force re-render on theme change
           className={cn(
-            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md map-overlay" 
+            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md map-overlay"
+            // Its background is now the scrolling map + dot grid + map-overlay tint
+            // Its border and glow will come from its holographic-panel nature + explicitTheme
           )}
-          // Inline style for backgroundImage will be set by useEffect
+          // The style prop for background image is managed by the useEffect hook
         >
           {/* Connecting Lines */}
           {nodes.map((node, i) =>
@@ -225,7 +223,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
               className={cn(
                 "absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80",
                 "p-3 md:p-4 z-20 animate-slide-in-bottom font-rajdhani rounded-lg shadow-lg",
-                "bg-black/40 backdrop-blur-sm"
+                "bg-black/40 backdrop-blur-sm" // Darker overlay for details window
               )}
             >
               <h3 className="text-lg font-orbitron mb-2 holographic-text">{selectedNode.title}</h3>
@@ -273,4 +271,3 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
     </div>
   );
 }
-
