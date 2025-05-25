@@ -408,19 +408,26 @@
 }
 
 @keyframes slide-in-right-tod {
-  from { transform: translateX(100%) scale(0.95); opacity: 0; }
-  to { transform: translateX(0) scale(1); opacity: 1; }
+  from { transform: translateX(100%) scale(0.95); } /* Just slide in */
+  to { transform: translateX(0) scale(1); }
 }
 @keyframes slide-out-right-tod {
-  from { transform: translateX(0) scale(1); opacity: 1; }
-  to { transform: translateX(100%) scale(0.95); opacity: 0; }
+  from { transform: translateX(0) scale(1); } /* Just slide out */
+  to { transform: translateX(100%) scale(0.95); }
 }
 
 .animate-slide-in-right-tod {
-  animation: slide-in-right-tod 0.5s ease-out forwards;
+  animation: slide-in-right-tod 0.6s ease-out forwards;
 }
 .animate-slide-out-right-tod {
-  animation: slide-out-right-tod 0.5s ease-out forwards;
+  animation: slide-out-right-tod 0.6s ease-out forwards;
+}
+
+/* Add an initial opacity for the panel so it's always opaque when rendered */
+.holographic-panel {
+  opacity: 1; /* Ensure it's opaque when present */
+  transition: opacity 0s; /* No opacity transition on the panel itself */
+  /* ... rest of .holographic-panel styles ... */
 }
 
 .map-overlay::before {
