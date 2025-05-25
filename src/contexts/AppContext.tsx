@@ -1,10 +1,10 @@
-
 "use client";
 
 import type { ReactNode } from 'react';
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'; // Removed useRef for now
-import type { Theme } from './ThemeContext'; // Import Theme type, ensure ThemeContext exports it
-import { useTheme } from './ThemeContext'; // To get themeVersion
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import type { Theme } from './ThemeContext';
+// import { useTheme } from './ThemeContext'; // Removed this as per previous discussion, AppContext doesn't need to directly useTheme
+import { TODWindow } from '@/components/game/shared/TODWindow'; // Import TODWindow
 
 export type Faction = 'Cyphers' | 'Shadows' | 'Observer';
 export type OnboardingStep = 'welcome' | 'factionChoice' | 'authPrompt' | 'fingerprint' | 'tod';
@@ -27,8 +27,10 @@ interface PlayerStats {
   elintSpentSpyShop: number;
 }
 
-export interface TODWindowOptions { // Exported for use in other components
+export interface TODWindowOptions {
   showCloseButton?: boolean;
+  explicitTheme?: Theme; // Add explicitTheme to options for TODWindow
+  themeVersion?: number; // Add themeVersion to options for TODWindow
 }
 
 interface AppContextType {
@@ -54,7 +56,7 @@ interface AppContextType {
   isTODWindowOpen: boolean;
   todWindowTitle: string;
   todWindowContent: ReactNode | null;
-  todWindowOptions: TODWindowOptions; // Use the exported interface
+  todWindowOptions: TODWindowOptions;
   openTODWindow: (title: string, content: ReactNode, options?: TODWindowOptions) => void;
   closeTODWindow: () => void;
 }
@@ -87,7 +89,6 @@ function generateFactionTeamCode(seedDate: Date, faction: Faction): string {
 
   const getRandomWord = (baseSeed: number, index: number) => {
     const combinedSeed = baseSeed + index * 100 + factionSeedOffset;
-    // Ensure a positive index for modulo, even if combinedSeed is negative (highly unlikely here)
     const positiveIndex = (combinedSeed % NATO_ALPHABET.length + NATO_ALPHABET.length) % NATO_ALPHABET.length;
     return NATO_ALPHABET[positiveIndex];
   };
@@ -119,11 +120,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [_isTODWindowOpen, _setIsTODWindowOpen] = useState(false);
   const [_todWindowTitle, _setTODWindowTitle] = useState('');
   const [_todWindowContent, _setTODWindowContent] = useState<ReactNode | null>(null);
-  const [_todWindowOptions, _setTODWindowOptions] = useState<TODWindowOptions>({ showCloseButton: true });
+  // Initialize with a default explicitTheme for TODWindow, e.g., 'terminal-green'
+  const [_todWindowOptions, _setTODWindowOptions] = useState<TODWindowOptions>({ showCloseButton: true, explicitTheme: 'terminal-green', themeVersion: 0 }); 
   
-  // Get themeVersion directly here if needed for context, but AppContext should not call useTheme if ThemeProvider is its child.
-  // If AppContext needs to provide themeVersion, it should be passed down from RootLayout or obtained without violating provider order.
-  // For now, removing the useTheme() call from here. Components needing themeVersion will get it from useTheme().
+  // No useTheme() here, themeVersion will be passed via _todWindowOptions
+  // and will be updated by whatever triggers openTODWindow when a theme changes.
 
   useEffect(() => {
     const inPiBrowser = navigator.userAgent.includes("PiBrowser");
@@ -133,7 +134,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     _setDailyTeamCode({
       Cyphers: generateFactionTeamCode(today, 'Cyphers'),
       Shadows: generateFactionTeamCode(today, 'Shadows'),
-      Observer: generateFactionTeamCode(today, 'Observer'), // Ensure Observer gets a code too
+      Observer: generateFactionTeamCode(today, 'Observer'),
     });
     _setIsLoading(false);
   }, []);
@@ -162,10 +163,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     _setMessages(prev => {
       const newMessagesList = [newMessage, ...prev.filter(m => !m.isPinned)];
       const pinnedMessages = prev.filter(m => m.isPinned);
-      // Ensure we don't exceed a reasonable limit, e.g., 50 messages
       return [...pinnedMessages, ...newMessagesList.slice(0, 50 - pinnedMessages.length)];
     });
-  }, [_setMessages]); // _setMessages is stable
+  }, [_setMessages]);
 
   const updatePlayerStats = useCallback((newStats: Partial<PlayerStats>) => {
     _setPlayerStats(prevStats => ({ ...prevStats, ...newStats }));
@@ -180,18 +180,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     console.log('[AppContext] openTODWindow called. Title:', title, "Options:", options, "Current isTODWindowOpen:", _isTODWindowOpen);
     _setTODWindowTitle(title);
     _setTODWindowContent(content);
-    _setTODWindowOptions(options); // Store the passed options
+    _setTODWindowOptions(options);
     console.log('[AppContext] Attempting to set _isTODWindowOpen to true.');
     _setIsTODWindowOpen(true);
     console.log('[AppContext] After _setIsTODWindowOpen(true) call.');
-  }, [_setTODWindowTitle, _setTODWindowContent, _setTODWindowOptions, _setIsTODWindowOpen, _isTODWindowOpen]); // Added _isTODWindowOpen for logging current state
+  }, [_setTODWindowTitle, _setTODWindowContent, _setTODWindowOptions, _setIsTODWindowOpen, _isTODWindowOpen]);
 
   const closeTODWindow = useCallback(() => {
     console.log('[AppContext] closeTODWindow called.');
     _setIsTODWindowOpen(false);
-    _setTODWindowContent(null); // Clear content on close
-    _setTODWindowOptions({ showCloseButton: true }); // Reset to default options
-  }, [_setIsTODWindowOpen, _setTODWindowContent, _setTODWindowOptions]);
+    // Do NOT clear content immediately. Let TODWindow handle its animation before content is null.
+    // _setTODWindowContent(null); 
+    // _setTODWindowOptions({ showCloseButton: true }); 
+  }, [_setIsTODWindowOpen]); // Only dependency is setIsTODWindowOpen
 
   useEffect(() => {
     console.log('[AppContext] isTODWindowOpen state changed to:', _isTODWindowOpen);
@@ -211,7 +212,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     isTODWindowOpen: _isTODWindowOpen,
     todWindowTitle: _todWindowTitle,
     todWindowContent: _todWindowContent,
-    todWindowOptions: _todWindowOptions, // Ensure this is included
+    todWindowOptions: _todWindowOptions,
     openTODWindow, closeTODWindow,
   }), [
     _faction, setFaction,
@@ -224,13 +225,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     _dailyTeamCode,
     _isLoading, setIsLoading,
     _messages, addMessage,
-    _isTODWindowOpen, _todWindowTitle, _todWindowContent, _todWindowOptions, // Ensure _todWindowOptions is in dependency array
+    _isTODWindowOpen, _todWindowTitle, _todWindowContent, _todWindowOptions,
     openTODWindow, closeTODWindow,
   ]);
 
   return (
     <AppContext.Provider value={contextValue}>
       {children}
+      {/* RENDER TODWindow UNCONDITIONALLY HERE */}
+      {_todWindowContent && ( // Only render if there's content to avoid empty panel flashes
+        <TODWindow 
+          isOpen={_isTODWindowOpen}
+          onClose={closeTODWindow}
+          title={_todWindowTitle}
+          explicitTheme={_todWindowOptions.explicitTheme}
+          themeVersion={_todWindowOptions.themeVersion}
+          showCloseButton={_todWindowOptions.showCloseButton}
+        >
+          {_todWindowContent}
+        </TODWindow>
+      )}
     </AppContext.Provider>
   );
 }

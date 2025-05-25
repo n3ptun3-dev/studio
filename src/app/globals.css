@@ -232,11 +232,9 @@
     @apply font-orbitron;
   }
 }
-
 /* Custom holographic styles */
 .holographic-panel {
-  /* background-color: var(--hologram-panel-bg); Uses var set by JS on :root */
-  background: none;
+  /*background: none;*/
   border-color: var(--hologram-panel-border); /* Uses var set by JS on :root */
   border-width: 1px;
   border-style: solid;
@@ -244,7 +242,6 @@
   box-shadow: 0 0 15px var(--hologram-glow-color), inset 0 0 10px var(--hologram-glow-color); /* Uses var set by JS on :root */
   @apply p-4 md:p-6;
 }
-
 .holographic-text {
   color: hsl(var(--foreground-hsl)); 
   text-shadow: 0 0 5px var(--hologram-glow-color), 0 0 10px var(--hologram-glow-color); 
@@ -417,17 +414,10 @@
 }
 
 .animate-slide-in-right-tod {
-  animation: slide-in-right-tod 0.6s ease-out forwards;
+  animation: slide-in-right-tod 0.3s ease-out forwards;
 }
 .animate-slide-out-right-tod {
-  animation: slide-out-right-tod 0.6s ease-out forwards;
-}
-
-/* Add an initial opacity for the panel so it's always opaque when rendered */
-.holographic-panel {
-  opacity: 1; /* Ensure it's opaque when present */
-  transition: opacity 0s; /* No opacity transition on the panel itself */
-  /* ... rest of .holographic-panel styles ... */
+  animation: slide-out-right-tod 0.3s ease-out forwards;
 }
 
 .map-overlay::before {
