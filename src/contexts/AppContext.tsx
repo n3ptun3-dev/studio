@@ -1,10 +1,45 @@
+// src/contexts/AppContext.tsx
+
 "use client";
 
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import type { Theme } from './ThemeContext';
-// import { useTheme } from './ThemeContext'; // Removed this as per previous discussion, AppContext doesn't need to directly useTheme
-import { TODWindow } from '@/components/game/shared/TODWindow'; // Import TODWindow
+import { TODWindow } from '@/components/game/shared/TODWindow';
+
+// TODO: Define these interfaces and functions based on your game's items
+// For now, these are basic placeholders to allow compilation
+export interface GameItemBase {
+  id: string;
+  name: string;
+  description: string;
+  category: ItemCategory;
+  maxStrength?: number; // Max strength for rechargeable items
+  cost: number;
+  icon?: string;
+}
+type ItemCategory = string; // Placeholder. Define your specific categories, e.g., 'weapon' | 'armor' | 'consumable' | 'theme' | 'misc';
+
+const getItemById = (itemId: string): GameItemBase | undefined => {
+  // This would typically fetch item details from a game data array/object
+  // Placeholder implementation:
+  const dummyItems: Record<string, GameItemBase> = {
+    'basic_pick_l1': { id: 'basic_pick_l1', name: 'Basic Pick L1', description: 'A basic lock pick.', category: 'tool', cost: 100 },
+    'std_cypher_lock_l1': { id: 'std_cypher_lock_l1', name: 'Standard Cypher Lock L1', description: 'A standard cypher lock.', category: 'lock', maxStrength: 100, cost: 200 },
+    'security_camera_l1': { id: 'security_camera_l1', name: 'Security Camera L1', description: 'Detects intruders.', category: 'sensor', maxStrength: 1, cost: 50 },
+    'theme_cyphers': { id: 'theme_cyphers', name: 'Cyphers Theme', description: 'Changes UI theme.', category: 'theme', cost: 0 },
+  };
+  return dummyItems[itemId];
+};
+
+const getItemMaxStrength = (item: GameItemBase): number | undefined => {
+  return item.maxStrength;
+};
+
+// TODO: Import your actual InventoryBrowserInTOD component
+// For example: import { InventoryBrowserInTOD } from '@/components/game/inventory/InventoryBrowserInTOD';
+const InventoryBrowserInTOD = () => <div className="p-4 text-center">Inventory Browser Content Placeholder</div>;
+
 
 export type Faction = 'Cyphers' | 'Shadows' | 'Observer';
 export type OnboardingStep = 'welcome' | 'factionChoice' | 'authPrompt' | 'fingerprint' | 'tod';
@@ -29,9 +64,17 @@ interface PlayerStats {
 
 export interface TODWindowOptions {
   showCloseButton?: boolean;
-  explicitTheme?: Theme; // Add explicitTheme to options for TODWindow
-  themeVersion?: number; // Add themeVersion to options for TODWindow
+  explicitTheme?: Theme;
+  themeVersion?: number;
 }
+
+// New interfaces for Inventory
+export interface PlayerInventoryItem {
+  id: string; // GameItemBase['id']
+  quantity: number;
+  currentStrength?: number; // For rechargeable/strength-based items
+}
+export type PlayerInventory = Record<string, PlayerInventoryItem>; // itemId as key
 
 interface AppContextType {
   faction: Faction;
@@ -53,12 +96,39 @@ interface AppContextType {
   setIsLoading: (loading: boolean) => void;
   messages: GameMessage[];
   addMessage: (message: Omit<GameMessage, 'id' | 'timestamp'>) => void;
+
   isTODWindowOpen: boolean;
   todWindowTitle: string;
   todWindowContent: ReactNode | null;
   todWindowOptions: TODWindowOptions;
   openTODWindow: (title: string, content: ReactNode, options?: TODWindowOptions) => void;
   closeTODWindow: () => void;
+
+  // New Inventory and Spy Shop States/Functions
+  playerInventory: PlayerInventory;
+  setPlayerInventory: React.Dispatch<React.SetStateAction<PlayerInventory>>;
+  updatePlayerInventoryItemStrength: (itemId: string, newStrength: number) => void;
+  spendElint: (amount: number) => boolean;
+  purchaseItem: (itemId: string, cost: number) => boolean;
+  shopSearchTerm: string;
+  setShopSearchTerm: (term: string) => void;
+  isShopAuthenticated: boolean;
+  setIsShopAuthenticated: (isAuthenticated: boolean) => void;
+
+  isSpyShopActive: boolean;
+  setIsSpyShopActive: (isActive: boolean) => void;
+  isSpyShopOpen: boolean;
+  openSpyShop: () => void;
+  closeSpyShop: () => void;
+
+  todInventoryContext: {
+    category: ItemCategory;
+    title: string;
+    purpose?: 'equip_lock' | 'equip_nexus' | 'infiltrate_lock';
+    onItemSelect?: (item: GameItemBase) => void;
+  } | null;
+  openInventoryTOD: (context: AppContextType['todInventoryContext']) => void;
+  closeInventoryTOD: () => void;
 }
 
 export interface GameMessage {
@@ -92,7 +162,7 @@ function generateFactionTeamCode(seedDate: Date, faction: Faction): string {
     const positiveIndex = (combinedSeed % NATO_ALPHABET.length + NATO_ALPHABET.length) % NATO_ALPHABET.length;
     return NATO_ALPHABET[positiveIndex];
   };
-  
+
   return `${getRandomWord(dayOfYear, 1)}-${getRandomWord(dayOfYear, 2)}-${getRandomWord(dayOfYear, 3)}`;
 }
 
@@ -120,11 +190,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [_isTODWindowOpen, _setIsTODWindowOpen] = useState(false);
   const [_todWindowTitle, _setTODWindowTitle] = useState('');
   const [_todWindowContent, _setTODWindowContent] = useState<ReactNode | null>(null);
-  // Initialize with a default explicitTheme for TODWindow, e.g., 'terminal-green'
-  const [_todWindowOptions, _setTODWindowOptions] = useState<TODWindowOptions>({ showCloseButton: true, explicitTheme: 'terminal-green', themeVersion: 0 }); 
-  
-  // No useTheme() here, themeVersion will be passed via _todWindowOptions
-  // and will be updated by whatever triggers openTODWindow when a theme changes.
+  const [_todWindowOptions, _setTODWindowOptions] = useState<TODWindowOptions>({ showCloseButton: true, explicitTheme: 'terminal-green', themeVersion: 0 });
+
+  // New state initializations
+  const [_playerInventory, _setPlayerInventory] = useState<PlayerInventory>({
+    'basic_pick_l1': { id: 'basic_pick_l1', quantity: 1 },
+    'std_cypher_lock_l1': { id: 'std_cypher_lock_l1', quantity: 2, currentStrength: 50 },
+    'security_camera_l1': { id: 'security_camera_l1', quantity: 1, currentStrength: 1 },
+    'theme_cyphers': { id: 'theme_cyphers', quantity: 1 },
+  });
+  const [_isSpyShopActive, _setIsSpyShopActive] = useState(false);
+  const [_todInventoryContext, _setTodInventoryContext] = useState<AppContextType['todInventoryContext']>(null);
+  const [_isSpyShopOpen, _setIsSpyShopOpen] = useState(false); // <--- ADDED / CONFIRMED
+  const [_shopSearchTerm, _setShopSearchTerm] = useState(''); // <--- ADDED / CONFIRMED
+  const [_isShopAuthenticated, _setIsShopAuthenticated] = useState(false); // <--- ADDED / CONFIRMED
+
 
   useEffect(() => {
     const inPiBrowser = navigator.userAgent.includes("PiBrowser");
@@ -153,6 +233,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const setPlayerPiName = useCallback((name: string | null) => _setPlayerPiName(name), [_setPlayerPiName]);
   const setOnboardingStep = useCallback((step: OnboardingStep) => _setOnboardingStep(step), [_setOnboardingStep]);
   const setIsLoading = useCallback((loading: boolean) => _setIsLoading(loading), [_setIsLoading]);
+  const setPlayerInventory = useCallback((action: React.SetStateAction<PlayerInventory>) => _setPlayerInventory(action), [_setPlayerInventory]);
+  const setIsSpyShopActive = useCallback((isActive: boolean) => _setIsSpyShopActive(isActive), [_setIsSpyShopActive]);
+  const setIsSpyShopOpen = useCallback((isOpen: boolean) => _setIsSpyShopOpen(isOpen), [_setIsSpyShopOpen]); // <--- ADDED / CONFIRMED
+  const setShopSearchTerm = useCallback((term: string) => _setShopSearchTerm(term), [_setShopSearchTerm]); // <--- ADDED / CONFIRMED
+  const setIsShopAuthenticated = useCallback((isAuthenticated: boolean) => _setIsShopAuthenticated(isAuthenticated), [_setIsShopAuthenticated]); // <--- ADDED / CONFIRMED
+
 
   const addMessage = useCallback((message: Omit<GameMessage, 'id' | 'timestamp'>) => {
     const newMessage: GameMessage = {
@@ -176,6 +262,50 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addMessage({ text: `+${amount} XP`, type: 'notification'});
   }, [_setPlayerStats, addMessage]);
 
+
+  // New Inventory and ELINT functions
+  const updatePlayerInventoryItemStrength = useCallback((itemId: string, newStrength: number) => {
+    _setPlayerInventory(prev => ({
+      ...prev,
+      [itemId]: { ...prev[itemId], currentStrength: newStrength },
+    }));
+  }, [_setPlayerInventory]);
+
+  const spendElint = useCallback((amount: number): boolean => {
+    if (_playerStats.elintReserves >= amount) {
+      _setPlayerStats(prev => ({ ...prev, elintReserves: prev.elintReserves - amount }));
+      return true;
+    }
+    return false;
+  }, [_playerStats, _setPlayerStats]);
+
+  const purchaseItem = useCallback((itemId: string, cost: number): boolean => {
+    if (spendElint(cost)) {
+      const itemDetails = getItemById(itemId);
+      if (!itemDetails) return false;
+
+      _setPlayerInventory(prev => {
+        const existing = prev[itemId];
+        const maxStrength = getItemMaxStrength(itemDetails); // Get max strength from itemDetails
+        return {
+          ...prev,
+          [itemId]: {
+            id: itemId,
+            quantity: (existing?.quantity || 0) + 1,
+            // If the item already exists, keep its current strength unless undefined.
+            // If new, set to maxStrength if available, otherwise undefined.
+            currentStrength: existing?.currentStrength !== undefined ? existing.currentStrength : maxStrength,
+          },
+        };
+      });
+      addMessage({ text: `Purchased ${itemDetails.name}`, type: 'notification' });
+      return true;
+    }
+    addMessage({ text: `Insufficient ELINT to purchase ${itemId}.`, type: 'error' });
+    return false;
+  }, [spendElint, _setPlayerInventory, addMessage]);
+
+
   const openTODWindow = useCallback((title: string, content: ReactNode, options: TODWindowOptions = { showCloseButton: true }) => {
     console.log('[AppContext] openTODWindow called. Title:', title, "Options:", options, "Current isTODWindowOpen:", _isTODWindowOpen);
     _setTODWindowTitle(title);
@@ -189,10 +319,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const closeTODWindow = useCallback(() => {
     console.log('[AppContext] closeTODWindow called.');
     _setIsTODWindowOpen(false);
-    // Do NOT clear content immediately. Let TODWindow handle its animation before content is null.
-    // _setTODWindowContent(null); 
-    // _setTODWindowOptions({ showCloseButton: true }); 
-  }, [_setIsTODWindowOpen]); // Only dependency is setIsTODWindowOpen
+    // TODWindow component now handles clearing content after its animation
+  }, [_setIsTODWindowOpen]);
+
+  // Spy Shop specific functions
+  const openSpyShop = useCallback(() => {
+    _setIsSpyShopOpen(true);
+    // IMPORTANT: No openTODWindow call here, as the Spy Shop is a separate overlay.
+  }, [_setIsSpyShopOpen]);
+
+  const closeSpyShop = useCallback(() => {
+    _setIsSpyShopOpen(false);
+    // IMPORTANT: No closeTODWindow call here.
+  }, [_setIsSpyShopOpen]);
+
+
+  // New Inventory TOD window functions
+  const openInventoryTOD = useCallback((context: AppContextType['todInventoryContext']) => {
+    _setTodInventoryContext(context);
+    // Open the main TOD window, its content will be the InventoryBrowserInTOD component
+    // The actual content rendering happens within TODWindow based on _todWindowContent
+    openTODWindow(context?.title || "Inventory Access", <InventoryBrowserInTOD />, {
+      explicitTheme: _todWindowOptions.explicitTheme,
+      themeVersion: _todWindowOptions.themeVersion,
+      showCloseButton: true, // Typically show close button for inventory
+    });
+  }, [_setTodInventoryContext, openTODWindow, _todWindowOptions.explicitTheme, _todWindowOptions.themeVersion]);
+
+  const closeInventoryTOD = useCallback(() => {
+    _setTodInventoryContext(null);
+    closeTODWindow(); // Your existing closeTODWindow function
+  }, [_setTodInventoryContext, closeTODWindow]);
+
 
   useEffect(() => {
     console.log('[AppContext] isTODWindowOpen state changed to:', _isTODWindowOpen);
@@ -209,11 +367,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
     dailyTeamCode: _dailyTeamCode,
     isLoading: _isLoading, setIsLoading,
     messages: _messages, addMessage,
+
     isTODWindowOpen: _isTODWindowOpen,
     todWindowTitle: _todWindowTitle,
     todWindowContent: _todWindowContent,
     todWindowOptions: _todWindowOptions,
     openTODWindow, closeTODWindow,
+
+    // New Context Values
+    playerInventory: _playerInventory, setPlayerInventory,
+    updatePlayerInventoryItemStrength,
+    spendElint,
+    purchaseItem,
+    isSpyShopActive: _isSpyShopActive, setIsSpyShopActive,
+    isSpyShopOpen: _isSpyShopOpen, // <--- ADDED to contextValue
+    openSpyShop, // <--- ADDED to contextValue
+    closeSpyShop, // <--- ADDED to contextValue
+    shopSearchTerm: _shopSearchTerm, // <--- ADDED to contextValue
+    setShopSearchTerm, // <--- ADDED to contextValue
+    isShopAuthenticated: _isShopAuthenticated, // <--- ADDED to contextValue
+    setIsShopAuthenticated, // <--- ADDED to contextValue
+    todInventoryContext: _todInventoryContext,
+    openInventoryTOD,
+    closeInventoryTOD,
   }), [
     _faction, setFaction,
     _isAuthenticated, setIsAuthenticated,
@@ -227,24 +403,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
     _messages, addMessage,
     _isTODWindowOpen, _todWindowTitle, _todWindowContent, _todWindowOptions,
     openTODWindow, closeTODWindow,
+    // New dependencies for useMemo - ENSURE ALL NEW STATES/SETTERS ARE HERE
+    _playerInventory, setPlayerInventory, updatePlayerInventoryItemStrength,
+    spendElint, purchaseItem,
+    _isSpyShopActive, setIsSpyShopActive,
+    _isSpyShopOpen, openSpyShop, closeSpyShop, // <--- ADDED to dependencies
+    _shopSearchTerm, setShopSearchTerm, // <--- ADDED to dependencies
+    _isShopAuthenticated, setIsShopAuthenticated, // <--- ADDED to dependencies
+    _todInventoryContext, openInventoryTOD, closeInventoryTOD,
   ]);
 
   return (
     <AppContext.Provider value={contextValue}>
       {children}
-      {/* RENDER TODWindow UNCONDITIONALLY HERE */}
-      {_todWindowContent && ( // Only render if there's content to avoid empty panel flashes
-        <TODWindow 
-          isOpen={_isTODWindowOpen}
-          onClose={closeTODWindow}
-          title={_todWindowTitle}
-          explicitTheme={_todWindowOptions.explicitTheme}
-          themeVersion={_todWindowOptions.themeVersion}
-          showCloseButton={_todWindowOptions.showCloseButton}
-        >
-          {_todWindowContent}
-        </TODWindow>
-      )}
+      {/* RENDER TODWindow UNCONDITIONALLY HERE - NO _todWindowContent && CHECK */}
+      {/* This ensures TODWindow is always mounted, allowing its internal state to manage animations correctly. */}
+      <TODWindow
+        isOpen={_isTODWindowOpen}
+        onClose={closeTODWindow}
+        title={_todWindowTitle}
+        explicitTheme={_todWindowOptions.explicitTheme}
+        themeVersion={_todWindowOptions.themeVersion}
+        showCloseButton={_todWindowOptions.showCloseButton}
+      >
+        {_todWindowContent} {/* Content is still passed, can be null */}
+      </TODWindow>
     </AppContext.Provider>
   );
 }

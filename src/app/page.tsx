@@ -1,21 +1,25 @@
+// src/app/page.tsx
 
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useAppContext, type Faction } from '@/contexts/AppContext';
+import { useAppContext, type Faction, type GameItemBase } from '@/contexts/AppContext'; // Ensure GameItemBase is imported
 import { useTheme, type Theme } from '@/contexts/ThemeContext';
 import { WelcomeScreen } from '@/components/game/onboarding/WelcomeScreen';
 import { FactionChoiceScreen } from '@/components/game/onboarding/FactionChoiceScreen';
 import { FingerprintScannerScreen } from '@/components/game/onboarding/FingerprintScannerScreen';
 import { ParallaxBackground } from '@/components/game/shared/ParallaxBackground';
 import { AgentSection } from '@/components/game/tod/AgentSection';
-import   ControlCenterSection from '@/components/game/tod/ControlCenterSection';
+import ControlCenterSection from '@/components/game/tod/ControlCenterSection';
 import { EquipmentLockerSection } from '@/components/game/tod/EquipmentLockerSection';
 import { VaultSection } from '@/components/game/tod/VaultSection';
 import { ScannerSection } from '@/components/game/tod/ScannerSection';
 import { TODWindow } from '@/components/game/shared/TODWindow';
+import { InventoryBrowserInTOD } from '@/components/game/inventory/InventoryBrowserInTOD'; // This is the correct import
 import { generateWelcomeMessage, type WelcomeMessageInput } from '@/ai/flows/welcome-message';
 import { cn } from '@/lib/utils';
+
+// REMOVED THE PLACEHOLDER DEFINITION FOR InventoryBrowserInTOD FROM HERE
 
 export default function HomePage() {
   const {
@@ -32,6 +36,9 @@ export default function HomePage() {
     todWindowContent,
     closeTODWindow,
     todWindowOptions,
+    isSpyShopActive, // <--- ADDED
+    todInventoryContext, // <--- ADDED
+    closeInventoryTOD, // <--- ADDED
   } = useAppContext();
 
   const { theme: currentTheme, themeVersion } = useTheme();
@@ -46,11 +53,6 @@ export default function HomePage() {
     setIsClientMounted(true);
   }, []);
 
-  // console.log('HomePage rendering. AppContext faction for TODWindow key:', faction);
-  // console.log('HomePage rendering. Current ThemeContext theme for TODWindow key:', currentTheme);
-  // console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key:', themeVersion);
-
-
   useEffect(() => {
     if (onboardingStep === 'tod' && isClientMounted) {
       const timer = setTimeout(() => {
@@ -64,7 +66,7 @@ export default function HomePage() {
 
 
   // AI Welcome Message Effect
- useEffect(() => {
+  useEffect(() => {
     if (onboardingStep !== 'tod' || !isClientMounted || isAppLoading || isTODWindowOpen || !playBootAnimation) return;
 
     setIsLoading(true);
@@ -123,22 +125,16 @@ export default function HomePage() {
 
       // Infinite scroll logic
       // Assuming 5 actual sections + 2 clones (one at start, one at end)
-      // Actual content width for looping is (sectionComponents.length - 2) * clientWidth
-      // Max possible scrollLeft before needing to jump to start clone is (sectionComponents.length - 1) * clientWidth
       const totalContentWidthForLooping = (sectionComponents.length - 2) * clientWidth;
       const maxPossibleScrollLeft = (sectionComponents.length - 1) * clientWidth;
 
       if (currentScrollLeft >= maxPossibleScrollLeft - 5) { // Near the very end of the last clone
-          // Jump to the equivalent position in the actual content (which starts after the first clone)
-          // The last clone is effectively the first actual section
-          todContainerRef.current.scrollLeft = clientWidth + (currentScrollLeft - maxPossibleScrollLeft);
+        todContainerRef.current.scrollLeft = clientWidth + (currentScrollLeft - maxPossibleScrollLeft);
       } else if (currentScrollLeft <= 5) { // Near the very start of the first clone
-          // Jump to the equivalent position in the actual content (which ends before the last clone)
-          // The first clone is effectively the last actual section
-          todContainerRef.current.scrollLeft = totalContentWidthForLooping + currentScrollLeft;
+        todContainerRef.current.scrollLeft = totalContentWidthForLooping + currentScrollLeft;
       }
     }
-  }, [sectionComponents.length]); // Depends only on the number of sections for calculation logic
+  }, [sectionComponents.length]);
 
 
   useEffect(() => {
@@ -147,20 +143,17 @@ export default function HomePage() {
       const setInitialScroll = () => {
         if (todContainerRef.current && todContainerRef.current.clientWidth > 0 && !initialScrollSetRef.current) {
           const sectionWidth = todContainerRef.current.clientWidth;
-          // AgentSection is at index 1 in the sectionComponents array (0 is vault-clone-start)
-          const targetSectionIndex = 1;
+          const targetSectionIndex = 1; // AgentSection is at index 1
           const initialScrollPosition = sectionWidth * targetSectionIndex;
-          
-          // console.log(`Attempting initial scroll: TargetIndex=${targetSectionIndex}, Width=${sectionWidth}, ScrollTo=${initialScrollPosition}`);
+
           todContainerRef.current.scrollLeft = initialScrollPosition;
           setParallaxOffset(initialScrollPosition); // Initialize parallax based on this scroll
           initialScrollSetRef.current = true; // Mark as set
-          // console.log(`Initial scroll DONE. todContainerRef.current.scrollLeft = ${todContainerRef.current.scrollLeft}. Initial scroll set ref: ${initialScrollSetRef.current}`);
         } else if (todContainerRef.current && todContainerRef.current.clientWidth === 0 && !initialScrollSetRef.current) {
-           // console.warn("Initial scroll: clientWidth is 0. Layout might not be stable for scroll calc.");
+          // console.warn("Initial scroll: clientWidth is 0. Layout might not be stable for scroll calc.");
         }
       };
-      
+
       requestAnimationFrame(setInitialScroll);
 
       container.addEventListener('scroll', handleScroll, { passive: true });
@@ -176,15 +169,15 @@ export default function HomePage() {
   if (!isClientMounted) {
     return (
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6">
-        <ParallaxBackground parallaxOffset={0} />
-        <div
- className="animate-pulse text-2xl font-orbitron holographic-text text-center"
-          style={{
-            color: 'hsl(var(--foreground-hsl))',
- textShadow: '0 0 5px hsl(var(--foreground-hsl)), 0 0 10px hsl(var(--foreground-hsl))',
-          }}
-        >INITIALIZING TOD...</div>
-      </main>
+        <ParallaxBackground parallaxOffset={0} />
+        <div
+          className="animate-pulse text-2xl font-orbitron holographic-text text-center"
+          style={{
+            color: 'hsl(var(--foreground-hsl))',
+            textShadow: '0 0 5px hsl(var(--foreground-hsl)), 0 0 10px hsl(var(--foreground-hsl))',
+          }}
+        >INITIALIZING TOD...</div>
+      </main>
     );
   }
 
@@ -193,13 +186,14 @@ export default function HomePage() {
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6">
         <ParallaxBackground parallaxOffset={0} />
         <div className="animate-pulse text-2xl font-orbitron holographic-text text-center">LOADING INTERFACE...</div>
+        {/* TODWindow for loading screen (general use) */}
         <TODWindow
-          key={`${faction}-${themeVersion}-loading-${isTODWindowOpen}`}
-          isOpen={isTODWindowOpen}
+          key={`loading-tod-${currentTheme}-${themeVersion}-${isTODWindowOpen}`}
+          isOpen={isTODWindowOpen && !todInventoryContext} // Only open if NOT an inventory TOD
           onClose={closeTODWindow}
           title={todWindowTitle}
           explicitTheme={currentTheme}
-          themeVersion={themeVersion} // Pass themeVersion here
+          themeVersion={themeVersion}
           showCloseButton={todWindowOptions.showCloseButton}
         >
           {todWindowContent}
@@ -222,17 +216,17 @@ export default function HomePage() {
       }
     };
     return (
-      // Ensure this main allows scrolling if its content (e.g., FactionChoiceScreen) is too tall
       <main className="relative flex flex-col items-center justify-start min-h-screen bg-background text-foreground p-4 sm:p-6 overflow-y-auto">
         <ParallaxBackground parallaxOffset={0} />
         {renderOnboarding()}
+        {/* TODWindow for onboarding screens (general use) */}
         <TODWindow
-          key={`${faction}-${themeVersion}-${onboardingStep}-${isTODWindowOpen}`}
-          isOpen={isTODWindowOpen}
+          key={`onboarding-tod-${currentTheme}-${themeVersion}-${onboardingStep}-${isTODWindowOpen}`}
+          isOpen={isTODWindowOpen && !todInventoryContext} // Only open if NOT an inventory TOD
           onClose={closeTODWindow}
           title={todWindowTitle}
           explicitTheme={currentTheme}
-          themeVersion={themeVersion} // Pass themeVersion here
+          themeVersion={themeVersion}
           showCloseButton={todWindowOptions.showCloseButton !== undefined ? todWindowOptions.showCloseButton : true}
         >
           {todWindowContent}
@@ -240,17 +234,17 @@ export default function HomePage() {
       </main>
     );
   }
-  
+
   // Main TOD view
   return (
-    <main className="relative h-screen w-screen overflow-hidden"> 
+    <main className="relative h-screen w-screen overflow-hidden">
       <ParallaxBackground parallaxOffset={parallaxOffset} />
 
       <div
         className="parallax-layer z-[5] opacity-20"
         style={{
           transform: `translateX(-${parallaxOffset * 0.5}px)`,
-          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`, // Adjust width based on parallax factor
+          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`,
           backgroundImage: `
             repeating-linear-gradient(
               45deg,
@@ -268,24 +262,32 @@ export default function HomePage() {
         }}
       >
       </div>
-      
+
+      {/* Spy Shop Overlay - NEW! */}
+      {isSpyShopActive && (
+        <div
+          className="fixed inset-0 z-[9998] transition-colors duration-200 ease-in-out" // Use transition-colors
+          style={{
+            backgroundColor: `hsl(var(--primary-hsl) / 0.5)`, // Use a semi-transparent primary color
+          }}
+        />
+      )}
+
       {playBootAnimation && (
         <div
           ref={todContainerRef}
           className={cn(
             "tod-scroll-container absolute inset-0 z-10 scrollbar-hide",
-            "animate-slide-up-from-bottom" 
+            "animate-slide-up-from-bottom"
           )}
           style={{
-            // scrollSnapType: 'x mandatory', // Removed for smoother scroll
-            WebkitOverflowScrolling: 'touch', // For smoother scrolling on iOS
+            WebkitOverflowScrolling: 'touch',
           }}
         >
           {sectionComponents.map((SectionComponentInstance, index) => (
             <div
               key={SectionComponentInstance.key || `tod-section-${index}`}
               className="tod-section"
-              // style={{ scrollSnapAlign: 'start' }} // Removed for smoother scroll
             >
               {SectionComponentInstance}
             </div>
@@ -293,18 +295,37 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* Main TOD Window for general use (e.g., messages, notifications) */}
+      {/* It will NOT open if an Inventory TOD is active */}
       <TODWindow
-        key={`${faction}-${themeVersion}-tod-${isTODWindowOpen}`}
-        isOpen={isTODWindowOpen}
+        key={`main-tod-${currentTheme}-${themeVersion}-${isTODWindowOpen}`}
+        isOpen={isTODWindowOpen && !todInventoryContext} // Only open if not an inventory TOD
         onClose={closeTODWindow}
         title={todWindowTitle}
         explicitTheme={currentTheme}
-        themeVersion={themeVersion} // Pass themeVersion here
+        themeVersion={themeVersion}
         showCloseButton={todWindowOptions.showCloseButton !== undefined ? todWindowOptions.showCloseButton : true}
       >
         {todWindowContent}
       </TODWindow>
+
+      {/* Specialized TOD Window for Inventory Browse - NEW! */}
+      {/* This will open when todInventoryContext is set, overriding the general TODWindow */}
+      {todInventoryContext && (
+        <TODWindow
+          key={`inventory-tod-${currentTheme}-${themeVersion}-${todInventoryContext.category}`}
+          isOpen={!!todInventoryContext} // Explicitly true if context exists
+          onClose={closeInventoryTOD} // Use the new closeInventoryTOD function
+          title={todInventoryContext.title}
+          explicitTheme={currentTheme}
+          themeVersion={themeVersion}
+          showCloseButton={true} // Inventory browser usually has a close button
+        >
+          {/* Content for this window: Needs to be a component that browses inventory */}
+          {/* We're using the placeholder component defined at the top of this file */}
+          <InventoryBrowserInTOD context={todInventoryContext} />
+        </TODWindow>
+      )}
     </main>
   );
 }
-

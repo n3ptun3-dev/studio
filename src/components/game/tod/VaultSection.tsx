@@ -1,20 +1,20 @@
+// src/components/game/tod/VaultSection.tsx
 
 "use client";
 import { useState } from 'react';
-import { useAppContext } from '@/contexts/AppContext';
+import { useAppContext, type GameItemBase, type ItemCategory } from '@/contexts/AppContext'; // Added GameItemBase and ItemCategory types
 import { HolographicPanel, HolographicButton, HolographicInput } from '@/components/game/shared/HolographicPanel';
 import { ShieldCheck, ShieldOff, ShieldAlert, Edit3, Lock, Unlock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface SectionProps {
   parallaxOffset: number;
-  // style?: React.CSSProperties; // Removed as it's no longer needed for root transform
 }
 
 const MAX_SLOTS = 8; // 4 Lock, 4 Vault-Wide
 
 export function VaultSection({ parallaxOffset }: SectionProps) {
-  const { faction, playerSpyName } = useAppContext(); // For theming and owner display
+  const { faction, playerSpyName, openInventoryTOD, closeInventoryTOD } = useAppContext(); // ADDED openInventoryTOD and closeInventoryTOD
   const [vaultTitle, setVaultTitle] = useState("[UNCLASSIFIED]");
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState(vaultTitle);
@@ -39,6 +39,43 @@ export function VaultSection({ parallaxOffset }: SectionProps) {
     setIsEditingTitle(false);
   };
 
+  // NEW: Handler for when a vault slot is clicked
+  const handleSlotClick = (slotId: number, slotType: 'lock' | 'upgrade') => {
+    let categoryToOpen: ItemCategory | undefined;
+    let title = '';
+    let purpose: 'equip_lock' | 'equip_nexus' | 'infiltrate_lock' | undefined;
+
+    if (slotType === 'lock') {
+      categoryToOpen = 'lock'; // Assuming 'lock' is an ItemCategory for lock items
+      title = `Equip Lock Slot ${slotId + 1}`;
+      purpose = 'equip_lock';
+    } else if (slotType === 'upgrade') {
+      categoryToOpen = 'vault_upgrade'; // Assuming 'vault_upgrade' for vault-wide items
+      title = `Equip Vault Upgrade Slot ${slotId + 1 - 4}`; // Adjust for upgrade slot numbering
+      purpose = 'equip_nexus'; // Example purpose for vault-wide upgrades
+    }
+
+    if (categoryToOpen) {
+      openInventoryTOD({
+        category: categoryToOpen,
+        title: title,
+        purpose: purpose,
+        onItemSelect: (item: GameItemBase) => {
+          console.log(`Agent ${playerSpyName} selected ${item.name} for ${slotType} slot ${slotId}`);
+          // TODO: Implement logic to equip the item to the specific slot
+          // This would involve updating the 'slots' state or sending an update to global player state
+          setSlots(prevSlots => prevSlots.map(s =>
+            s.id === slotId ? { ...s, item: { name: item.name, level: 1, colorVar: '--level-1-color' } } : s // Placeholder: Set item details
+          ));
+          closeInventoryTOD(); // Close the inventory TOD after selection
+        }
+      });
+    } else {
+      console.warn(`No inventory category defined for slot type: ${slotType}`);
+    }
+  };
+
+
   const centralHexagonColor = faction === 'Cyphers' ? 'hsl(var(--primary-hsl))' : faction === 'Shadows' ? 'hsl(var(--primary-hsl))' : 'hsl(var(--muted-hsl))';
 
   return (
@@ -47,9 +84,9 @@ export function VaultSection({ parallaxOffset }: SectionProps) {
         <div className="text-center mb-2 mt-2">
           {isEditingTitle ? (
             <div className="flex items-center gap-2">
-              <HolographicInput 
-                type="text" 
-                value={tempTitle} 
+              <HolographicInput
+                type="text"
+                value={tempTitle}
                 onChange={handleTitleChange}
                 maxLength={30}
                 className="text-lg"
@@ -72,15 +109,15 @@ export function VaultSection({ parallaxOffset }: SectionProps) {
             {isSecure ? <ShieldCheck className="w-4 h-4" /> : <ShieldAlert className="w-4 h-4" />}
             STATUS: {isSecure ? "SECURE" : "NOT SECURED"}
         </div>
-       
+
         {/* Central Hexagon Core & Slots */}
         <div className="relative flex-grow w-full flex items-center justify-center aspect-square max-h-[70vh] max-w-[70vh]">
           {/* Central Hexagon */}
           <svg viewBox="0 0 100 100" className="absolute w-1/2 h-1/2 animate-spin-slow opacity-70" style={{ animationDuration: '20s'}}>
-            <polygon 
-              points="50,5 95,27.5 95,72.5 50,95 5,72.5 5,27.5" 
+            <polygon
+              points="50,5 95,27.5 95,72.5 50,95 5,72.5 5,27.5"
               stroke={centralHexagonColor}
-              strokeWidth="2" 
+              strokeWidth="2"
               fill="hsla(var(--background-hsl), 0.3)"
               className="icon-glow"
               style={{ filter: `drop-shadow(0 0 5px ${centralHexagonColor})`}}
@@ -105,9 +142,9 @@ export function VaultSection({ parallaxOffset }: SectionProps) {
                   transform: 'translate(-50%, -50%)',
                   borderColor: itemColor,
                   boxShadow: slot.item ? `0 0 10px ${itemColor}, inset 0 0 5px ${itemColor}` : `0 0 5px ${itemColor}`,
-                  backgroundColor: 'hsla(var(--background-hsl), 0.5)',
+                  backgroundColor: `hsla(var(--background-hsl), 0.5)`, // CHANGED TO BACKTICKS
                 }}
-                // onClick={() => handleSlotClick(slot.id)} // TODO: Implement slot interaction
+                onClick={() => handleSlotClick(slot.id, slot.type)}
               >
                 <div className="w-full h-full flex items-center justify-center">
                   {slot.item ? (
@@ -115,7 +152,7 @@ export function VaultSection({ parallaxOffset }: SectionProps) {
                   ) : slot.type === 'lock' ? (
                     <Unlock className="w-6 h-6 md:w-8 md:h-8" style={{color: itemColor}}/>
                   ) : (
-                     <ShieldOff className="w-6 h-6 md:w-8 md:h-8" style={{color: itemColor}}/>
+                      <ShieldOff className="w-6 h-6 md:w-8 md:h-8" style={{color: itemColor}}/>
                   )}
                 </div>
                 {/* TODO: Add smaller preview for fortifiers if item in slot is a lock and fortified */}

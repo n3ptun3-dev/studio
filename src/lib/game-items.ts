@@ -30,14 +30,14 @@ export interface GameItemBase {
 }
 
 // Categories from the prompt
-export type ItemCategory = 
-  | 'Vault Hardware' 
-  | 'Lock Fortifiers' 
-  | 'Entry Tools' 
-  | 'Infiltration Gear' 
-  | 'Nexus Upgrades' 
-  | 'Assault Tech' 
-  | 'Aesthetic Schemes';
+export type ItemCategory =
+  'Vault Hardware' |
+  'Lock Fortifiers' |
+  'Entry Tools' |
+  'Infiltration Gear' |
+  'Nexus Upgrades' |
+  'Assault Tech' |
+  'Aesthetic Schemes';
 
 
 // Helper function to calculate scaled values based on level

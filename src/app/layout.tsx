@@ -1,3 +1,4 @@
+// src/app/layout.tsx
 
 import React from 'react';
 import type { Metadata } from 'next';
@@ -7,8 +8,11 @@ import { GeistMono } from 'geist/font/mono';
 import './globals.css';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AppProvider } from '@/contexts/AppContext';
-import { ThemeUpdater } from '@/components/theme-updater';
-import { Toaster } from "@/components/ui/toaster"; // Assuming Toaster will be used later.
+// import { ThemeUpdater } from '@/components/theme-updater'; // Still commented out as planned
+import { Toaster } from "@/components/ui/toaster";
+import { SpyShopSectionWrapper } from '@/components/game/spyshop/SpyShopSectionWrapper';
+import { SpyShopFadeOverlay } from '@/components/game/spyshop/SpyShopFadeOverlay';
+
 
 const geistSans = GeistSans;
 const geistMono = GeistMono;
@@ -16,19 +20,19 @@ const geistMono = GeistMono;
 const orbitron = Orbitron({
   subsets: ['latin'],
   variable: '--font-orbitron',
-  weight: ['400', '500', '700', '900'], 
+  weight: ['400', '500', '700', '900'],
 });
 
 const exo2 = Exo_2({
   subsets: ['latin'],
   variable: '--font-exo2',
-  weight: ['300', '400', '500', '600', '700'], 
+  weight: ['300', '400', '500', '600', '700'],
 });
 
 const rajdhani = Rajdhani({
   subsets: ['latin'],
   variable: '--font-rajdhani',
-  weight: ['400', '500', '600', '700'], 
+  weight: ['400', '500', '600', '700'],
 });
 
 export const metadata: Metadata = {
@@ -43,19 +47,21 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      {/* 
-        The inline <style jsx global> block for setting :root CSS variables 
-        has been removed. ThemeContext.tsx now handles dynamic injection of 
-        these variables onto document.documentElement.style.
-        The globals.css file provides initial defaults within .theme-terminal-green (formerly :root).
-      */}
-      <body 
-        className={`${geistSans.className} ${geistSans.variable} ${geistMono.className} ${geistMono.variable} ${orbitron.variable} ${exo2.variable} ${rajdhani.variable} antialiased bg-background text-foreground`}>
-        <ThemeProvider attribute="class" defaultTheme="terminal-green" enableSystem disableTransitionOnChange>
+      <body
+        className={`${geistSans.className} ${geistSans.variable} ${geistMono.className} ${geistMono.variable} ${orbitron.variable} ${exo2.variable} ${rajdhani.variable} antialiased bg-background text-foreground`}
+        suppressHydrationWarning={true} // <-- ADD THIS LINE!
+      >
+        <ThemeProvider attribute="class" defaultTheme="terminal-green" enableSystem>
           <AppProvider>
-            {children}
-            <ThemeUpdater />
-            {/* <Toaster /> Ensure Toaster is rendered if used */}
+            {/* <ThemeUpdater /> */}
+            <Toaster />
+
+            <div className="relative h-screen w-screen overflow-hidden">
+              {children}
+
+              <SpyShopSectionWrapper />
+              <SpyShopFadeOverlay />
+            </div>
           </AppProvider>
         </ThemeProvider>
       </body>
