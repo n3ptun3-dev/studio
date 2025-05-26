@@ -9,7 +9,7 @@ interface SectionProps {
 }
 
 export function SpyShopSection({ parallaxOffset }: SectionProps) {
-  // TODO: Implement Spy Shop UI
+  // TODO: Implement Spy Shop UI to open from within the Equipment Locker section
   // Categories: Vault Hardware, Lock Fortifiers, Entry Tools, Infiltration Gear, Nexus Upgrades, Assault Tech, Aesthetic Schemes
   // Item display: previews, details, level/quantity selectors, purchase button
   // Aesthetic Schemes selection to change TOD theme
