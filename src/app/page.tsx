@@ -50,13 +50,10 @@ export default function HomePage() {
   const initialScrollSetRef = useRef(false);
   const [playBootAnimation, setPlayBootAnimation] = useState(false);
 
-  // console.log('HomePage rendering, isTODWindowOpen:', isTODWindowOpen);
-  // console.log('HomePage rendering. AppContext faction for TODWindow key:', faction);
-  // console.log('HomePage rendering. Current ThemeContext theme for TODWindow key:', currentTheme);
-  // console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key:', themeVersion);
-  // console.log('HomePage rendering. AppContext faction for TODWindow key:', appContext.faction);
-  // console.log('HomePage rendering. Current ThemeContext theme for TODWindow key:', currentTheme);
-  // console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key:', themeVersion);
+  console.log('HomePage rendering, isTODWindowOpen:', isTODWindowOpen);
+  console.log('HomePage rendering. AppContext faction for TODWindow key:', faction);
+  console.log('HomePage rendering. Current ThemeContext theme for TODWindow key:', currentTheme);
+  console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key:', themeVersion);
 
 
   useEffect(() => {
@@ -74,17 +71,20 @@ export default function HomePage() {
     }
   }, [onboardingStep, isClientMounted]);
 
-  // useEffect(() => {
-  //   if (isClientMounted && onboardingStep === 'codenameInput' && !isTODWindowOpen) {
-  //     const factionTheme = appContext.faction === 'Cyphers' ? 'cyphers' : appContext.faction === 'Shadows' ? 'shadows' : 'terminal-green';
-  //     console.log(`[HomePage] onboardingStep is codenameInput, opening TODWindow. Faction for theme: ${appContext.faction}`);
-  //     openTODWindow(
-  //       "Agent Codename",
-  //       <CodenameInput explicitTheme={factionTheme} />,
-  //       { showCloseButton: false }
-  //     );
-  //   }
-  // }, [isClientMounted, onboardingStep, openTODWindow, isTODWindowOpen, appContext.faction]);
+  // useEffect to open CodenameInput when onboardingStep is 'codenameInput'
+  // This was moved from AppContext to HomePage
+  useEffect(() => {
+    if (isClientMounted && onboardingStep === 'codenameInput' && !isTODWindowOpen) {
+      const factionTheme = faction === 'Cyphers' ? 'cyphers' : faction === 'Shadows' ? 'shadows' : 'terminal-green';
+      console.log(`[HomePage] onboardingStep is codenameInput, opening TODWindow. Faction for theme: ${faction}`);
+      openTODWindow(
+        "Agent Codename",
+        <CodenameInput explicitTheme={factionTheme} />,
+        { showCloseButton: false }
+      );
+    }
+  }, [isClientMounted, onboardingStep, openTODWindow, isTODWindowOpen, faction]);
+
 
   useEffect(() => {
     if (onboardingStep !== 'tod' || !isClientMounted || isAppLoading || isTODWindowOpen || !playBootAnimation) return;
@@ -107,7 +107,6 @@ export default function HomePage() {
       setIsLoading(false);
     } else if (playerSpyName) { // Existing, named player
       // AI Welcome Message Disabled
-      // console.log("AI Welcome message generation DISABLED. Using placeholder.");
       addMessage({
         text: `Agent ${playerSpyName}, welcome back. Standard operational parameters active. HQ awaits your report.`,
         type: 'hq',
@@ -115,7 +114,6 @@ export default function HomePage() {
       });
       setIsLoading(false);
     } else {
-      // console.log("Welcome message generation skipped: conditions not fully met (e.g. no playerSpyName).");
       setIsLoading(false);
     }
   }, [onboardingStep, isClientMounted, playerSpyName, faction, playerStats, addMessage, setIsLoading, isAppLoading, isTODWindowOpen, playBootAnimation]);
@@ -137,20 +135,16 @@ export default function HomePage() {
       if (clientWidth === 0) return;
       setParallaxOffset(currentScrollLeft);
 
-      const totalContentWidthForLooping = (sectionComponents.length - 2) * clientWidth; // Width of the 5 actual sections
-      const maxPossibleScrollLeft = (sectionComponents.length - 1) * clientWidth; // Total scrollable width including the end clone
+      const totalContentWidthForLooping = (sectionComponents.length - 2) * clientWidth; 
+      const maxPossibleScrollLeft = (sectionComponents.length - 1) * clientWidth;
 
-      // console.log(`Scroll: ${currentScrollLeft}, ClientWidth: ${clientWidth}, TotalLoopWidth: ${totalContentWidthForLooping}, MaxScroll: ${maxPossibleScrollLeft}`);
-
-      if (currentScrollLeft >= maxPossibleScrollLeft - 5) { // Near the very end (at the start of the end clone)
-        // console.log("Jump to start loop");
+      if (currentScrollLeft >= maxPossibleScrollLeft - 5) { 
         todContainerRef.current.scrollLeft = clientWidth + (currentScrollLeft - maxPossibleScrollLeft);
-      } else if (currentScrollLeft <= 5) { // Near the very beginning (at the end of the start clone)
-        // console.log("Jump to end loop");
+      } else if (currentScrollLeft <= 5) { 
         todContainerRef.current.scrollLeft = totalContentWidthForLooping + currentScrollLeft;
       }
     }
-  }, [sectionComponents.length]); // parallaxOffset removed as it was causing re-creation of handleScroll
+  }, [sectionComponents.length]);
 
   useEffect(() => {
     const container = todContainerRef.current;
@@ -158,16 +152,15 @@ export default function HomePage() {
       const setInitialScroll = () => {
         if (todContainerRef.current && todContainerRef.current.clientWidth > 0 && !initialScrollSetRef.current) {
           const sectionWidth = todContainerRef.current.clientWidth;
-          const targetSectionIndex = 1; // AgentSection
+          const targetSectionIndex = 1; // AgentSection is at index 1
           const initialScrollPosition = sectionWidth * targetSectionIndex;
           todContainerRef.current.scrollLeft = initialScrollPosition;
-          setParallaxOffset(initialScrollPosition); // Initialize parallaxOffset
+          setParallaxOffset(initialScrollPosition); 
           initialScrollSetRef.current = true;
           console.log(`[HomePage] Initial scroll set to: ${initialScrollPosition} for section index ${targetSectionIndex}. Container width: ${sectionWidth}`);
         }
       };
       
-      // Use requestAnimationFrame to ensure layout is stable before scrolling
       requestAnimationFrame(setInitialScroll);
 
       container.addEventListener('scroll', handleScroll, { passive: true });
@@ -177,17 +170,14 @@ export default function HomePage() {
         }
       };
     }
-  }, [onboardingStep, isAppLoading, isClientMounted, playBootAnimation, handleScroll]); // handleScroll added as dependency
+  }, [onboardingStep, isAppLoading, isClientMounted, playBootAnimation, handleScroll]); 
 
   const renderOnboarding = () => {
-    // console.log(`[HomePage] renderOnboarding called, current step: ${onboardingStep}`);
     switch (onboardingStep) {
       case 'welcome':
         return <WelcomeScreen />;
       case 'factionChoice':
         return <FactionChoiceScreen />;
-      // case 'codenameInput': // This is handled by TODWindow opened from AppContext/HomePage useEffect
-      //   return <div className="animate-pulse text-2xl font-orbitron holographic-text text-center">Awaiting Codename...</div>;
       case 'fingerprint':
         return <FingerprintScannerScreen />;
       default: 
@@ -198,7 +188,7 @@ export default function HomePage() {
   if (!isClientMounted) {
     return (
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6">
-        <ParallaxBackground />
+        <ParallaxBackground parallaxOffset={0} /> {/* Pass 0 or a default offset */}
         <div className="text-2xl font-orbitron holographic-text text-center animate-pulse">INITIALIZING TOD...</div>
       </main>
     );
@@ -207,10 +197,10 @@ export default function HomePage() {
   if (isAppLoading && onboardingStep !== 'tod') {
     return (
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6">
-        <ParallaxBackground />
+        <ParallaxBackground parallaxOffset={0} />
         <div className="animate-pulse text-2xl font-orbitron holographic-text text-center">LOADING INTERFACE...</div>
          <TODWindow
-            key={`${faction}-${themeVersion}-${isTODWindowOpen}-loading`}
+            key={`${faction}-${currentTheme}-${themeVersion}-loading-${isTODWindowOpen}`}
             isOpen={isTODWindowOpen && !todInventoryContext}
             onClose={closeTODWindow}
             title={todWindowTitle}
@@ -224,17 +214,13 @@ export default function HomePage() {
     );
   }
 
-  // console.log(`HomePage rendering. AppContext faction for TODWindow key: ${faction}`);
-  // console.log(`HomePage rendering. Current ThemeContext theme for TODWindow key: ${currentTheme}`);
-  // console.log(`HomePage rendering. Current ThemeContext themeVersion for TODWindow key: ${themeVersion}`);
-
   if (onboardingStep !== 'tod') {
     return (
       <main className="relative flex flex-col items-center justify-start min-h-screen bg-background text-foreground p-4 sm:p-6 overflow-y-auto">
-        <ParallaxBackground />
+        <ParallaxBackground parallaxOffset={0} />
         {renderOnboarding()}
         <TODWindow
-          key={`${faction}-${themeVersion}-onboarding-${isTODWindowOpen}-${onboardingStep}`}
+           key={`${faction}-${currentTheme}-${themeVersion}-onboarding-${isTODWindowOpen}-${onboardingStep}`}
           isOpen={isTODWindowOpen && !todInventoryContext}
           onClose={closeTODWindow}
           title={todWindowTitle}
@@ -248,15 +234,14 @@ export default function HomePage() {
     );
   }
 
-  // console.log('HomePage rendering. AppContext faction for TODWindow key (TOD view):', faction);
-  // console.log('HomePage rendering. Current ThemeContext theme for TODWindow key (TOD view):', currentTheme);
-  // console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key (TOD view):', themeVersion);
-  // console.log('HomePage rendering. TODWindow props: explicitTheme=', currentTheme, 'key=', `${faction}-${themeVersion}-tod-${isTODWindowOpen}-${todInventoryContext ? 'inv-open' : 'inv-closed'}`);
-
+  console.log('HomePage rendering. AppContext faction for TODWindow key (TOD view):', faction);
+  console.log('HomePage rendering. Current ThemeContext theme for TODWindow key (TOD view):', currentTheme);
+  console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key (TOD view):', themeVersion);
+  console.log('HomePage rendering. TODWindow props: explicitTheme=', currentTheme, 'key=', `${faction}-${currentTheme}-${themeVersion}-tod-${isTODWindowOpen}-${todInventoryContext ? 'inv-open' : 'inv-closed'}`);
 
   return (
     <main className="relative h-screen w-screen overflow-hidden"> 
-      <ParallaxBackground />
+      <ParallaxBackground parallaxOffset={parallaxOffset} />
       
       <div 
         className="parallax-layer z-[5] opacity-30"
@@ -308,12 +293,12 @@ export default function HomePage() {
       )}
       
       <TODWindow
-        key={`${faction}-${themeVersion}-tod-${isTODWindowOpen}-${todInventoryContext ? 'inv-open' : 'inv-closed'}`}
+        key={`${faction}-${currentTheme}-${themeVersion}-tod-${isTODWindowOpen}-${todInventoryContext ? 'inv-open' : 'inv-closed'}`}
         isOpen={isTODWindowOpen && !todInventoryContext}
         onClose={closeTODWindow}
         title={todWindowTitle}
         explicitTheme={currentTheme}
-        themeVersion={themeVersion} // Pass themeVersion here
+        themeVersion={themeVersion} 
         showCloseButton={todWindowOptions.showCloseButton !== undefined ? todWindowOptions.showCloseButton : true}
       >
         {todWindowContent}
@@ -321,12 +306,12 @@ export default function HomePage() {
 
       {todInventoryContext && (
         <TODWindow
-          key={`${faction}-${themeVersion}-inventory-${todInventoryContext.category}-${isTODWindowOpen}`}
+          key={`${faction}-${currentTheme}-${themeVersion}-inventory-${todInventoryContext.category}-${isTODWindowOpen}`}
           isOpen={!!todInventoryContext}
           onClose={closeInventoryTOD}
           title={todInventoryContext.title}
-          explicitTheme={currentTheme} // Pass current theme
-          themeVersion={themeVersion} // Pass themeVersion
+          explicitTheme={currentTheme} 
+          themeVersion={themeVersion} 
           showCloseButton={true}
         >
           <InventoryBrowserInTOD context={todInventoryContext} />
@@ -336,13 +321,10 @@ export default function HomePage() {
   );
 }
 
-
-// Default stats for a new player, ensures `elintReserves` has a defined value for comparison
-// If PlayerStats is defined elsewhere globally, ensure this matches or use that definition.
-const DEFAULT_PLAYER_STATS_FOR_NEW_PLAYER = {
+const DEFAULT_PLAYER_STATS_FOR_NEW_PLAYER: PlayerStats = {
   xp: 0,
-  level: 1, // Start at level 1
-  elintReserves: 500, // Example starting ELINT
+  level: 1, 
+  elintReserves: 500, 
   elintTransferred: 0,
   successfulVaultInfiltrations: 0,
   successfulLockInfiltrations: 0,
@@ -358,3 +340,5 @@ const DEFAULT_PLAYER_STATS_FOR_NEW_PLAYER = {
   hasPlacedFirstLock: false,
 };
       
+
+    
