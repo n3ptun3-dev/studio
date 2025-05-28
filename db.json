@@ -1,0 +1,67 @@
+{
+  "players": [
+    {
+      "id": "mock_pi_id_12345",
+      "spyName": "Agent 007",
+      "faction": "Shadows",
+      "stats": {
+        "strength": 10,
+        "stealth": 12,
+        "hacking": 8
+      },
+      "inventory": [
+        { "itemId": "item_stealth_suit", "quantity": 1, "stats": { "stealthBoost": 5 } },
+        { "itemId": "item_hacking_tool", "quantity": 2, "stats": { "hackingBoost": 3 } }
+      ],
+      "vault": [
+        { "slotId": "vault_slot_1", "deployedItem": null },
+        { "slotId": "vault_slot_2", "deployedItem": null }
+      ]
+    }
+  ],
+  "items": [
+    { "itemId": "item_stealth_suit", "name": "Stealth Suit", "description": "Increases stealth.", "stats": { "stealthBoost": 5 }, "price": 100 },
+    { "itemId": "item_hacking_tool", "name": "Hacking Tool", "description": "Helps with hacking.", "stats": { "hackingBoost": 3 }, "price": 75 },
+    { "itemId": "item_strength_boost", "name": "Strength Boost", "description": "Temporarily increases strength.", "stats": { "strengthBoost": 7 }, "price": 50 }
+  ],
+  "droppedItems": [],
+  "messages": [],
+  "dailyTeamCodes": {
+    "Cyphers": "CYPHERCODE123",
+    "Shadows": "SHADOWCODE456"
+  }
+}
+{
+    "players": [
+      {
+        "id": "mock_pi_id_12345",
+        "spyName": "Agent 007",
+        "faction": "Shadows",
+        "stats": {
+          "strength": 10,
+          "stealth": 12,
+          "hacking": 8
+        },
+        "inventory": [
+          { "itemId": "item_stealth_suit", "quantity": 1, "stats": { "stealthBoost": 5 } },
+          { "itemId": "item_hacking_tool", "quantity": 2, "stats": { "hackingBoost": 3 } }
+        ],
+        "vault": [
+          { "slotId": "vault_slot_1", "deployedItem": null },
+          { "slotId": "vault_slot_2", "deployedItem": null }
+        ]
+      }
+    ],
+    "items": [
+      { "itemId": "item_stealth_suit", "name": "Stealth Suit", "description": "Increases stealth.", "stats": { "stealthBoost": 5 }, "price": 100 },
+      { "itemId": "item_hacking_tool", "name": "Hacking Tool", "description": "Helps with hacking.", "stats": { "hackingBoost": 3 }, "price": 75 },
+      { "itemId": "item_strength_boost", "name": "Strength Boost", "description": "Temporarily increases strength.", "stats": { "strengthBoost": 7 }, "price": 50 }
+    ],
+    "droppedItems": [],
+    "messages": [],
+    "dailyTeamCodes": {
+      "Cyphers": "CYPHERCODE123",
+      "Shadows": "SHADOWCODE456"
+    }
+  }
+  
