@@ -2,8 +2,8 @@
   "players": [
     {
       "id": "mock_pi_id_12345",
-      "spyName": "Agent 007",
-      "faction": "Shadows",
+      "spyName": "N3PTUN3",
+      "faction": "Cyphers",
       "stats": {
         "strength": 10,
         "stealth": 12,
