@@ -3,7 +3,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useAppContext, type Faction, type GameItemBase } from '@/contexts/AppContext'; // Ensure GameItemBase is imported
+import { useAppContext, type Faction, type GameItemBase } from '@/contexts/AppContext';
 import { useTheme, type Theme } from '@/contexts/ThemeContext';
 import { WelcomeScreen } from '@/components/game/onboarding/WelcomeScreen';
 import { FactionChoiceScreen } from '@/components/game/onboarding/FactionChoiceScreen';
@@ -15,39 +15,46 @@ import { EquipmentLockerSection } from '@/components/game/tod/EquipmentLockerSec
 import { VaultSection } from '@/components/game/tod/VaultSection';
 import { ScannerSection } from '@/components/game/tod/ScannerSection';
 import { TODWindow } from '@/components/game/shared/TODWindow';
-import { InventoryBrowserInTOD } from '@/components/game/inventory/InventoryBrowserInTOD'; // This is the correct import
+import { InventoryBrowserInTOD } from '@/components/game/inventory/InventoryBrowserInTOD';
 import { generateWelcomeMessage, type WelcomeMessageInput } from '@/ai/flows/welcome-message';
 import { cn } from '@/lib/utils';
-
-// REMOVED THE PLACEHOLDER DEFINITION FOR InventoryBrowserInTOD FROM HERE
+import { CodenameInput } from '@/components/game/onboarding/CodenameInput'; // Ensure this is imported if used by AppContext
 
 export default function HomePage() {
+  const appContext = useAppContext();
   const {
     onboardingStep,
-    setOnboardingStep,
-    faction,
-    playerSpyName,
-    playerStats,
+    // setOnboardingStep, // No longer directly set from here for codename input
+    faction, // Consumed directly from appContext
+    playerSpyName, // Consumed directly
+    playerStats, // Consumed directly
     addMessage,
     setIsLoading,
-    isLoading: isAppLoading,
+    isLoading: isAppLoading, // from AppContext
     isTODWindowOpen,
     todWindowTitle,
     todWindowContent,
     closeTODWindow,
     todWindowOptions,
-    isSpyShopActive, // <--- ADDED
-    todInventoryContext, // <--- ADDED
-    closeInventoryTOD, // <--- ADDED
-  } = useAppContext();
+    isSpyShopActive,
+    todInventoryContext,
+    closeInventoryTOD,
+    // openTODWindow, // No longer directly called from here for codename input
+  } = appContext;
 
-  const { theme: currentTheme, themeVersion } = useTheme();
+  const { theme: currentTheme, themeVersion } = useTheme(); // For TODWindow keying
 
   const todContainerRef = useRef<HTMLDivElement>(null);
   const [parallaxOffset, setParallaxOffset] = useState(0);
   const [isClientMounted, setIsClientMounted] = useState(false);
   const initialScrollSetRef = useRef(false);
   const [playBootAnimation, setPlayBootAnimation] = useState(false);
+
+  console.log('HomePage rendering, onboardingStep:', onboardingStep, "isTODWindowOpen:", isTODWindowOpen, "isAppLoading:", isAppLoading);
+  console.log('HomePage rendering. AppContext faction for TODWindow key:', faction);
+  console.log('HomePage rendering. Current ThemeContext theme for TODWindow key:', currentTheme);
+  console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key:', themeVersion);
+
 
   useEffect(() => {
     setIsClientMounted(true);
@@ -57,20 +64,19 @@ export default function HomePage() {
     if (onboardingStep === 'tod' && isClientMounted) {
       const timer = setTimeout(() => {
         setPlayBootAnimation(true);
-      }, 50); // Short delay to allow initial render
+      }, 50);
       return () => clearTimeout(timer);
     } else if (onboardingStep !== 'tod') {
-      setPlayBootAnimation(false); // Reset animation if navigating away from TOD
+      setPlayBootAnimation(false);
     }
   }, [onboardingStep, isClientMounted]);
 
-
-  // AI Welcome Message Effect
   useEffect(() => {
     if (onboardingStep !== 'tod' || !isClientMounted || isAppLoading || isTODWindowOpen || !playBootAnimation) return;
+    if (!playerSpyName && faction !== 'Observer') return; // Don't run if spyName isn't set yet for non-observers
 
     setIsLoading(true);
-    const isNewUser = !playerStats.xp && !playerStats.elintReserves && !playerStats.level;
+    const isNewUser = !playerStats.xp && !playerStats.elintReserves && !playerStats.level && faction !== 'Observer';
 
     if (isNewUser) {
       addMessage({
@@ -79,13 +85,13 @@ export default function HomePage() {
         isPinned: true,
       });
       setIsLoading(false);
-    } else {
+    } else if (faction !== 'Observer') {
       const welcomeInput: WelcomeMessageInput = {
         playerName: playerSpyName || "Agent",
         faction: faction,
         elintReserves: playerStats.elintReserves,
-        networkActivity: "Medium", // Placeholder
-        vaultDefenses: "Holding", // Placeholder
+        networkActivity: "Medium",
+        vaultDefenses: "Holding",
       };
       generateWelcomeMessage(welcomeInput)
         .then(response => {
@@ -96,46 +102,41 @@ export default function HomePage() {
           addMessage({ text: "HQ Comms Error. Standard protocols active.", type: 'error', isPinned: true });
         })
         .finally(() => setIsLoading(false));
+    } else { // Observer faction
+        addMessage({
+            text: "Observation deck online. Monitoring network activity.",
+            type: 'system',
+            isPinned: true,
+        });
+        setIsLoading(false);
     }
   }, [onboardingStep, isClientMounted, playerSpyName, faction, playerStats, addMessage, setIsLoading, isAppLoading, isTODWindowOpen, playBootAnimation]);
 
-
-  const sectionComponents = React.useMemo(() => [
-    // Clones for infinite looping effect
-    <VaultSection key="vault-clone-start" parallaxOffset={parallaxOffset} />, // End of loop, shows start
-    // Actual sections in order
+  const sectionComponents = useMemo(() => [
+    <VaultSection key="vault-clone-start" parallaxOffset={parallaxOffset} />,
     <AgentSection key="agent-actual" parallaxOffset={parallaxOffset} />,
     <ControlCenterSection key="control-center-actual" parallaxOffset={parallaxOffset} />,
     <ScannerSection key="scanner-actual" parallaxOffset={parallaxOffset} />,
     <EquipmentLockerSection key="equipment-locker-actual" parallaxOffset={parallaxOffset} />,
     <VaultSection key="vault-actual" parallaxOffset={parallaxOffset} />,
-    // Clone for infinite looping effect
-    <AgentSection key="agent-clone-end" parallaxOffset={parallaxOffset} />, // Start of loop, shows end
+    <AgentSection key="agent-clone-end" parallaxOffset={parallaxOffset} />,
   ], [parallaxOffset]);
-
 
   const handleScroll = useCallback(() => {
     if (todContainerRef.current) {
       const currentScrollLeft = todContainerRef.current.scrollLeft;
       const clientWidth = todContainerRef.current.clientWidth;
-
-      if (clientWidth === 0) return; // Avoid division by zero if not yet rendered
-
+      if (clientWidth === 0) return;
       setParallaxOffset(currentScrollLeft);
-
-      // Infinite scroll logic
-      // Assuming 5 actual sections + 2 clones (one at start, one at end)
       const totalContentWidthForLooping = (sectionComponents.length - 2) * clientWidth;
       const maxPossibleScrollLeft = (sectionComponents.length - 1) * clientWidth;
-
-      if (currentScrollLeft >= maxPossibleScrollLeft - 5) { // Near the very end of the last clone
+      if (currentScrollLeft >= maxPossibleScrollLeft - 5) {
         todContainerRef.current.scrollLeft = clientWidth + (currentScrollLeft - maxPossibleScrollLeft);
-      } else if (currentScrollLeft <= 5) { // Near the very start of the first clone
+      } else if (currentScrollLeft <= 5) {
         todContainerRef.current.scrollLeft = totalContentWidthForLooping + currentScrollLeft;
       }
     }
   }, [sectionComponents.length]);
-
 
   useEffect(() => {
     const container = todContainerRef.current;
@@ -143,19 +144,15 @@ export default function HomePage() {
       const setInitialScroll = () => {
         if (todContainerRef.current && todContainerRef.current.clientWidth > 0 && !initialScrollSetRef.current) {
           const sectionWidth = todContainerRef.current.clientWidth;
-          const targetSectionIndex = 1; // AgentSection is at index 1
+          const targetSectionIndex = 1; // AgentSection
           const initialScrollPosition = sectionWidth * targetSectionIndex;
-
           todContainerRef.current.scrollLeft = initialScrollPosition;
-          setParallaxOffset(initialScrollPosition); // Initialize parallax based on this scroll
-          initialScrollSetRef.current = true; // Mark as set
-        } else if (todContainerRef.current && todContainerRef.current.clientWidth === 0 && !initialScrollSetRef.current) {
-          // console.warn("Initial scroll: clientWidth is 0. Layout might not be stable for scroll calc.");
+          setParallaxOffset(initialScrollPosition);
+          initialScrollSetRef.current = true;
+          console.log(`[HomePage] Initial scroll set to: ${initialScrollPosition} for section index ${targetSectionIndex}`);
         }
       };
-
       requestAnimationFrame(setInitialScroll);
-
       container.addEventListener('scroll', handleScroll, { passive: true });
       return () => {
         if (container) {
@@ -165,18 +162,26 @@ export default function HomePage() {
     }
   }, [onboardingStep, isAppLoading, isClientMounted, playBootAnimation, handleScroll]);
 
+  const renderOnboarding = () => {
+    switch (onboardingStep) {
+      case 'welcome':
+        return <WelcomeScreen />;
+      case 'factionChoice':
+        return <FactionChoiceScreen />;
+      // case 'codenameInput': // This step is now handled by TODWindow opened from AppContext
+      //   return <div>Loading Codename Input...</div>; // Or a placeholder if needed
+      case 'fingerprint':
+        return <FingerprintScannerScreen />;
+      default:
+        return <div className="animate-pulse text-2xl font-orbitron holographic-text text-center">LOADING NEXT STEP...</div>;
+    }
+  };
 
   if (!isClientMounted) {
     return (
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6">
-        <ParallaxBackground parallaxOffset={0} />
-        <div
-          className="animate-pulse text-2xl font-orbitron holographic-text text-center"
-          style={{
-            color: 'hsl(var(--foreground-hsl))',
-            textShadow: '0 0 5px hsl(var(--foreground-hsl)), 0 0 10px hsl(var(--foreground-hsl))',
-          }}
-        >INITIALIZING TOD...</div>
+        <ParallaxBackground />
+        <div className="animate-pulse text-2xl font-orbitron holographic-text text-center">INITIALIZING TOD...</div>
       </main>
     );
   }
@@ -184,45 +189,31 @@ export default function HomePage() {
   if (isAppLoading && onboardingStep !== 'tod') {
     return (
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6">
-        <ParallaxBackground parallaxOffset={0} />
+        <ParallaxBackground />
         <div className="animate-pulse text-2xl font-orbitron holographic-text text-center">LOADING INTERFACE...</div>
-        {/* TODWindow for loading screen (general use) */}
-        <TODWindow
-          key={`loading-tod-${currentTheme}-${themeVersion}-${isTODWindowOpen}`}
-          isOpen={isTODWindowOpen && !todInventoryContext} // Only open if NOT an inventory TOD
-          onClose={closeTODWindow}
-          title={todWindowTitle}
-          explicitTheme={currentTheme}
-          themeVersion={themeVersion}
-          showCloseButton={todWindowOptions.showCloseButton}
-        >
-          {todWindowContent}
+         <TODWindow
+            key={`${faction}-${themeVersion}-loading-${isTODWindowOpen}`}
+            isOpen={isTODWindowOpen && !todInventoryContext}
+            onClose={closeTODWindow}
+            title={todWindowTitle}
+            explicitTheme={currentTheme}
+            themeVersion={themeVersion}
+            showCloseButton={todWindowOptions.showCloseButton}
+          >
+            {todWindowContent}
         </TODWindow>
       </main>
     );
   }
 
   if (onboardingStep !== 'tod') {
-    const renderOnboarding = () => {
-      switch (onboardingStep) {
-        case 'welcome':
-          return <WelcomeScreen />;
-        case 'factionChoice':
-          return <FactionChoiceScreen />;
-        case 'fingerprint':
-          return <FingerprintScannerScreen />;
-        default:
-          return <div className="animate-pulse text-2xl font-orbitron holographic-text text-center">LOADING NEXT STEP...</div>;
-      }
-    };
     return (
       <main className="relative flex flex-col items-center justify-start min-h-screen bg-background text-foreground p-4 sm:p-6 overflow-y-auto">
-        <ParallaxBackground parallaxOffset={0} />
+        <ParallaxBackground />
         {renderOnboarding()}
-        {/* TODWindow for onboarding screens (general use) */}
         <TODWindow
-          key={`onboarding-tod-${currentTheme}-${themeVersion}-${onboardingStep}-${isTODWindowOpen}`}
-          isOpen={isTODWindowOpen && !todInventoryContext} // Only open if NOT an inventory TOD
+          key={`${faction}-${themeVersion}-onboarding-${isTODWindowOpen}-${onboardingStep}`}
+          isOpen={isTODWindowOpen && !todInventoryContext}
           onClose={closeTODWindow}
           title={todWindowTitle}
           explicitTheme={currentTheme}
@@ -235,11 +226,9 @@ export default function HomePage() {
     );
   }
 
-  // Main TOD view
   return (
     <main className="relative h-screen w-screen overflow-hidden">
-      <ParallaxBackground parallaxOffset={parallaxOffset} />
-
+      <ParallaxBackground />
       <div
         className="parallax-layer z-[5] opacity-20"
         style={{
@@ -260,19 +249,13 @@ export default function HomePage() {
             )
           `
         }}
-      >
-      </div>
-
-      {/* Spy Shop Overlay - NEW! */}
+      />
       {isSpyShopActive && (
         <div
-          className="fixed inset-0 z-[9998] transition-colors duration-200 ease-in-out" // Use transition-colors
-          style={{
-            backgroundColor: `hsl(var(--primary-hsl) / 0.5)`, // Use a semi-transparent primary color
-          }}
+          className="fixed inset-0 z-[9998] transition-colors duration-200 ease-in-out"
+          style={{ backgroundColor: `hsl(var(--primary-hsl) / 0.5)` }}
         />
       )}
-
       {playBootAnimation && (
         <div
           ref={todContainerRef}
@@ -280,9 +263,7 @@ export default function HomePage() {
             "tod-scroll-container absolute inset-0 z-10 scrollbar-hide",
             "animate-slide-up-from-bottom"
           )}
-          style={{
-            WebkitOverflowScrolling: 'touch',
-          }}
+          style={{ WebkitOverflowScrolling: 'touch' }}
         >
           {sectionComponents.map((SectionComponentInstance, index) => (
             <div
@@ -294,12 +275,9 @@ export default function HomePage() {
           ))}
         </div>
       )}
-
-      {/* Main TOD Window for general use (e.g., messages, notifications) */}
-      {/* It will NOT open if an Inventory TOD is active */}
       <TODWindow
-        key={`main-tod-${currentTheme}-${themeVersion}-${isTODWindowOpen}`}
-        isOpen={isTODWindowOpen && !todInventoryContext} // Only open if not an inventory TOD
+        key={`${faction}-${themeVersion}-tod-${isTODWindowOpen}`}
+        isOpen={isTODWindowOpen && !todInventoryContext}
         onClose={closeTODWindow}
         title={todWindowTitle}
         explicitTheme={currentTheme}
@@ -308,24 +286,21 @@ export default function HomePage() {
       >
         {todWindowContent}
       </TODWindow>
-
-      {/* Specialized TOD Window for Inventory Browse - NEW! */}
-      {/* This will open when todInventoryContext is set, overriding the general TODWindow */}
       {todInventoryContext && (
         <TODWindow
-          key={`inventory-tod-${currentTheme}-${themeVersion}-${todInventoryContext.category}`}
-          isOpen={!!todInventoryContext} // Explicitly true if context exists
-          onClose={closeInventoryTOD} // Use the new closeInventoryTOD function
+          key={`${faction}-${themeVersion}-inventory-${todInventoryContext.category}-${isTODWindowOpen}`}
+          isOpen={!!todInventoryContext}
+          onClose={closeInventoryTOD}
           title={todInventoryContext.title}
           explicitTheme={currentTheme}
           themeVersion={themeVersion}
-          showCloseButton={true} // Inventory browser usually has a close button
+          showCloseButton={true}
         >
-          {/* Content for this window: Needs to be a component that browses inventory */}
-          {/* We're using the placeholder component defined at the top of this file */}
           <InventoryBrowserInTOD context={todInventoryContext} />
         </TODWindow>
       )}
     </main>
   );
 }
+
+    

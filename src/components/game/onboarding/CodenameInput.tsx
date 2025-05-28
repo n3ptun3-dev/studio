@@ -18,23 +18,26 @@ export function CodenameInput({ explicitTheme }: CodenameInputProps) {
     setOnboardingStep,
     closeTODWindow,
     faction,
-    onboardingStep
+    onboardingStep // For logging or more complex conditional logic if needed
   } = useAppContext();
   const [codename, setCodename] = useState('');
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (faction === 'Observer') {
-      toast({ title: "Observation Protocol", description: "Observers do not set codenames. System engaging.", variant: "default" });
-      closeTODWindow();
-      if (onboardingStep !== 'tod' && onboardingStep !== 'fingerprint') {
-        setOnboardingStep('fingerprint');
-      }
-    }
-  }, [faction, closeTODWindow, setOnboardingStep, toast, onboardingStep]);
+  console.log('[CodenameInput] Rendering. Faction from context:', faction, "Onboarding step:", onboardingStep, "Explicit theme:", explicitTheme);
 
-  const handleSubmit = () => {
+  useEffect(() => {
+    // This safeguard is important if an Observer somehow gets here.
+    // It should ideally be prevented by AppContext.handleAuthentication setting step to 'tod' for Observers.
+    if (faction === 'Observer' && onboardingStep === 'codenameInput') { // Check step too
+      toast({ title: "Observation Protocol", description: "Observers should not set codenames.", variant: "default" });
+      closeTODWindow();
+      // Let AppContext or HomePage handle the next step for an Observer if this state is reached.
+      // Typically, an Observer would already be at 'tod' step.
+    }
+  }, [faction, onboardingStep, setOnboardingStep, closeTODWindow, toast]);
+
+  const handleSubmit = async () => {
     setError(null);
     const trimmedCodename = codename.trim();
 
@@ -46,28 +49,29 @@ export function CodenameInput({ explicitTheme }: CodenameInputProps) {
       setError("Codename must be between 3 and 20 characters.");
       return;
     }
-    if (!/^[a-zA-Z0-9]+(?: [a-zA-Z0-9]+)*$/.test(trimmedCodename)) { // Allows single spaces between words
+    if (!/^[a-zA-Z0-9]+(?: [a-zA-Z0-9]+)*$/.test(trimmedCodename)) {
        setError("Codename can only contain letters, numbers, and single spaces between words.");
        return;
     }
 
-    setPlayerSpyName(trimmedCodename);
+    await setPlayerSpyName(trimmedCodename); // Ensure this async operation completes
     toast({
         title: "Codename Assigned",
-        description: `Welcome, Agent ${trimmedCodename}. Prepare for deployment.`,
+        description: `Welcome, Agent ${trimmedCodename}. Prepare for biometric scan.`,
     });
     closeTODWindow();
-    setOnboardingStep('fingerprint');
+    setOnboardingStep('fingerprint'); // Proceed to fingerprint after codename
   };
 
+  // If faction is Observer and this component somehow renders, return null to show nothing.
+  // The useEffect above should handle closing the window.
   if (faction === 'Observer') {
-    return null; 
+    return null;
   }
 
   return (
     <div className="flex flex-col items-center justify-center p-4 space-y-4 font-rajdhani">
       <p className="text-muted-foreground text-center text-base leading-relaxed mb-2 holographic-text">
-        Agent, your operational codename is critical for field identification.
         Choose wisely; altering it later may have... consequences.
       </p>
 
@@ -96,4 +100,5 @@ export function CodenameInput({ explicitTheme }: CodenameInputProps) {
     </div>
   );
 }
+
     
