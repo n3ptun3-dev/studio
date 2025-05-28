@@ -1,3 +1,4 @@
+
 // src/app/page.tsx
 
 "use client";
@@ -49,13 +50,13 @@ export default function HomePage() {
   const initialScrollSetRef = useRef(false);
   const [playBootAnimation, setPlayBootAnimation] = useState(false);
 
-  console.log('HomePage rendering, isTODWindowOpen:', isTODWindowOpen, "Onboarding step:", onboardingStep);
-  console.log('HomePage rendering. AppContext faction for TODWindow key:', faction);
-  console.log('HomePage rendering. Current ThemeContext theme for TODWindow key:', currentTheme);
-  console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key:', themeVersion);
-  console.log('HomePage rendering. AppContext faction for TODWindow key:', appContext.faction);
-  console.log('HomePage rendering. Current ThemeContext theme for TODWindow key:', currentTheme);
-  console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key:', themeVersion);
+  // console.log('HomePage rendering, isTODWindowOpen:', isTODWindowOpen);
+  // console.log('HomePage rendering. AppContext faction for TODWindow key:', faction);
+  // console.log('HomePage rendering. Current ThemeContext theme for TODWindow key:', currentTheme);
+  // console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key:', themeVersion);
+  // console.log('HomePage rendering. AppContext faction for TODWindow key:', appContext.faction);
+  // console.log('HomePage rendering. Current ThemeContext theme for TODWindow key:', currentTheme);
+  // console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key:', themeVersion);
 
 
   useEffect(() => {
@@ -73,17 +74,17 @@ export default function HomePage() {
     }
   }, [onboardingStep, isClientMounted]);
 
-  useEffect(() => {
-    if (isClientMounted && onboardingStep === 'codenameInput' && !isTODWindowOpen) {
-      const factionTheme = appContext.faction === 'Cyphers' ? 'cyphers' : appContext.faction === 'Shadows' ? 'shadows' : 'terminal-green';
-      console.log(`[HomePage] onboardingStep is codenameInput, opening TODWindow. Faction for theme: ${appContext.faction}`);
-      openTODWindow(
-        "Agent Codename",
-        <CodenameInput explicitTheme={factionTheme} />,
-        { showCloseButton: false }
-      );
-    }
-  }, [isClientMounted, onboardingStep, openTODWindow, isTODWindowOpen, appContext.faction]);
+  // useEffect(() => {
+  //   if (isClientMounted && onboardingStep === 'codenameInput' && !isTODWindowOpen) {
+  //     const factionTheme = appContext.faction === 'Cyphers' ? 'cyphers' : appContext.faction === 'Shadows' ? 'shadows' : 'terminal-green';
+  //     console.log(`[HomePage] onboardingStep is codenameInput, opening TODWindow. Faction for theme: ${appContext.faction}`);
+  //     openTODWindow(
+  //       "Agent Codename",
+  //       <CodenameInput explicitTheme={factionTheme} />,
+  //       { showCloseButton: false }
+  //     );
+  //   }
+  // }, [isClientMounted, onboardingStep, openTODWindow, isTODWindowOpen, appContext.faction]);
 
   useEffect(() => {
     if (onboardingStep !== 'tod' || !isClientMounted || isAppLoading || isTODWindowOpen || !playBootAnimation) return;
@@ -106,35 +107,15 @@ export default function HomePage() {
       setIsLoading(false);
     } else if (playerSpyName) { // Existing, named player
       // AI Welcome Message Disabled
-      console.log("AI Welcome message generation DISABLED. Using placeholder.");
+      // console.log("AI Welcome message generation DISABLED. Using placeholder.");
       addMessage({
         text: `Agent ${playerSpyName}, welcome back. Standard operational parameters active. HQ awaits your report.`,
         type: 'hq',
         isPinned: true,
       });
       setIsLoading(false);
-      /*
-      // Original AI Welcome Message Logic (Now Disabled)
-      setIsLoading(true);
-      const welcomeInput: WelcomeMessageInput = {
-        playerName: playerSpyName,
-        faction: faction,
-        elintReserves: playerStats.elintReserves,
-        networkActivity: "Medium", 
-        vaultDefenses: "Holding",
-      };
-      generateWelcomeMessage(welcomeInput)
-        .then(response => {
-          addMessage({ text: response.message, type: 'hq', isPinned: true });
-        })
-        .catch(error => {
-          console.error("Failed to generate welcome message:", error);
-          addMessage({ text: "HQ Comms Error. Standard protocols active.", type: 'error', isPinned: true });
-        })
-        .finally(() => setIsLoading(false));
-      */
     } else {
-      console.log("Welcome message generation skipped: conditions not fully met (e.g. no playerSpyName).");
+      // console.log("Welcome message generation skipped: conditions not fully met (e.g. no playerSpyName).");
       setIsLoading(false);
     }
   }, [onboardingStep, isClientMounted, playerSpyName, faction, playerStats, addMessage, setIsLoading, isAppLoading, isTODWindowOpen, playBootAnimation]);
@@ -156,16 +137,20 @@ export default function HomePage() {
       if (clientWidth === 0) return;
       setParallaxOffset(currentScrollLeft);
 
-      const totalContentWidthForLooping = (sectionComponents.length - 2) * clientWidth;
-      const maxPossibleScrollLeft = (sectionComponents.length - 1) * clientWidth;
+      const totalContentWidthForLooping = (sectionComponents.length - 2) * clientWidth; // Width of the 5 actual sections
+      const maxPossibleScrollLeft = (sectionComponents.length - 1) * clientWidth; // Total scrollable width including the end clone
 
-      if (currentScrollLeft >= maxPossibleScrollLeft - 5) {
+      // console.log(`Scroll: ${currentScrollLeft}, ClientWidth: ${clientWidth}, TotalLoopWidth: ${totalContentWidthForLooping}, MaxScroll: ${maxPossibleScrollLeft}`);
+
+      if (currentScrollLeft >= maxPossibleScrollLeft - 5) { // Near the very end (at the start of the end clone)
+        // console.log("Jump to start loop");
         todContainerRef.current.scrollLeft = clientWidth + (currentScrollLeft - maxPossibleScrollLeft);
-      } else if (currentScrollLeft <= 5) {
+      } else if (currentScrollLeft <= 5) { // Near the very beginning (at the end of the start clone)
+        // console.log("Jump to end loop");
         todContainerRef.current.scrollLeft = totalContentWidthForLooping + currentScrollLeft;
       }
     }
-  }, [sectionComponents.length]);
+  }, [sectionComponents.length]); // parallaxOffset removed as it was causing re-creation of handleScroll
 
   useEffect(() => {
     const container = todContainerRef.current;
@@ -173,15 +158,18 @@ export default function HomePage() {
       const setInitialScroll = () => {
         if (todContainerRef.current && todContainerRef.current.clientWidth > 0 && !initialScrollSetRef.current) {
           const sectionWidth = todContainerRef.current.clientWidth;
-          const targetSectionIndex = 1; 
+          const targetSectionIndex = 1; // AgentSection
           const initialScrollPosition = sectionWidth * targetSectionIndex;
           todContainerRef.current.scrollLeft = initialScrollPosition;
-          setParallaxOffset(initialScrollPosition);
+          setParallaxOffset(initialScrollPosition); // Initialize parallaxOffset
           initialScrollSetRef.current = true;
-          console.log(`[HomePage] Initial scroll set to: ${initialScrollPosition} for section index ${targetSectionIndex}`);
+          console.log(`[HomePage] Initial scroll set to: ${initialScrollPosition} for section index ${targetSectionIndex}. Container width: ${sectionWidth}`);
         }
       };
+      
+      // Use requestAnimationFrame to ensure layout is stable before scrolling
       requestAnimationFrame(setInitialScroll);
+
       container.addEventListener('scroll', handleScroll, { passive: true });
       return () => {
         if (container) {
@@ -189,18 +177,21 @@ export default function HomePage() {
         }
       };
     }
-  }, [onboardingStep, isAppLoading, isClientMounted, playBootAnimation, handleScroll]);
+  }, [onboardingStep, isAppLoading, isClientMounted, playBootAnimation, handleScroll]); // handleScroll added as dependency
 
   const renderOnboarding = () => {
+    // console.log(`[HomePage] renderOnboarding called, current step: ${onboardingStep}`);
     switch (onboardingStep) {
       case 'welcome':
         return <WelcomeScreen />;
       case 'factionChoice':
         return <FactionChoiceScreen />;
+      // case 'codenameInput': // This is handled by TODWindow opened from AppContext/HomePage useEffect
+      //   return <div className="animate-pulse text-2xl font-orbitron holographic-text text-center">Awaiting Codename...</div>;
       case 'fingerprint':
         return <FingerprintScannerScreen />;
       default: 
-        return <div className="animate-pulse text-2xl font-orbitron holographic-text text-center">LOADING NEXT STEP...</div>;
+        return <div className="animate-pulse text-2xl font-orbitron holographic-text text-center">LOADING NEXT STEP... ({onboardingStep})</div>;
     }
   };
 
@@ -208,7 +199,7 @@ export default function HomePage() {
     return (
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6">
         <ParallaxBackground />
-        <div className="animate-pulse text-2xl font-orbitron holographic-text text-center">INITIALIZING TOD...</div>
+        <div className="text-2xl font-orbitron holographic-text text-center animate-pulse">INITIALIZING TOD...</div>
       </main>
     );
   }
@@ -219,7 +210,7 @@ export default function HomePage() {
         <ParallaxBackground />
         <div className="animate-pulse text-2xl font-orbitron holographic-text text-center">LOADING INTERFACE...</div>
          <TODWindow
-            key={`${appContext.faction}-${themeVersion}-${isTODWindowOpen}-loading`}
+            key={`${faction}-${themeVersion}-${isTODWindowOpen}-loading`}
             isOpen={isTODWindowOpen && !todInventoryContext}
             onClose={closeTODWindow}
             title={todWindowTitle}
@@ -233,13 +224,17 @@ export default function HomePage() {
     );
   }
 
+  // console.log(`HomePage rendering. AppContext faction for TODWindow key: ${faction}`);
+  // console.log(`HomePage rendering. Current ThemeContext theme for TODWindow key: ${currentTheme}`);
+  // console.log(`HomePage rendering. Current ThemeContext themeVersion for TODWindow key: ${themeVersion}`);
+
   if (onboardingStep !== 'tod') {
     return (
       <main className="relative flex flex-col items-center justify-start min-h-screen bg-background text-foreground p-4 sm:p-6 overflow-y-auto">
         <ParallaxBackground />
         {renderOnboarding()}
         <TODWindow
-          key={`${appContext.faction}-${themeVersion}-onboarding-${isTODWindowOpen}-${onboardingStep}`}
+          key={`${faction}-${themeVersion}-onboarding-${isTODWindowOpen}-${onboardingStep}`}
           isOpen={isTODWindowOpen && !todInventoryContext}
           onClose={closeTODWindow}
           title={todWindowTitle}
@@ -253,14 +248,21 @@ export default function HomePage() {
     );
   }
 
+  // console.log('HomePage rendering. AppContext faction for TODWindow key (TOD view):', faction);
+  // console.log('HomePage rendering. Current ThemeContext theme for TODWindow key (TOD view):', currentTheme);
+  // console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key (TOD view):', themeVersion);
+  // console.log('HomePage rendering. TODWindow props: explicitTheme=', currentTheme, 'key=', `${faction}-${themeVersion}-tod-${isTODWindowOpen}-${todInventoryContext ? 'inv-open' : 'inv-closed'}`);
+
+
   return (
-    <main className="relative h-screen w-screen overflow-hidden">
+    <main className="relative h-screen w-screen overflow-hidden"> 
       <ParallaxBackground />
-      <div
+      
+      <div 
         className="parallax-layer z-[5] opacity-30"
         style={{
           transform: `translateX(-${parallaxOffset * 0.5}px)`,
-          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`,
+          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`, 
           backgroundImage: `
             repeating-linear-gradient(
               45deg,
@@ -306,12 +308,12 @@ export default function HomePage() {
       )}
       
       <TODWindow
-        key={`${appContext.faction}-${themeVersion}-tod-${isTODWindowOpen}-${todInventoryContext ? 'inv-open' : 'inv-closed'}`}
+        key={`${faction}-${themeVersion}-tod-${isTODWindowOpen}-${todInventoryContext ? 'inv-open' : 'inv-closed'}`}
         isOpen={isTODWindowOpen && !todInventoryContext}
         onClose={closeTODWindow}
         title={todWindowTitle}
         explicitTheme={currentTheme}
-        themeVersion={themeVersion}
+        themeVersion={themeVersion} // Pass themeVersion here
         showCloseButton={todWindowOptions.showCloseButton !== undefined ? todWindowOptions.showCloseButton : true}
       >
         {todWindowContent}
@@ -319,12 +321,12 @@ export default function HomePage() {
 
       {todInventoryContext && (
         <TODWindow
-          key={`${appContext.faction}-${themeVersion}-inventory-${todInventoryContext.category}-${isTODWindowOpen}`}
+          key={`${faction}-${themeVersion}-inventory-${todInventoryContext.category}-${isTODWindowOpen}`}
           isOpen={!!todInventoryContext}
           onClose={closeInventoryTOD}
           title={todInventoryContext.title}
-          explicitTheme={currentTheme}
-          themeVersion={themeVersion}
+          explicitTheme={currentTheme} // Pass current theme
+          themeVersion={themeVersion} // Pass themeVersion
           showCloseButton={true}
         >
           <InventoryBrowserInTOD context={todInventoryContext} />
@@ -339,9 +341,8 @@ export default function HomePage() {
 // If PlayerStats is defined elsewhere globally, ensure this matches or use that definition.
 const DEFAULT_PLAYER_STATS_FOR_NEW_PLAYER = {
   xp: 0,
-  level: 0, // Or 1 if players start at level 1
+  level: 1, // Start at level 1
   elintReserves: 500, // Example starting ELINT
-  // ... other stats initialized to 0 or default values
   elintTransferred: 0,
   successfulVaultInfiltrations: 0,
   successfulLockInfiltrations: 0,
@@ -356,4 +357,4 @@ const DEFAULT_PLAYER_STATS_FOR_NEW_PLAYER = {
   elintSpentSpyShop: 0,
   hasPlacedFirstLock: false,
 };
-
+      
