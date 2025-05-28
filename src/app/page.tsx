@@ -16,9 +16,9 @@ import { VaultSection } from '@/components/game/tod/VaultSection';
 import { ScannerSection } from '@/components/game/tod/ScannerSection';
 import { TODWindow } from '@/components/game/shared/TODWindow';
 import { InventoryBrowserInTOD } from '@/components/game/inventory/InventoryBrowserInTOD';
-import { generateWelcomeMessage, type WelcomeMessageInput } from '@/ai/flows/welcome-message';
+// import { generateWelcomeMessage, type WelcomeMessageInput } from '@/ai/flows/welcome-message'; // AI Disabled
 import { cn } from '@/lib/utils';
-import { CodenameInput } from '@/components/game/onboarding/CodenameInput'; // Ensure this is imported
+import { CodenameInput } from '@/components/game/onboarding/CodenameInput';
 
 export default function HomePage() {
   const appContext = useAppContext();
@@ -38,7 +38,7 @@ export default function HomePage() {
     isSpyShopActive,
     todInventoryContext,
     closeInventoryTOD,
-    openTODWindow, // For CodenameInput flow
+    openTODWindow,
   } = appContext;
 
   const { theme: currentTheme, themeVersion } = useTheme();
@@ -53,6 +53,9 @@ export default function HomePage() {
   console.log('HomePage rendering. AppContext faction for TODWindow key:', faction);
   console.log('HomePage rendering. Current ThemeContext theme for TODWindow key:', currentTheme);
   console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key:', themeVersion);
+  console.log('HomePage rendering. AppContext faction for TODWindow key:', appContext.faction);
+  console.log('HomePage rendering. Current ThemeContext theme for TODWindow key:', currentTheme);
+  console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key:', themeVersion);
 
 
   useEffect(() => {
@@ -63,47 +66,38 @@ export default function HomePage() {
     if (onboardingStep === 'tod' && isClientMounted) {
       const timer = setTimeout(() => {
         setPlayBootAnimation(true);
-      }, 50); // Short delay to allow initial render
+      }, 50);
       return () => clearTimeout(timer);
     } else if (onboardingStep !== 'tod') {
-      setPlayBootAnimation(false); // Reset if not in TOD
+      setPlayBootAnimation(false);
     }
   }, [onboardingStep, isClientMounted]);
 
-
-  // Effect to open CodenameInput window when onboardingStep dictates
   useEffect(() => {
     if (isClientMounted && onboardingStep === 'codenameInput' && !isTODWindowOpen) {
-      const factionTheme = faction === 'Cyphers' ? 'cyphers' : faction === 'Shadows' ? 'shadows' : 'terminal-green';
-      console.log(`[HomePage] onboardingStep is codenameInput, opening TODWindow. Faction for theme: ${faction}`);
+      const factionTheme = appContext.faction === 'Cyphers' ? 'cyphers' : appContext.faction === 'Shadows' ? 'shadows' : 'terminal-green';
+      console.log(`[HomePage] onboardingStep is codenameInput, opening TODWindow. Faction for theme: ${appContext.faction}`);
       openTODWindow(
         "Agent Codename",
         <CodenameInput explicitTheme={factionTheme} />,
         { showCloseButton: false }
       );
     }
-  }, [isClientMounted, onboardingStep, openTODWindow, isTODWindowOpen, faction]);
-
+  }, [isClientMounted, onboardingStep, openTODWindow, isTODWindowOpen, appContext.faction]);
 
   useEffect(() => {
     if (onboardingStep !== 'tod' || !isClientMounted || isAppLoading || isTODWindowOpen || !playBootAnimation) return;
-    if (faction !== 'Observer' && !playerSpyName) { // For non-observers, require spyName
-        console.log("Welcome message generation skipped: playerSpyName not set for non-Observer.");
-        return;
-    }
-
-
-    setIsLoading(true);
-    const isNewUser = !playerStats.xp && !playerStats.elintReserves && !playerStats.level;
+    
+    const isNewPlayer = !playerStats.xp && playerStats.elintReserves <= DEFAULT_PLAYER_STATS_FOR_NEW_PLAYER.elintReserves && !playerStats.level;
 
     if (faction === 'Observer') {
-        addMessage({
-            text: "Observation deck online. Monitoring network activity.",
-            type: 'system',
-            isPinned: true,
-        });
-        setIsLoading(false);
-    } else if (isNewUser && playerSpyName) { // Ensure spyName is set for new user welcome
+      addMessage({
+        text: "Observation deck online. Monitoring network activity.",
+        type: 'system',
+        isPinned: true,
+      });
+      setIsLoading(false);
+    } else if (isNewPlayer && playerSpyName) {
       addMessage({
         text: `Welcome, Agent ${playerSpyName}. HQ guidance protocol initiated. Familiarize yourself with the Tactical Overlay Device. Your first objective: explore your Agent PAD.`,
         type: 'hq',
@@ -111,12 +105,23 @@ export default function HomePage() {
       });
       setIsLoading(false);
     } else if (playerSpyName) { // Existing, named player
+      // AI Welcome Message Disabled
+      console.log("AI Welcome message generation DISABLED. Using placeholder.");
+      addMessage({
+        text: `Agent ${playerSpyName}, welcome back. Standard operational parameters active. HQ awaits your report.`,
+        type: 'hq',
+        isPinned: true,
+      });
+      setIsLoading(false);
+      /*
+      // Original AI Welcome Message Logic (Now Disabled)
+      setIsLoading(true);
       const welcomeInput: WelcomeMessageInput = {
         playerName: playerSpyName,
         faction: faction,
         elintReserves: playerStats.elintReserves,
-        networkActivity: "Medium", // Placeholder
-        vaultDefenses: "Holding",  // Placeholder
+        networkActivity: "Medium", 
+        vaultDefenses: "Holding",
       };
       generateWelcomeMessage(welcomeInput)
         .then(response => {
@@ -127,10 +132,10 @@ export default function HomePage() {
           addMessage({ text: "HQ Comms Error. Standard protocols active.", type: 'error', isPinned: true });
         })
         .finally(() => setIsLoading(false));
+      */
     } else {
-        // Should not happen if logic above is correct, but as a fallback:
-        console.log("Welcome message generation skipped: conditions not fully met.");
-        setIsLoading(false);
+      console.log("Welcome message generation skipped: conditions not fully met (e.g. no playerSpyName).");
+      setIsLoading(false);
     }
   }, [onboardingStep, isClientMounted, playerSpyName, faction, playerStats, addMessage, setIsLoading, isAppLoading, isTODWindowOpen, playBootAnimation]);
 
@@ -148,19 +153,19 @@ export default function HomePage() {
     if (todContainerRef.current) {
       const currentScrollLeft = todContainerRef.current.scrollLeft;
       const clientWidth = todContainerRef.current.clientWidth;
-      if (clientWidth === 0) return; // Avoid division by zero if not yet rendered
+      if (clientWidth === 0) return;
       setParallaxOffset(currentScrollLeft);
 
       const totalContentWidthForLooping = (sectionComponents.length - 2) * clientWidth;
       const maxPossibleScrollLeft = (sectionComponents.length - 1) * clientWidth;
 
-      if (currentScrollLeft >= maxPossibleScrollLeft - 5) { // Check if near the end
+      if (currentScrollLeft >= maxPossibleScrollLeft - 5) {
         todContainerRef.current.scrollLeft = clientWidth + (currentScrollLeft - maxPossibleScrollLeft);
-      } else if (currentScrollLeft <= 5) { // Check if near the beginning
+      } else if (currentScrollLeft <= 5) {
         todContainerRef.current.scrollLeft = totalContentWidthForLooping + currentScrollLeft;
       }
     }
-  }, [sectionComponents.length]); // Only depends on sectionComponents.length
+  }, [sectionComponents.length]);
 
   useEffect(() => {
     const container = todContainerRef.current;
@@ -168,15 +173,15 @@ export default function HomePage() {
       const setInitialScroll = () => {
         if (todContainerRef.current && todContainerRef.current.clientWidth > 0 && !initialScrollSetRef.current) {
           const sectionWidth = todContainerRef.current.clientWidth;
-          const targetSectionIndex = 1; // AgentSection is at index 1 (0-indexed)
+          const targetSectionIndex = 1; 
           const initialScrollPosition = sectionWidth * targetSectionIndex;
           todContainerRef.current.scrollLeft = initialScrollPosition;
-          setParallaxOffset(initialScrollPosition); // Initialize parallaxOffset
+          setParallaxOffset(initialScrollPosition);
           initialScrollSetRef.current = true;
           console.log(`[HomePage] Initial scroll set to: ${initialScrollPosition} for section index ${targetSectionIndex}`);
         }
       };
-      requestAnimationFrame(setInitialScroll); // Use rAF for layout-dependent operations
+      requestAnimationFrame(setInitialScroll);
       container.addEventListener('scroll', handleScroll, { passive: true });
       return () => {
         if (container) {
@@ -192,10 +197,9 @@ export default function HomePage() {
         return <WelcomeScreen />;
       case 'factionChoice':
         return <FactionChoiceScreen />;
-      // CodenameInput is now handled by TODWindow opened from AppContext/HomePage useEffect
       case 'fingerprint':
         return <FingerprintScannerScreen />;
-      default: // Handles 'authPrompt' or 'codenameInput' if they are intermediate steps before window opens
+      default: 
         return <div className="animate-pulse text-2xl font-orbitron holographic-text text-center">LOADING NEXT STEP...</div>;
     }
   };
@@ -215,12 +219,12 @@ export default function HomePage() {
         <ParallaxBackground />
         <div className="animate-pulse text-2xl font-orbitron holographic-text text-center">LOADING INTERFACE...</div>
          <TODWindow
-            key={`${faction}-${themeVersion}-loading-${isTODWindowOpen}`} // Key ensures re-render on theme/state change
-            isOpen={isTODWindowOpen && !todInventoryContext} // Only general TOD window, not inventory
+            key={`${appContext.faction}-${themeVersion}-${isTODWindowOpen}-loading`}
+            isOpen={isTODWindowOpen && !todInventoryContext}
             onClose={closeTODWindow}
             title={todWindowTitle}
-            explicitTheme={currentTheme} // Pass current theme from ThemeContext
-            themeVersion={themeVersion}   // Pass theme version
+            explicitTheme={currentTheme}
+            themeVersion={themeVersion}
             showCloseButton={todWindowOptions.showCloseButton}
           >
             {todWindowContent}
@@ -235,7 +239,7 @@ export default function HomePage() {
         <ParallaxBackground />
         {renderOnboarding()}
         <TODWindow
-          key={`${faction}-${themeVersion}-onboarding-${isTODWindowOpen}-${onboardingStep}`}
+          key={`${appContext.faction}-${themeVersion}-onboarding-${isTODWindowOpen}-${onboardingStep}`}
           isOpen={isTODWindowOpen && !todInventoryContext}
           onClose={closeTODWindow}
           title={todWindowTitle}
@@ -249,16 +253,14 @@ export default function HomePage() {
     );
   }
 
-  // Main TOD View
   return (
     <main className="relative h-screen w-screen overflow-hidden">
       <ParallaxBackground />
-      {/* Parallax grid layer */}
       <div
         className="parallax-layer z-[5] opacity-30"
         style={{
           transform: `translateX(-${parallaxOffset * 0.5}px)`,
-          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`, // Ensure width covers parallax movement
+          width: `${sectionComponents.length * 100 * 0.5 + 100}vw`,
           backgroundImage: `
             repeating-linear-gradient(
               45deg,
@@ -279,7 +281,7 @@ export default function HomePage() {
       {isSpyShopActive && (
         <div
           className="fixed inset-0 z-[9998] transition-colors duration-200 ease-in-out"
-          style={{ backgroundColor: `hsl(var(--primary-hsl) / 0.5)` }} // Example spy shop active overlay
+          style={{ backgroundColor: `hsl(var(--primary-hsl) / 0.5)` }}
         />
       )}
 
@@ -288,13 +290,13 @@ export default function HomePage() {
           ref={todContainerRef}
           className={cn(
             "tod-scroll-container absolute inset-0 z-10 scrollbar-hide",
-            "animate-slide-up-from-bottom" // Apply boot animation
+            "animate-slide-up-from-bottom"
           )}
-          style={{ WebkitOverflowScrolling: 'touch' }} // For smoother scrolling on iOS
+          style={{ WebkitOverflowScrolling: 'touch' }}
         >
           {sectionComponents.map((SectionComponentInstance, index) => (
             <div
-              key={SectionComponentInstance.key || `tod-section-${index}`} // Ensure unique key for each section instance
+              key={SectionComponentInstance.key || `tod-section-${index}`}
               className="tod-section"
             >
               {SectionComponentInstance}
@@ -303,9 +305,8 @@ export default function HomePage() {
         </div>
       )}
       
-      {/* General Purpose TOD Window */}
       <TODWindow
-        key={`${faction}-${themeVersion}-tod-${isTODWindowOpen}`}
+        key={`${appContext.faction}-${themeVersion}-tod-${isTODWindowOpen}-${todInventoryContext ? 'inv-open' : 'inv-closed'}`}
         isOpen={isTODWindowOpen && !todInventoryContext}
         onClose={closeTODWindow}
         title={todWindowTitle}
@@ -316,16 +317,15 @@ export default function HomePage() {
         {todWindowContent}
       </TODWindow>
 
-      {/* Inventory Browser TOD Window */}
       {todInventoryContext && (
         <TODWindow
-          key={`${faction}-${themeVersion}-inventory-${todInventoryContext.category}-${isTODWindowOpen}`}
-          isOpen={!!todInventoryContext} // Controlled by todInventoryContext presence
+          key={`${appContext.faction}-${themeVersion}-inventory-${todInventoryContext.category}-${isTODWindowOpen}`}
+          isOpen={!!todInventoryContext}
           onClose={closeInventoryTOD}
           title={todInventoryContext.title}
           explicitTheme={currentTheme}
           themeVersion={themeVersion}
-          showCloseButton={true} // Inventory browser should always have a close button
+          showCloseButton={true}
         >
           <InventoryBrowserInTOD context={todInventoryContext} />
         </TODWindow>
@@ -333,3 +333,27 @@ export default function HomePage() {
     </main>
   );
 }
+
+
+// Default stats for a new player, ensures `elintReserves` has a defined value for comparison
+// If PlayerStats is defined elsewhere globally, ensure this matches or use that definition.
+const DEFAULT_PLAYER_STATS_FOR_NEW_PLAYER = {
+  xp: 0,
+  level: 0, // Or 1 if players start at level 1
+  elintReserves: 500, // Example starting ELINT
+  // ... other stats initialized to 0 or default values
+  elintTransferred: 0,
+  successfulVaultInfiltrations: 0,
+  successfulLockInfiltrations: 0,
+  elintObtainedTotal: 0,
+  elintObtainedCycle: 0,
+  elintLostTotal: 0,
+  elintLostCycle: 0,
+  elintGeneratedTotal: 0,
+  elintGeneratedCycle: 0,
+  elintTransferredToHQCyle: 0,
+  successfulInterferences: 0,
+  elintSpentSpyShop: 0,
+  hasPlacedFirstLock: false,
+};
+
