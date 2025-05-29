@@ -16,6 +16,9 @@ const ITEM_LEVEL_COLORS_CSS_VARS = {
 
 export type ItemLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
+// Define and export ITEM_LEVELS array for easier iteration and use in other components
+export const ITEM_LEVELS: ItemLevel[] = [1, 2, 3, 4, 5, 6, 7, 8];
+
 export interface GameItemBase {
   id: string;
   name: string;
@@ -24,20 +27,20 @@ export interface GameItemBase {
   cost: number; // ELINT cost
   scarcity: 'Common' | 'Uncommon' | 'Rare' | 'Very Rare' | 'Super Rare' | 'Scarce';
   category: ItemCategory;
-  imageSrc?: string; // URL for item image
+  imageSrc?: string; // URL for item image (for detail view)
   colorVar: keyof typeof ITEM_LEVEL_COLORS_CSS_VARS; // To link to CSS variable for color
   dataAiHint?: string; // Hint for AI to replace placeholder images
 }
 
 // Categories from the prompt
-export type ItemCategory =
-  'Vault Hardware' |
-  'Lock Fortifiers' |
-  'Entry Tools' |
-  'Infiltration Gear' |
-  'Nexus Upgrades' |
-  'Assault Tech' |
-  'Aesthetic Schemes';
+export type ItemCategory = 
+  | 'Vault Hardware' 
+  | 'Lock Fortifiers' 
+  | 'Entry Tools' 
+  | 'Infiltration Gear' 
+  | 'Nexus Upgrades' 
+  | 'Assault Tech' 
+  | 'Aesthetic Schemes';
 
 
 // Helper function to calculate scaled values based on level
@@ -122,6 +125,33 @@ export interface AestheticSchemeItem extends GameItemBase {
   category: 'Aesthetic Schemes';
   themeKey: string; // e.g., 'deep-ocean-dive', maps to ThemeContext Theme type and CSS class
 }
+
+// --- Types for Shop Categories and Item Display ---
+
+export interface ItemTile {
+  id: string; // Unique ID for the tile, e.g., 'std_cypher_lock_base'
+  name: string; // Base name of the item, e.g., 'Standard Cypher Lock'
+  tileImageSrc?: string; // Image for the grid tile
+  category: ItemCategory; // The category this item belongs to
+  // A function to get the specific item data for a given level
+  getItemLevelData: (level: ItemLevel) => GameItemBase | undefined;
+}
+
+export interface ItemSubCategory {
+  name: string; // Name of the sub-category, e.g., 'All Vault Hardware'
+  items: ItemTile[]; // List of ItemTiles in this sub-category
+}
+
+export interface ProductCategory {
+  id: string; // Unique ID for the category, e.g., 'vaultHardware'
+  name: string; // Display name, e.g., 'Vault Hardware'
+  iconImageSrc: string; // Path to the icon
+  itemSubCategories: ItemSubCategory[];
+}
+
+// SpecificItemData is simply a GameItemBase or one of its extended types
+// The component will then conditionally display properties based on the actual type
+export type SpecificItemData = GameItemBase;
 
 // --- Item Data ---
 
@@ -732,6 +762,142 @@ export const AESTHETIC_SCHEME_ITEMS: AestheticSchemeItem[] = [
   { id: 'theme_shadows', name: 'Team Red', description: 'Standard Shadows operative theme.', level: 1, cost: 0, scarcity: 'Common', category: 'Aesthetic Schemes', themeKey: 'shadows', colorVar: 1, imageSrc: 'https://picsum.photos/seed/themered/100/100', dataAiHint: "red abstract" },
   { id: 'theme_l2_green', name: 'Level 2 (Green)', description: 'A bright, energetic green theme.', level: 2, cost: 500, scarcity: 'Uncommon', category: 'Aesthetic Schemes', themeKey: 'level-2-green', colorVar: 4, imageSrc: 'https://picsum.photos/seed/themegreen/100/100', dataAiHint: "green abstract" },
   // ... Add all schemes from prompt (keeping existing for now)
+];
+
+// Helper function to create an ItemTile from a base item name and its category
+function createItemTile(category: ItemCategory, baseName: string, tileImageSrc: string): ItemTile {
+  return {
+    id: `${baseName.toLowerCase().replace(/\s/g, '_')}_base`, // Unique ID for the base item
+    name: baseName,
+    tileImageSrc: tileImageSrc,
+    category: category,
+    getItemLevelData: (level: ItemLevel): GameItemBase | undefined => {
+      // Find the specific item for this base name and level from the main item lists
+      const itemsInThisCategory = ALL_ITEMS_BY_CATEGORY[category];
+      return itemsInThisCategory.find(item => item.name === baseName && item.level === level);
+    }
+  };
+}
+
+// SHOP_CATEGORIES definition
+export const SHOP_CATEGORIES: ProductCategory[] = [
+  {
+    id: 'vaultHardware',
+    name: 'Vault Hardware',
+    iconImageSrc: 'https://placehold.co/24x24/000000/FFFFFF?text=VH', // Placeholder icon
+    itemSubCategories: [
+      {
+        name: 'All Vault Hardware',
+        items: [
+          createItemTile('Vault Hardware', 'Standard Cypher Lock', 'https://placehold.co/100x100/000000/FFFFFF?text=Cypher'),
+          createItemTile('Vault Hardware', 'Reinforced Deadbolt', 'https://placehold.co/100x100/000000/FFFFFF?text=Deadbolt'),
+          createItemTile('Vault Hardware', 'Quantum Entanglement Lock', 'https://placehold.co/100x100/000000/FFFFFF?text=Quantum'),
+          createItemTile('Vault Hardware', 'Sonic Pulse Lock', 'https://placehold.co/100x100/000000/FFFFFF?text=Sonic'),
+          createItemTile('Vault Hardware', 'Plasma Conduit Lock', 'https://placehold.co/100x100/000000/FFFFFF?text=Plasma'),
+          createItemTile('Vault Hardware', 'Biometric Seal', 'https://placehold.co/100x100/000000/FFFFFF?text=Biometric'),
+          createItemTile('Vault Hardware', 'Neural Network Lock', 'https://placehold.co/100x100/000000/FFFFFF?text=Neural'),
+          createItemTile('Vault Hardware', 'Temporal Flux Lock', 'https://placehold.co/100x100/000000/FFFFFF?text=Temporal'),
+        ]
+      }
+    ]
+  },
+  {
+    id: 'lockFortifiers',
+    name: 'Lock Fortifiers',
+    iconImageSrc: 'https://placehold.co/24x24/000000/FFFFFF?text=LF', // Placeholder icon
+    itemSubCategories: [
+      {
+        name: 'All Lock Fortifiers',
+        items: [
+          createItemTile('Lock Fortifiers', 'Dummy Node', 'https://placehold.co/100x100/000000/FFFFFF?text=Dummy'),
+          createItemTile('Lock Fortifiers', 'Adaptive Shield', 'https://placehold.co/100x100/000000/FFFFFF?text=Shield'),
+          createItemTile('Lock Fortifiers', 'Feedback Loop', 'https://placehold.co/100x100/000000/FFFFFF?text=Feedback'),
+          createItemTile('Lock Fortifiers', 'Sonic Dampener', 'https://placehold.co/100x100/000000/FFFFFF?text=Dampener'),
+          createItemTile('Lock Fortifiers', 'Temporal Anchor', 'https://placehold.co/100x100/000000/FFFFFF?text=Anchor'),
+          createItemTile('Lock Fortifiers', 'Reactive Armor', 'https://placehold.co/100x100/000000/FFFFFF?text=Armor'),
+          createItemTile('Lock Fortifiers', 'Neural Feedback Spore', 'https://placehold.co/100x100/000000/FFFFFF?text=Spore'),
+          createItemTile('Lock Fortifiers', 'Entanglement Field Inhibitor', 'https://placehold.co/100x100/000000/FFFFFF?text=Inhibitor'),
+        ]
+      }
+    ]
+  },
+  {
+    id: 'entryTools',
+    name: 'Entry Tools',
+    iconImageSrc: 'https://placehold.co/24x24/000000/FFFFFF?text=ET', // Placeholder icon
+    itemSubCategories: [
+      {
+        name: 'All Entry Tools',
+        items: [
+          createItemTile('Entry Tools', 'Basic Pick', 'https://placehold.co/100x100/000000/FFFFFF?text=Pick'),
+          createItemTile('Entry Tools', 'Hydraulic Drill', 'https://placehold.co/100x100/000000/FFFFFF?text=Drill'),
+          createItemTile('Entry Tools', 'Code Injector', 'https://placehold.co/100x100/000000/FFFFFF?text=Injector'),
+          createItemTile('Entry Tools', 'Sonic Pulser', 'https://placehold.co/100x100/000000/FFFFFF?text=Pulser'),
+          createItemTile('Entry Tools', 'Bio-Scanner Override', 'https://placehold.co/100x100/000000/FFFFFF?text=BioScanner'),
+          createItemTile('Entry Tools', 'Temporal Dephaser', 'https://placehold.co/100x100/000000/FFFFFF?text=Dephaser'),
+          createItemTile('Entry Tools', 'Quantum Dephaser', 'https://placehold.co/100x100/000000/FFFFFF?text=QuantumDephaser'),
+          createItemTile('Entry Tools', 'Universal Key', 'https://placehold.co/100x100/000000/FFFFFF?text=Key'),
+        ]
+      }
+    ]
+  },
+  {
+    id: 'nexusUpgrades',
+    name: 'Nexus Upgrades',
+    iconImageSrc: 'https://placehold.co/24x24/000000/FFFFFF?text=NU', // Placeholder icon
+    itemSubCategories: [
+      {
+        name: 'All Nexus Upgrades',
+        items: [
+          createItemTile('Nexus Upgrades', 'Security Camera', 'https://placehold.co/100x100/000000/FFFFFF?text=Camera'),
+          createItemTile('Nexus Upgrades', 'Reinforced Foundation', 'https://placehold.co/100x100/000000/FFFFFF?text=Foundation'),
+          createItemTile('Nexus Upgrades', 'Emergency Repair System (ERS)', 'https://placehold.co/100x100/000000/FFFFFF?text=ERS'),
+          createItemTile('Nexus Upgrades', 'Emergency Power Cell (EPC)', 'https://placehold.co/100x100/000000/FFFFFF?text=EPC'),
+        ]
+      }
+    ]
+  },
+  {
+    id: 'assaultTech',
+    name: 'Assault Tech',
+    iconImageSrc: 'https://placehold.co/24x24/000000/FFFFFF?text=AT', // Placeholder icon
+    itemSubCategories: [
+      {
+        name: 'All Assault Tech',
+        items: [
+          createItemTile('Assault Tech', 'System Hack', 'https://placehold.co/100x100/000000/FFFFFF?text=Hack'),
+          createItemTile('Assault Tech', 'Stealth Program', 'https://placehold.co/100x100/000000/FFFFFF?text=Stealth'),
+          createItemTile('Assault Tech', 'Code Scrambler', 'https://placehold.co/100x100/000000/FFFFFF?text=Scrambler'),
+        ]
+      }
+    ]
+  },
+  {
+    id: 'aestheticSchemes',
+    name: 'Aesthetic Schemes',
+    iconImageSrc: 'https://placehold.co/28x28/000000/FFFFFF?text=AS', // Placeholder icon
+    itemSubCategories: [
+      {
+        name: 'All Aesthetic Schemes',
+        items: [
+          createItemTile('Aesthetic Schemes', 'Team Blue', 'https://placehold.co/100x100/000000/FFFFFF?text=BlueTheme'),
+          createItemTile('Aesthetic Schemes', 'Team Red', 'https://placehold.co/100x100/000000/FFFFFF?text=RedTheme'),
+          createItemTile('Aesthetic Schemes', 'Level 2 (Green)', 'https://placehold.co/100x100/000000/FFFFFF?text=GreenTheme'),
+        ]
+      }
+    ]
+  },
+  {
+    id: 'infiltrationGear',
+    name: 'Infiltration Gear',
+    iconImageSrc: 'https://placehold.co/24x24/000000/FFFFFF?text=IG', // Placeholder icon
+    itemSubCategories: [
+      {
+        name: 'All Infiltration Gear',
+        items: []
+      }
+    ]
+  },
 ];
 
 
