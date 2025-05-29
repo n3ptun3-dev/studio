@@ -55,10 +55,6 @@ export function CodenameInput({ explicitTheme }: CodenameInputProps) {
     }
 
     await setPlayerSpyName(trimmedCodename); // Ensure this async operation completes
-    toast({
-        title: "Codename Assigned",
-        description: `Welcome, Agent ${trimmedCodename}. Prepare for biometric scan.`,
-    });
     closeTODWindow();
     setOnboardingStep('fingerprint'); // Proceed to fingerprint after codename
   };
@@ -71,10 +67,6 @@ export function CodenameInput({ explicitTheme }: CodenameInputProps) {
 
   return (
     <div className="flex flex-col items-center justify-center p-4 space-y-4 font-rajdhani">
-      <p className="text-muted-foreground text-center text-base leading-relaxed mb-2 holographic-text">
-        Choose wisely; altering it later may have... consequences.
-      </p>
-
       <div className="w-full max-w-sm space-y-1">
         <Label htmlFor="codename-input" className="text-sm text-muted-foreground holographic-text">Enter Your Codename:</Label>
         <HolographicInput
@@ -97,6 +89,10 @@ export function CodenameInput({ explicitTheme }: CodenameInputProps) {
       >
         Register
       </HolographicButton>
+
+      <p className="text-muted-foreground text-center text-base leading-relaxed mb-2 holographic-text">
+        Choose wisely; altering it later may have... consequences.
+      </p>
     </div>
   );
 }

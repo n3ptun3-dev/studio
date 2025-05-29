@@ -8,7 +8,7 @@ import { HolographicPanel } from '@/components/game/shared/HolographicPanel';
 import { useTheme } from '@/contexts/ThemeContext';
 
 export function FingerprintScannerScreen() {
-  const { setOnboardingStep, faction } = useAppContext();
+  const { setOnboardingStep, faction, playerSpyName } = useAppContext();
   const { theme: currentGlobalTheme, themeVersion } = useTheme();
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
@@ -78,7 +78,7 @@ export function FingerprintScannerScreen() {
             {/* Top content block for "Access Granted" */}
             <div className="flex-shrink-0"> 
               <h2 className="text-3xl font-orbitron holographic-text text-green-400">Access Granted</h2>
-              <p className="text-lg text-muted-foreground mt-2">Initializing Spi Vs Spi TOD...</p>
+              <p className="text-lg text-muted-foreground mt-2">Welcome Agent {playerSpyName}.<br />Loading TOD...</p>
             </div>
             <div className="flex-grow" /> {/* Spacer */}
             {/* Bottom graphic block for "Access Granted" - matches scanning state structure */}

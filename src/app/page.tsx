@@ -181,7 +181,7 @@ export default function HomePage() {
       case 'fingerprint':
         return <FingerprintScannerScreen />;
       default: 
-        return <div className="animate-pulse text-2xl font-orbitron holographic-text text-center">LOADING NEXT STEP... ({onboardingStep})</div>;
+        return <div className="animate-pulse text-2xl font-orbitron holographic-text text-center">CODENAME REQUIRED</div>;
     }
   };
 
