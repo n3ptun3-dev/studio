@@ -10,7 +10,7 @@ import { WelcomeScreen } from '@/components/game/onboarding/WelcomeScreen';
 import { FactionChoiceScreen } from '@/components/game/onboarding/FactionChoiceScreen';
 import { FingerprintScannerScreen } from '@/components/game/onboarding/FingerprintScannerScreen';
 import { ParallaxBackground } from '@/components/game/shared/ParallaxBackground';
-import AgentSection from '@/components/game/tod/AgentSection';
+import { AgentSection } from '@/components/game/tod/AgentSection';
 import ControlCenterSection from '@/components/game/tod/ControlCenterSection';
 import { EquipmentLockerSection } from '@/components/game/tod/EquipmentLockerSection';
 import { VaultSection } from '@/components/game/tod/VaultSection';
