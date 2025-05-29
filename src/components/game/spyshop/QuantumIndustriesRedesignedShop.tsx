@@ -57,7 +57,7 @@ export function QuantumIndustriesRedesignedShop() {
   const [selectedProductCategory, setSelectedProductCategory] = useState<ProductCategory | null>(null);
   const [selectedItemSubCategory, setSelectedItemSubCategory] = useState<ItemSubCategory | null>(null);
   const [selectedItemBaseName, setSelectedItemBaseName] = useState<string | null>(null); // e.g., "Standard Cypher Lock"
-  const [selectedLevel, setSelectedLevel] = useState<ItemLevel>(playerInfo?.level || 'L1'); // Default to player level or L1
+  const [selectedLevel, setSelectedLevel] = useState<ItemLevel>(playerInfo?.level || ITEM_LEVELS[0]); // Default to player level or L1
   
   const [currentViewItemData, setCurrentViewItemData] = useState<SpecificItemData | null>(null);
 
@@ -138,95 +138,100 @@ export function QuantumIndustriesRedesignedShop() {
     : [];
 
 
-  const renderProductsPage = () => (
-    <div className="flex flex-col h-full">
-      {/* Info Area - Scrollable */}
-      <div className="flex-grow relative overflow-hidden"> {/* This div is important for AnimatePresence child */}
-        <div
-          ref={scrollContainerRef}
-          className={`flex-grow overflow-y-auto pb-24 relative scrollbar-hide ${
-            currentViewItemData ? 'pt-[calc(var(--sub-header-height,46px)+var(--level-bar-height,38px)+40px)]' :
-            selectedItemSubCategory ? 'pt-[calc(var(--sub-header-height,46px)+30px)]' :
-            'pt-4' // Default padding when no sub-bars are visible
-          }`}> {/* pb-24 for bottom nav */}
-          {/* Conditional Content */}
-          <AnimatePresence mode="wait">
-            {currentViewItemData ? (
-                 <motion.div
-                    key="item-detail-view"
-                    initial={{ opacity: 0, x: 50 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -50 }}
-                    transition={{ duration: 0.3 }}
+  const renderProductsPage = () => {
+    return (
+      <div className="flex flex-col h-full">
+        {/* Info Area - Scrollable */}
+        <div className="flex-grow relative overflow-hidden"> {/* This div is important for AnimatePresence child */}
+          <div
+            ref={scrollContainerRef}
+            className={`flex-grow overflow-y-auto pb-24 relative scrollbar-hide ${
+              currentViewItemData ? 'pt-[calc(var(--sub-header-height,46px)+var(--level-bar-height,38px)+40px)]' :
+              selectedItemSubCategory ? 'pt-[calc(var(--sub-header-height,46px)+30px)]' :
+              'pt-4' // Default padding when no sub-bars are visible
+            }`}> {/* pb-24 for bottom nav */}
+            {/* Conditional Content */}
+            <AnimatePresence mode="wait">
+              {currentViewItemData ? (
+                  <motion.div
+                      key="item-detail-view"
+                      initial={{ opacity: 0, x: 50 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -50 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <SpecificItemDetailView
+                          itemData={currentViewItemData}
+                          onBack={handleBackFromItemDetail}
+                          onPurchase={handlePurchase}
+                      />
+                  </motion.div>
+              ) : selectedItemSubCategory ? (
+                  <motion.div
+                      key="item-grid-view"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className=""
+                    >
+                      <ItemDisplayGrid
+                          items={selectedItemSubCategory.items}
+                          onSelectItem={handleSelectItemTile}
+                      />
+                  </motion.div>
+              ) : (
+                  <motion.div
+                      key="welcome-view"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="flex flex-col items-center justify-center h-full p-8 text-center relative"
                   >
-                    <SpecificItemDetailView
-                        itemData={currentViewItemData}
-                        onBack={handleBackFromItemDetail}
-                        onPurchase={handlePurchase}
-                    />
-                </motion.div>
-            ) : selectedItemSubCategory ? (
-                 <motion.div
-                    key="item-grid-view"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className=""
-                  >
-                    <ItemDisplayGrid
-                        items={selectedItemSubCategory.items}
-                        onSelectItem={handleSelectItemTile}
-                    />
-                </motion.div>
-            ) : (
-                <motion.div
-                    key="welcome-view"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="flex flex-col items-center justify-center h-full p-8 text-center relative"
-                >
-                    <div className="absolute inset-0 z-0 opacity-10">
-                        <Image src="/spyshop/Quantum Industries Icon.png" alt="Quantum Industries Icon" layout="fill" objectFit="contain" />
-                    </div>
-                    <div className="relative z-10">
-                        <h2 className="text-3xl font-orbitron text-cyan-300 mb-4">Welcome, Agent.</h2>
-                        <p className="text-slate-300 text-lg max-w-md mx-auto">
-                            Quantum Industries provides elite tools for the discerning operative. Please select a product category below to explore our arsenal.
-                        </p>
-                    </div>
-                </motion.div>
-            )}
-          </AnimatePresence>
-      </div>
-</div>
-      <ProductNav selectedCategory={selectedProductCategory} onSelectCategory={handleSelectProductCategory} />
-  );
-
-  const renderAboutUsPage = () => (
-    <div ref={scrollContainerRef} className="flex-grow overflow-y-auto p-6 md:p-10 text-slate-300 relative scrollbar-hide">
-        <div className="absolute inset-0 z-0 opacity-5">
-             <Image src="/spyshop/Quantum Industries Logo.png" alt="Quantum Industries Logo" layout="fill" objectFit="contain" objectPosition="center"/>
+                      <div className="absolute inset-0 z-0 opacity-10">
+                          <Image src="/spyshop/Quantum Industries Icon.png" alt="Quantum Industries Icon" layout="fill" objectFit="contain" data-ai-hint="logo abstract" />
+                      </div>
+                      <div className="relative z-10">
+                          <h2 className="text-3xl font-orbitron text-cyan-300 mb-4">Welcome, Agent.</h2>
+                          <p className="text-slate-300 text-lg max-w-md mx-auto">
+                              Quantum Industries provides elite tools for the discerning operative. Please select a product category below to explore our arsenal.
+                          </p>
+                      </div>
+                  </motion.div>
+              )}
+            </AnimatePresence>
         </div>
-        <div className="relative z-10 max-w-3xl mx-auto">
-            <h2 className="text-4xl font-orbitron text-cyan-300 mb-8 text-center">About Quantum Industries</h2>
-            <p className="text-lg mb-6 leading-relaxed">
-                At Quantum Industries, we don't just engineer security solutions; we redefine the very fabric of digital defense and offense. Born from a vision of a hyper-connected, yet fiercely protected, future, we are the pioneers of ELINT security, pushing the boundaries of what's possible in a world where information is the ultimate currency.
-            </p>
-            <p className="text-lg mb-6 leading-relaxed">
-                Our dedicated team of quantum physicists, cybernetic engineers, and tactical strategists work tirelessly to develop state-of-the-art Vault Hardware, impenetrable Lock Fortifiers, and revolutionary Nexus Gadgets. From the subtle hum of a Biometric Seal to the mind-bending complexity of a Temporal Flux Lock, our defensive technologies are crafted to withstand the most sophisticated infiltration attempts, ensuring your ELINT remains inviolable.
-            </p>
-             <p className="text-lg mb-6 leading-relaxed">
-                But security isn't just about defense. It's also about strategic advantage. Our Offensive Tools and Assault Tech are designed for those who dare to breach the seemingly unbreachable. Whether you're wielding a precision Code Injector, a heavy-duty Hydraulic Drill, or deploying a game-changing Seismic Charge, Quantum Industries empowers you to navigate the digital battlefield with unparalleled prowess.
-            </p>
-            <p className="text-xl text-cyan-400 font-semibold mt-10 text-center font-orbitron">
-                "Innovation in Security. Excellence in Espionage."
-            </p>
-        </div>
+  </div>
+        <ProductNav selectedCategory={selectedProductCategory} onSelectCategory={handleSelectProductCategory} />
     </div>
-  );
+    );
+  };
+
+  const renderAboutUsPage = () => {
+    return (
+      <div ref={scrollContainerRef} className="flex-grow overflow-y-auto p-6 md:p-10 text-slate-300 relative scrollbar-hide">
+          <div className="absolute inset-0 z-0 opacity-5">
+              <Image src="/spyshop/Quantum Industries Logo.png" alt="Quantum Industries Logo" layout="fill" objectFit="contain" objectPosition="center" data-ai-hint="logo text" />
+          </div>
+          <div className="relative z-10 max-w-3xl mx-auto">
+              <h2 className="text-4xl font-orbitron text-cyan-300 mb-8 text-center">About Quantum Industries</h2>
+              <p className="text-lg mb-6 leading-relaxed">
+                  At Quantum Industries, we don't just engineer security solutions; we redefine the very fabric of digital defense and offense. Born from a vision of a hyper-connected, yet fiercely protected, future, we are the pioneers of ELINT security, pushing the boundaries of what's possible in a world where information is the ultimate currency.
+              </p>
+              <p className="text-lg mb-6 leading-relaxed">
+                  Our dedicated team of quantum physicists, cybernetic engineers, and tactical strategists work tirelessly to develop state-of-the-art Vault Hardware, impenetrable Lock Fortifiers, and revolutionary Nexus Gadgets. From the subtle hum of a Biometric Seal to the mind-bending complexity of a Temporal Flux Lock, our defensive technologies are crafted to withstand the most sophisticated infiltration attempts, ensuring your ELINT remains inviolable.
+              </p>
+              <p className="text-lg mb-6 leading-relaxed">
+                  But security isn't just about defense. It's also about strategic advantage. Our Offensive Tools and Assault Tech are designed for those who dare to breach the seemingly unbreachable. Whether you're wielding a precision Code Injector, a heavy-duty Hydraulic Drill, or deploying a game-changing Seismic Charge, Quantum Industries empowers you to navigate the digital battlefield with unparalleled prowess.
+              </p>
+              <p className="text-xl text-cyan-400 font-semibold mt-10 text-center font-orbitron">
+                  "Innovation in Security. Excellence in Espionage."
+              </p>
+          </div>
+      </div>
+    );
+  };
 
   return (
     <div className="fixed inset-0 z-[99] flex items-center justify-center bg-black/80 backdrop-blur-md">
@@ -258,7 +263,7 @@ export function QuantumIndustriesRedesignedShop() {
                  <LevelSelectorBar
                     selectedLevel={selectedLevel}
                     onSelectLevel={handleSelectLevel}
-                    playerLevel={playerInfo?.level || 'L1'}
+                    playerLevel={playerInfo?.level || ITEM_LEVELS[0]}
                     levelsAvailable={levelsAvailableForItem}
                 />
             )}
@@ -287,7 +292,7 @@ const NewStickyHeader: React.FC<NewStickyHeaderProps> = ({ activePage, setActive
       <div className="flex justify-between items-center w-full max-w-6xl mx-auto">
         <div className={`flex items-center transition-all duration-300 ${isScrolled ? 'space-x-2' : 'space-x-3'}`}>
           <div className={`relative ${isScrolled ? 'w-8 h-8' : 'w-10 h-10 md:w-12 md:h-12'}`}>
-            <Image src="/spyshop/Quantum Industries Icon Logo.png" alt="QI Logo" layout="fill" objectFit="contain" />
+            <Image src="/spyshop/Quantum Industries Icon Logo.png" alt="QI Logo" layout="fill" objectFit="contain" data-ai-hint="logo quantum" />
           </div>
           {!isScrolled && <span className="font-orbitron text-xl md:text-2xl text-cyan-300 hidden sm:inline">QUANTUM INDUSTRIES</span>}
         </div>
@@ -332,7 +337,7 @@ const ProductNav: React.FC<ProductNavProps> = ({ selectedCategory, onSelectCateg
             className={`flex flex-col items-center p-2 rounded-md transition-all duration-200 w-28 h-20 justify-center
                         ${selectedCategory?.id === cat.id ? 'bg-cyan-600/30 scale-105 ring-1 ring-cyan-400' : 'hover:bg-slate-700/50'}`}
           >
-            <Image src={cat.iconImageSrc} alt={cat.name} width={cat.id === 'aestheticSchemes' ? 28 : 24} height={cat.id === 'aestheticSchemes' ? 28 : 24} className="mb-1 opacity-80 group-hover:opacity-100" />
+            <Image src={cat.iconImageSrc} alt={cat.name} width={cat.id === 'aestheticSchemes' ? 28 : 24} height={cat.id === 'aestheticSchemes' ? 28 : 24} className="mb-1 opacity-80 group-hover:opacity-100" data-ai-hint="icon category" />
             <span className={`text-xs text-center ${selectedCategory?.id === cat.id ? 'text-cyan-300 font-semibold' : 'text-slate-300'}`}>
               {cat.name}
             </span>
@@ -394,7 +399,7 @@ const ItemDisplayGrid: React.FC<ItemDisplayGridProps> = ({ items, onSelectItem }
     return <p className="text-center text-slate-400 mt-10">No items in this category yet.</p>;
   }
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4 p-4">
       {items.map((item) => (
         <motion.button
           key={item.id}
@@ -406,7 +411,7 @@ const ItemDisplayGrid: React.FC<ItemDisplayGridProps> = ({ items, onSelectItem }
           transition={{ duration: 0.2, delay: Math.random() * 0.2 }}
         >
           <div className="w-full h-2/3 relative mb-2">
-            <Image src={item.tileImageSrc || '/spyshop/tiles/placeholder.png'} alt={item.name} layout="fill" objectFit="contain" className="rounded-sm" />
+            <Image src={item.tileImageSrc || '/spyshop/tiles/placeholder.png'} alt={item.name} layout="fill" objectFit="contain" className="rounded-sm" data-ai-hint="item icon" />
           </div>
           <span className="text-xs sm:text-sm font-rajdhani font-semibold text-cyan-200 leading-tight">{item.name}</span>
         </motion.button>
@@ -449,7 +454,7 @@ const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({ itemDat
             onClick={() => setIsImageModalOpen(true)}
             whileHover={{ scale: 1.03 }}
           >
-            <Image src={itemData.imageSrc || '/spyshop/items/placeholder_large.png'} alt={itemData.title} layout="fill" objectFit="contain" />
+            <Image src={itemData.imageSrc || '/spyshop/items/placeholder_large.png'} alt={itemData.title} layout="fill" objectFit="contain" data-ai-hint="item large" />
             <div className="absolute inset-0 bg-black/20 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
                 <Search className="w-12 h-12 text-white/70"/>
             </div>
@@ -504,7 +509,7 @@ const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({ itemDat
                 className="relative max-w-3xl max-h-[80vh]"
                 onClick={(e) => e.stopPropagation()} // Prevents modal close on image click
             >
-                <Image src={itemData.imageSrc || '/spyshop/items/placeholder_large.png'} alt={itemData.title} width={800} height={800} objectFit="contain" className="rounded-lg shadow-2xl"/>
+                <Image src={itemData.imageSrc || '/spyshop/items/placeholder_large.png'} alt={itemData.title} width={800} height={800} objectFit="contain" className="rounded-lg shadow-2xl" data-ai-hint="item closeup" />
                 <button onClick={() => setIsImageModalOpen(false)} className="absolute -top-3 -right-3 bg-slate-800 text-white rounded-full p-1.5 shadow-lg hover:bg-red-500 transition-colors">
                     <X className="w-5 h-5"/>
                 </button>
