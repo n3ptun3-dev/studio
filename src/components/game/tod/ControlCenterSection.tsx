@@ -7,7 +7,6 @@ import { CopyToClipboard } from 'react-copy-to-clipboard';
 import { MessageFeed } from '@/components/game/shared/MessageFeed';
 import { Zap, Fingerprint, ShieldAlert, Info, AlertTriangle, CheckSquare, Copy, Lock, LockOpen, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import CircularTimer from '@/components/game/shared/CircularTimer';
 import { useToast } from '@/hooks/use-toast';
 
@@ -193,7 +192,7 @@ export default function ControlCenterSection({ parallaxOffset }: SectionProps) {
     setCopiedCode(true);
     setTimeout(() => {
       setCopiedCode(false);
-    }, 2000); // Show checkmark for 2 seconds
+    }, 3000); // Show checkmark for 3 seconds
   };
 
   const displayedFactionCode = dailyTeamCode[faction] || dailyTeamCode['Observer'];
