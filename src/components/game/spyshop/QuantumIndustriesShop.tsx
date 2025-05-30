@@ -16,9 +16,9 @@ export function QuantumIndustriesShop() {
   // Render the product grid content
   const renderShopContent = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-8 pr-4">
-      {/* Vault Hardware Section */}
+      {/* Hardware Section */}
       <div className="bg-gradient-to-br from-blue-900/40 to-cyan-900/40 border border-blue-700 rounded-lg p-6 shadow-xl backdrop-blur-sm">
-        <h3 className="text-3xl font-bold text-sky-300 mb-4 flex items-center"><Lock className="w-8 h-8 mr-2" /> Vault Hardware</h3>
+        <h3 className="text-3xl font-bold text-sky-300 mb-4 flex items-center"><Lock className="w-8 h-8 mr-2" /> Hardware</h3>
         <p className="text-gray-300 mb-4">Fortify your vault with our cutting-edge barriers. Strength, resistance, and cost vary by level and type, ensuring robust protection for your ELINT.</p>
         <ul className="space-y-3 text-lg">
           <li><span className="font-semibold text-sky-200">Standard Cypher Lock:</span> Your basic digital barrier. Requires successful code entries based on strength.</li>

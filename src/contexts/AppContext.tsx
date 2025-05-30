@@ -485,7 +485,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     let newStats = { ..._currentPlayer.stats };
-    if (itemBeingDeployed && itemBeingDeployed.category === 'Vault Hardware' && !newStats.hasPlacedFirstLock) {
+    if (itemBeingDeployed && itemBeingDeployed.category === 'Hardware' && !newStats.hasPlacedFirstLock) {
       newStats = {
         ...newStats,
         elintReserves: newStats.elintReserves + 10000,

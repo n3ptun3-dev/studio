@@ -214,7 +214,7 @@ export function QuantumIndustriesRedesignedShop() {
                   At Quantum Industries, we don't just engineer security solutions; we redefine the very fabric of digital defense and offense. Born from a vision of a hyper-connected, yet fiercely protected, future, we are the pioneers of ELINT security, pushing the boundaries of what's possible in a world where information is the ultimate currency.
               </p>
               <p className="text-lg mb-6 leading-relaxed">
-                  Our dedicated team of quantum physicists, cybernetic engineers, and tactical strategists work tirelessly to develop state-of-the-art Vault Hardware, impenetrable Lock Fortifiers, and revolutionary Nexus Gadgets. From the subtle hum of a Biometric Seal to the mind-bending complexity of a Temporal Flux Lock, our defensive technologies are crafted to withstand the most sophisticated infiltration attempts, ensuring your ELINT remains inviolable.
+                  Our dedicated team of quantum physicists, cybernetic engineers, and tactical strategists aim to develop state-of-the-art Vault Hardware, impenetrable Lock Fortifiers, and revolutionary Nexus Gadgets. From the subtle hum of a Biometric Seal to the mind-bending complexity of a Temporal Flux Lock, our defensive technologies are crafted to withstand the most sophisticated infiltration attempts, ensuring your ELINT remains inviolable.
               </p>
               <p className="text-lg mb-6 leading-relaxed">
                   But security isn't just about defense. It's also about strategic advantage. Our Offensive Tools and Assault Tech are designed for those who dare to breach the seemingly unbreachable. Whether you're wielding a precision Code Injector, a heavy-duty Hydraulic Drill, or deploying a game-changing Seismic Charge, Quantum Industries empowers you to navigate the digital battlefield with unparalleled prowess.
@@ -309,7 +309,7 @@ const NewStickyHeader: React.FC<NewStickyHeaderProps> = ({ activePage, setActive
         // Large Header Layout
         <div className="flex flex-col items-center w-full max-w-6xl mx-auto px-6 pt-4 pb-3">
           <div className="relative w-full h-16 md:h-20 mb-3"> {/* Container for full logo */}
-            <Image src="/spyshop/Quantum Industries Logo.png" alt="Quantum Industries Logo" layout="fill" objectFit="contain" data-ai-hint="logo quantum large"/>
+            <Image src="/spyshop/Quantum Industries Icon Logo.png" alt="Quantum Industries Logo" layout="fill" objectFit="contain" data-ai-hint="logo quantum large"/>
           </div>
           <div className="flex justify-center items-center space-x-4 w-full">
             <button

@@ -62,7 +62,7 @@ export function VaultSection({ parallaxOffset }: SectionProps) {
     let purpose: 'equip_lock' | 'equip_nexus' | undefined;
 
     if (slot.type === 'lock') {
-      categoryToOpen = 'Vault Hardware'; 
+      categoryToOpen = 'Hardware'; 
       todTitle = `Equip Lock Slot ${parseInt(slot.id.split('_')[2]) + 1}`;
       purpose = 'equip_lock';
     } else if (slot.type === 'upgrade') {

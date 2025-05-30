@@ -10,7 +10,7 @@ interface SectionProps {
 
 export function SpyShopSection({ parallaxOffset }: SectionProps) {
   // TODO: Implement Spy Shop UI to open from within the Equipment Locker section
-  // Categories: Vault Hardware, Lock Fortifiers, Entry Tools, Infiltration Gear, Nexus Upgrades, Assault Tech, Aesthetic Schemes
+  // Categories: Hardware, Lock Fortifiers, Entry Tools, Infiltration Gear, Nexus Upgrades, Assault Tech, Aesthetic Schemes
   // Item display: previews, details, level/quantity selectors, purchase button
   // Aesthetic Schemes selection to change TOD theme
 
@@ -20,7 +20,7 @@ export function SpyShopSection({ parallaxOffset }: SectionProps) {
         <h2 className="text-4xl font-orbitron mb-8 holographic-text">Spy Shop</h2>
         <p className="text-muted-foreground">Under Development</p>
         <p className="text-center mt-4 text-sm">
-          Purchase Vault Hardware, Lock Fortifiers, Entry Tools, Infiltration Gear, Nexus Upgrades, Assault Tech, and customize your TOD with Aesthetic Schemes.
+          Purchase Hardware, Lock Fortifiers, Entry Tools, Infiltration Gear, Nexus Upgrades, Assault Tech, and customize your TOD with Aesthetic Schemes.
         </p>
       </HolographicPanel>
     </div>

@@ -10,13 +10,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { getItemById, ALL_ITEMS_BY_CATEGORY, type ItemCategory, GameItemBase, VaultHardwareItem, LockFortifierItem, EntryToolItem, NexusUpgradeItem, AestheticSchemeItem, ItemLevel } from '@/lib/game-items'; // Adjust path as needed
+import { getItemById, ALL_ITEMS_BY_CATEGORY, type ItemCategory, GameItemBase, HardwareItem, LockFortifierItem, EntryToolItem, NexusUpgradeItem, AestheticSchemeItem, ItemLevel } from '@/lib/game-items'; // Adjust path as needed
 import { ChevronLeft, ShoppingCart, ArrowRight, Zap, CheckCircle, XCircle, Power, Fingerprint as FingerprintIcon, LogIn, UserCircle, Search } from 'lucide-react';
 import { ITEM_LEVEL_COLORS_CSS_VARS } from '@/lib/constants'; // Adjust path
 
 // Helper: Define max strength/charges for items if not explicit in game-items.ts
 const getItemMaxStrength = (item: GameItemBase): number | undefined => {
-  if ('strength' in item && typeof item.strength === 'number') return item.strength; // VaultHardware, LockFortifier
+  if ('strength' in item && typeof item.strength === 'number') return item.strength; // Hardware, LockFortifier
   if (item.category === 'Entry Tools' && (item as EntryToolItem).maxCharges) return (item as EntryToolItem).maxCharges;
   if (item.category === 'Nexus Upgrades' && (item as NexusUpgradeItem).processingPowerBoost) return (item as NexusUpgradeItem).processingPowerBoost; // Example, adjust as needed
   if (item.category === 'Aesthetic Schemes') return undefined;
@@ -36,7 +36,7 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
   // Placeholder for owned items (replace with actual player inventory)
   const [ownedItems, setOwnedItems] = useState<GameItemBase[]>([
     getItemById('entry_tool_alpha'),
-    getItemById('vault_hardware_beta'),
+    getItemById('hardware_beta'),
     getItemById('lock_fortifier_gamma'),
     getItemById('nexus_upgrade_delta'),
     getItemById('aesthetic_scheme_a'),
@@ -68,7 +68,7 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
 
   const LockerContent = useCallback(() => {
     const itemCategories: ItemCategory[] = [
-      'Vault Hardware',
+      'Hardware',
       'Lock Fortifiers',
       'Entry Tools',
       'Infiltration Gear',

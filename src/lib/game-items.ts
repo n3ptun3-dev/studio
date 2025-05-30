@@ -1,4 +1,4 @@
-
+// src/lib/game-items.ts
 // This file defines the data structures and item lists for the Spi vs Spi game.
 // It includes interfaces for various item categories and populated arrays of example items.
 
@@ -32,12 +32,11 @@ export interface GameItemBase {
   imageSrc?: string; // URL for item image (for detail view)
   tileImageSrc?: string; // URL for item tile in grid view (can be same as imageSrc or different)
   colorVar: keyof typeof ITEM_LEVEL_COLORS_CSS_VARS; // To link to CSS variable for color
-  dataAiHint?: string; // Hint for AI to replace placeholder images
-
+  
   // Detailed properties - some are optional and category-specific
-  strength?: { current: number, max: number }; // For Vault Hardware, Lock Fortifiers
-  resistance?: { current: number, max: number }; // For Vault Hardware, Lock Fortifiers
-  minigameEffect?: string; // For Vault Hardware
+  strength?: { current: number, max: number }; // For Hardware, Lock Fortifiers
+  resistance?: { current: number, max: number }; // For Hardware, Lock Fortifiers
+  minigameEffect?: string; // For Hardware
   attackFactor?: number; // For Entry Tools
   type?: 'One-Time Use' | 'Rechargeable' | 'Consumable' | 'Not Applicable'; // For Lock Fortifiers, Entry Tools
   perUseCost?: number; // For rechargeable items
@@ -68,16 +67,16 @@ export interface GameItemBase {
   maxStrength?: number; // Used in AppContext for PlayerInventoryItem
   maxCharges?: number; // For Entry Tools that are consumable by charge
   processingPowerBoost?: number; // Example for Nexus Upgrades
+  dataAiHint?: string; // AI hint for data generation or display
 }
 
 
-// Categories from the prompt
+// Categories
 export type ItemCategory = 
-  | 'Vault Hardware' 
+  | 'Hardware' 
   | 'Lock Fortifiers' 
-  | 'Entry Tools' 
-  | 'Infiltration Gear' 
   | 'Nexus Upgrades' 
+  | 'Infiltration Gear' 
   | 'Assault Tech' 
   | 'Aesthetic Schemes';
 
@@ -101,8 +100,8 @@ function calculateScaledValue(
 }
 
 // Specific item types (extend GameItemBase)
-export interface VaultHardwareItem extends GameItemBase {
-  category: 'Vault Hardware';
+export interface HardwareItem extends GameItemBase {
+  category: 'Hardware';
   strength: { current: number, max: number };
   resistance: { current: number, max: number };
   minigameEffect?: string; 
@@ -118,8 +117,9 @@ export interface LockFortifierItem extends GameItemBase {
   minigameInfluence?: string;
 }
 
+// EntryToolItem interface is no longer directly used in the main categories, but kept for completeness if needed elsewhere.
 export interface EntryToolItem extends GameItemBase {
-  category: 'Entry Tools';
+  category: 'Entry Tools'; // Still exists as a type, but not in main game flow
   attackFactor: number;
   type?: 'Rechargeable' | 'Consumable' | 'Not Applicable';
   perUseCost?: number;
@@ -205,13 +205,19 @@ function generateItemLevels<T extends Omit<GameItemBase, 'level' | 'id' | 'cost'
     const itemTitle = `${baseName} ${configForLevel.titleSuffix || `L${level}`}`;
     
     let specificStrength, specificResistance, specificAttackFactor;
-    if ('strength' in baseConfig && typeof baseConfig.strength === 'number') { // Assuming baseConfig might have flat numbers
-      specificStrength = { current: calculateScaledValue(level, baseConfig.strength as number, (baseConfig.strength as number) * 2), max: calculateScaledValue(level, baseConfig.strength as number, (baseConfig.strength as number) * 2) };
+    if ('strength' in baseConfig && typeof baseConfig.strength === 'object' && baseConfig.strength !== null && 'current' in baseConfig.strength) { 
+      specificStrength = { current: calculateScaledValue(level, baseConfig.strength.current as number, (baseConfig.strength.max || baseConfig.strength.current * 8) as number), max: calculateScaledValue(level, baseConfig.strength.max as number, (baseConfig.strength.max || baseConfig.strength.current * 8) as number) };
+    } else if ('strength' in baseConfig && typeof baseConfig.strength === 'number') { // Fallback for old number-only strength
+      specificStrength = { current: calculateScaledValue(level, baseConfig.strength as number, (baseConfig.strength as number) * 8), max: calculateScaledValue(level, baseConfig.strength as number, (baseConfig.strength as number) * 8) };
     }
-    if ('resistance' in baseConfig && typeof baseConfig.resistance === 'number') {
-      specificResistance = { current: calculateScaledValue(level, baseConfig.resistance as number, (baseConfig.resistance as number) * 2), max: calculateScaledValue(level, baseConfig.resistance as number, (baseConfig.resistance as number) * 2) };
+    
+    if ('resistance' in baseConfig && typeof baseConfig.resistance === 'object' && baseConfig.resistance !== null && 'current' in baseConfig.resistance) {
+      specificResistance = { current: calculateScaledValue(level, baseConfig.resistance.current as number, (baseConfig.resistance.max || baseConfig.resistance.current * 8) as number), max: calculateScaledValue(level, baseConfig.resistance.max as number, (baseConfig.resistance.max || baseConfig.resistance.current * 8) as number) };
+    } else if ('resistance' in baseConfig && typeof baseConfig.resistance === 'number') { // Fallback for old number-only resistance
+      specificResistance = { current: calculateScaledValue(level, baseConfig.resistance as number, (baseConfig.resistance as number) * 8), max: calculateScaledValue(level, baseConfig.resistance as number, (baseConfig.resistance as number) * 8) };
     }
-     if ('attackFactor' in baseConfig && typeof baseConfig.attackFactor === 'number') {
+
+    if ('attackFactor' in baseConfig && typeof baseConfig.attackFactor === 'number') {
       specificAttackFactor = calculateScaledValue(level, baseConfig.attackFactor, baseConfig.attackFactor * 8);
     }
 
@@ -224,8 +230,9 @@ function generateItemLevels<T extends Omit<GameItemBase, 'level' | 'id' | 'cost'
       level: level,
       cost: configForLevel.cost,
       scarcity: configForLevel.scarcity || baseConfig.scarcity,
-      imageSrc: baseConfig.imageSrc || `https://placehold.co/100x100/1a202c/718096&text=${baseName.substring(0,3)}${level}`,
-      tileImageSrc: baseConfig.tileImageSrc || baseConfig.imageSrc || `https://placehold.co/80x80/2d3748/e2e8f0&text=${baseName.substring(0,3)}${level}`,
+      // Placeholder images if not provided
+      imageSrc: baseConfig.imageSrc || `/spyshop/items/placeholder_${baseIdPrefix}_L${level}.png`, // Placeholder [cite: 1]
+      tileImageSrc: baseConfig.tileImageSrc || `/spyshop/tiles/placeholder_${baseIdPrefix}_L${level}.png`, // Placeholder [cite: 1]
       colorVar: level as keyof typeof ITEM_LEVEL_COLORS_CSS_VARS, // Link level to colorVar directly
       ...(specificStrength && { strength: specificStrength }),
       ...(specificResistance && { resistance: specificResistance }),
@@ -236,78 +243,187 @@ function generateItemLevels<T extends Omit<GameItemBase, 'level' | 'id' | 'cost'
 }
 
 
-export const VAULT_HARDWARE_ITEMS: VaultHardwareItem[] = [
-  ...generateItemLevels<'VaultHardware'>(
+export const HARDWARE_ITEMS: HardwareItem[] = [
+  ...generateItemLevels<'Hardware'>(
     'std_cypher_lock', 'Standard Cypher Lock',
-    { category: 'Vault Hardware', description: 'Basic digital barrier.', resistance: { current: 10, max: 10 }, minigameEffect: "Requires X entries.", dataAiHint: "security lock", tileImageSrc: "/spyshop/tiles/StdCypherLock.png", imageSrc: "/spyshop/items/StdCypherLock_L1.png" },
-    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 100, 800), strength: {current: calculateScaledValue(l, 50, 400), max: calculateScaledValue(l, 50, 400)}, scarcity: l < 4 ? 'Common' : 'Uncommon' }))
+    { category: 'Hardware', description: 'Basic digital barrier.', strength: { current: 100, max: 100 }, resistance: { current: 10, max: 10 }, minigameEffect: "Requires successful code entries equal to its remaining strength divided by the attacker's tool's strength per entry.", dataAiHint: "security lock", tileImageSrc: "/spyshop/tiles/StdCypherLock.png", imageSrc: "/spyshop/items/StdCypherLock_L1.png" },
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 100, 800), strength: {current: calculateScaledValue(l, 100, 800), max: calculateScaledValue(l, 100, 800)}, scarcity: 'Common' })) // [cite: 7]
   ),
-  ...generateItemLevels<'VaultHardware'>(
+  ...generateItemLevels<'Hardware'>(
     'reinforced_deadbolt', 'Reinforced Deadbolt',
-    { category: 'Vault Hardware', description: 'Physical barrier with added resilience.', resistance: { current: 20, max: 20 }, minigameEffect: "Harder to drill.", dataAiHint: "strong lock", tileImageSrc: "/spyshop/tiles/ReinforcedDeadbolt.png", imageSrc: "/spyshop/items/ReinforcedDeadbolt_L1.png" },
-    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 150, 1200), strength: {current: calculateScaledValue(l, 75, 600), max: calculateScaledValue(l, 75, 600)}, scarcity: l < 3 ? 'Common' : l < 6 ? 'Uncommon' : 'Rare' }))
+    { category: 'Hardware', description: 'A physical barrier with added resilience.', strength: { current: 100, max: 100 }, resistance: { current: 20, max: 20 }, minigameEffect: "Higher strength. Drills remove fewer strength points per use compared to picks of the same level. Picks remove 50% less strength per use against Reinforced Deadbolts. Drills remove 75% less strength points per use compared to picks of the same level. Drills and Picks have different Strength per entry values against this lock, affecting how much each correct entry reduces the lock's strength and progresses the attacker towards bypassing the lock.", dataAiHint: "strong lock", tileImageSrc: "/spyshop/tiles/ReinforcedDeadbolt.png", imageSrc: "/spyshop/items/ReinforcedDeadbolt_L1.png" },
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 200, 1600), strength: {current: calculateScaledValue(l, 100, 800), max: calculateScaledValue(l, 100, 800)}, scarcity: 'Common' })) // [cite: 9, 10, 11, 12, 13]
   ),
-   ...generateItemLevels<'VaultHardware'>(
+    ...generateItemLevels<'Hardware'>(
     'quantum_entanglement_lock', 'Quantum Entanglement Lock',
-    { category: 'Vault Hardware', description: 'Non-physical tricky tech.', resistance: {current: 30, max:30}, minigameEffect: "Adds extra symbols.", dataAiHint: "quantum lock", tileImageSrc: "/spyshop/tiles/QuantumLock.png", imageSrc: "/spyshop/items/QuantumLock_L1.png"},
-    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 300, 2400), strength: {current: calculateScaledValue(l, 100, 800), max: calculateScaledValue(l, 100, 800)}, scarcity: l < 5 ? 'Uncommon' : 'Rare' }))
+    { category: 'Hardware', description: 'Non-physical tricky tech that shrugs off some standard hits.', strength: {current: 100, max:100}, resistance: {current: 30, max:30}, minigameEffect: "Adds an extra symbol to the displayed sequence. An L8 lock injects this extra symbol every 3rd round, L7 every 4th round, L6 every 5th round, L5 every 6th round, L4 every 7th round, L3 every 8th round, L2 every 9th round, and L1 every 10th round. Code Injectors have reduced effectiveness. Sonic Pulsers have reduced effectiveness (Time Allowed Per Sequence increased by 25% less).", dataAiHint: "quantum lock", tileImageSrc: "/spyshop/tiles/QuantumLock.png", imageSrc: "/spyshop/items/QuantumLock_L1.png"},
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 300, 2400), strength: {current: calculateScaledValue(l, 100, 800), max: calculateScaledValue(l, 100, 800)}, scarcity: l < 6 ? 'Common' : 'Scarce' })) // [cite: 14, 15, 16, 17, 18]
+  ),
+  // New Hardware Items
+  ...generateItemLevels<'Hardware'>(
+    'sonic_pulse_lock', 'Sonic Pulse Lock',
+    { category: 'Hardware', description: 'Needs specific frequencies, standard hits less effective.', strength: {current: 100, max:100}, resistance: {current: 40, max:40}, minigameEffect: "The time allowed for each entry is significantly reduced, scaling with the lock's level. The base time allowed per sequence is 20 seconds minus the lock level (e.g., L1 equals 19 seconds, L8 equals 12 seconds).", dataAiHint: "sound lock" }, // [cite: 19, 20, 21, 22]
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 400, 3200), strength: {current: calculateScaledValue(l, 100, 800), max: calculateScaledValue(l, 100, 800)}, scarcity: 'Uncommon' })) // [cite: 19]
+  ),
+  ...generateItemLevels<'Hardware'>(
+    'plasma_conduit_lock', 'Plasma Conduit Lock',
+    { category: 'Hardware', description: 'Energy flow defense, cuts standard damage in half.', strength: {current: 100, max:100}, resistance: {current: 50, max:50}, minigameEffect: "Successful entries slightly decrease the time allowed for subsequent entries. The time reduction for subsequent entries is equal to the lock's level in seconds (L1: 1s, L2: 2s, ..., L8: 8s). Code Injectors have reduced effectiveness against this lock, and the tool's Strength per entry is halved.", dataAiHint: "energy lock" }, // [cite: 23, 24, 25, 26]
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 500, 4000), strength: {current: calculateScaledValue(l, 100, 800), max: calculateScaledValue(l, 100, 800)}, scarcity: 'Uncommon' })) // [cite: 23]
+  ),
+  ...generateItemLevels<'Hardware'>(
+    'biometric_seal', 'Biometric Seal',
+    { category: 'Hardware', description: 'Biological key required, very resistant to non-specific attacks.', strength: {current: 100, max:100}, resistance: {current: 60, max:60}, minigameEffect: "Very high strength. Introduces occasional micro-stutters or pauses in the symbol display. The symbols flash and hide while being displayed. The frequency at which the symbols disappear increases with the lock's level: L1 and L2 every 4s, L3 and L4 every 3s, L5 and L6 every 2s, and L7 and L8 every 1s. The duration for which the symbols disappear also increases with the lock's level: L1 for 0.1s, up to L8 for 0.8s. Picks are less effective; they remove half the normal strength per use. Code Injectors have reduced effectiveness (50% less reduction of 'Symbols Displayed').", dataAiHint: "bio lock" }, // [cite: 26, 27, 28]
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 600, 4800), strength: {current: calculateScaledValue(l, 100, 800), max: calculateScaledValue(l, 100, 800)}, scarcity: 'Rare' })) // [cite: 26]
+  ),
+  ...generateItemLevels<'Hardware'>(
+    'neural_network_lock', 'Neural Network Lock',
+    { category: 'Hardware', description: 'Non-physical lock that adapts and evolves, learning to resist intrusions.', strength: {current: 100, max:100}, resistance: {current: 70, max:70}, minigameEffect: "Very high strength. The number of symbols displayed in each sequence gradually increases. The base number of symbols increases with the lock's level (L1 starts with 6, L2 with 7, up to L8 starting with 13). For every two successful entries, the number of displayed symbols increases by one. Drills are ineffective; they do not reduce the lock's strength.", dataAiHint: "AI lock" }, // [cite: 29, 30, 31, 32, 33]
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 700, 5600), strength: {current: calculateScaledValue(l, 100, 800), max: calculateScaledValue(l, 100, 800)}, scarcity: 'Rare' })) // [cite: 29]
+  ),
+  ...generateItemLevels<'Hardware'>(
+    'temporal_flux_lock', 'Temporal Flux Lock',
+    { category: 'Hardware', description: 'Non-physical lock that warps time around the secured data.', strength: {current: 100, max:100}, resistance: {current: 80, max:80}, minigameEffect: "Its strength, and therefore the number of 'Required Successful Entries', increases over time, scaling with its level (e.g., L1 increases by 5 strength per second, up to L8 increasing by 40 strength per second). Code Injectors are ineffective against this lock. Sonic Pulsers have reduced effectiveness (Time Allowed Per Sequence increased by 25% less).", dataAiHint: "time warp lock" }, // [cite: 33, 34, 35]
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 800, 6400), strength: {current: calculateScaledValue(l, 100, 800), max: calculateScaledValue(l, 100, 800)}, scarcity: 'Very Rare' })) // [cite: 33]
   ),
 ];
 
 export const LOCK_FORTIFIER_ITEMS: LockFortifierItem[] = [
   ...generateItemLevels<'LockFortifier'>(
     'dummy_node', 'Dummy Node',
-    { category: 'Lock Fortifiers', description: 'Negates successful entries.', strength: {current: 1, max:1}, resistance: {current:0, max:0}, type: 'One-Time Use', functionDescription: 'Negates entries equal to its level.', dataAiHint: "circuit node", tileImageSrc: "/spyshop/tiles/DummyNode.png", imageSrc: "/spyshop/items/DummyNode_L1.png"},
-    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 200, 1600), scarcity: l < 6 ? 'Uncommon' : 'Rare' }))
+    { category: 'Lock Fortifiers', description: 'Negates successful entries.', strength: {current: 100, max:100}, resistance: {current:0, max:0}, type: 'One-Time Use', functionDescription: 'Negates entries equal to its level.', minigameInfluence: 'Increases the number of "Correct Entries Required" by an amount equal to the Dummy Node\'s level. This is an additive increase, separate from the lock\'s strength. For example, an L3 Dummy Node increases the required entries by 3.', dataAiHint: "circuit node", tileImageSrc: "/spyshop/tiles/DummyNode.png", imageSrc: "/spyshop/items/DummyNode_L1.png"},
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 400, 1100), scarcity: 'Scarce' })) // [cite: 37, 38, 39, 40]
+  ),
+  // New Lock Fortifier Items
+  ...generateItemLevels<'LockFortifier'>(
+    'adaptive_shield', 'Adaptive Shield',
+    { category: 'Lock Fortifiers', description: 'Boosts the defense of its attached lock and itself after taking damage, adapting to the incoming attack type.', strength: {current: 100, max:100}, resistance: {current: 50, max:50}, type: 'Rechargeable', functionDescription: 'Increases the lock\'s resistance by an amount equal to its level times 10.', minigameInfluence: 'Increases the lock\'s resistance by an amount equal to its level times 10. This increased resistance raises the number of "Correct Entries Required" to bypass the lock, as more entries are needed to reduce the lock\'s strength. Formula: Required Entries = Lock Strength / (Attacker\'s Tool Strength / (1 + (Lock Resistance / 100))).', dataAiHint: "adaptive defense" }, // [cite: 40, 41]
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 400, 1100), perUseCost: calculateScaledValue(l, 20, 90), scarcity: 'Scarce' })) // [cite: 40]
+  ),
+  ...generateItemLevels<'LockFortifier'>(
+    'feedback_loop', 'Feedback Loop',
+    { category: 'Lock Fortifiers', description: 'Sends disruptive feedback back at attacking electronic gadgets when hit, potentially damaging or stunning them.', strength: {current: 100, max:100}, resistance: {current: 30, max:30}, type: 'Rechargeable', functionDescription: 'Damages the attacker\'s tool upon a failed entry. The damage dealt is equal to the level of the Feedback Loop.', minigameInfluence: 'Does not directly affect the Key Cracker, but penalizes the attacker for incorrect entries. Code Injectors have reduced effectiveness (50% less reduction of \'Symbols Displayed\').', dataAiHint: "feedback system" }, // [cite: 41, 42]
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 400, 1100), perUseCost: calculateScaledValue(l, 30, 135), scarcity: 'Scarce' })) // [cite: 41]
+  ),
+  ...generateItemLevels<'LockFortifier'>(
+    'sonic_dampener', 'Sonic Dampener',
+    { category: 'Lock Fortifiers', description: 'Absorbs or shifts incoming sonic attack frequencies, making sonic-based breaches difficult. Sonic Pulser\'s time bonus is halved.', strength: {current: 100, max:100}, resistance: {current: 40, max:40}, type: 'Rechargeable', functionDescription: 'Makes Drills completely ineffective.', minigameInfluence: 'Prevents the use of Hydraulic Drills (they do 0 damage).', dataAiHint: "sonic defense" }, // [cite: 43, 44]
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 400, 1100), perUseCost: calculateScaledValue(l, 30, 135), scarcity: 'Scarce' })) // [cite: 43]
+  ),
+  ...generateItemLevels<'LockFortifier'>(
+    'temporal_anchor', 'Temporal Anchor',
+    { category: 'Lock Fortifiers', description: 'Stabilizes the local temporal field around its lock, making attacks that manipulate time or rely on precise sequences unreliable.', strength: {current: 100, max:100}, resistance: {current: 60, max:60}, type: 'Rechargeable', functionDescription: 'Periodically reverses a portion of the correctly entered sequence. An L8 lock reverses the sequence every 3rd round, L7 every 4th round, L6 every 5th round, L5 every 6th round, L4 every 7th round, L3 every 8th round, L2 every 9th round, and L1 every 10th round. The Key Cracker display should indicate that the code should be entered in reverse order.', minigameInfluence: 'Periodically reverses a portion of the currently displayed input sequence. The frequency of this reversal scales with the Temporal Anchor\'s level (e.g., L1 reverses every 5 seconds, up to L8 reversing every 1 second). This means that only the symbols the player is currently entering will be reversed, not the entire sequence required to unlock the lock.', dataAiHint: "time anchor" }, // [cite: 45, 46, 47, 48, 49, 50, 51]
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 600, 1300), perUseCost: calculateScaledValue(l, 50, 190), scarcity: 'Rare' })) // [cite: 45]
+  ),
+  ...generateItemLevels<'LockFortifier'>(
+    'reactive_armor', 'Reactive Armor',
+    { category: 'Lock Fortifiers', description: 'Explodes outwards when its strength reaches zero, potentially damaging nearby attacking gadgets.', strength: {current: 100, max:100}, resistance: {current: 80, max:80}, type: 'One-Time Use', functionDescription: 'No direct effect on the Key Cracker.', minigameInfluence: 'Does not directly affect the Key Cracker. Code Injectors have reduced effectiveness (50% less reduction of \'Symbols Displayed\').', dataAiHint: "explosive armor" }, // [cite: 52, 53, 54, 55]
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 600, 1300), scarcity: 'Rare' })) // [cite: 52]
+  ),
+  ...generateItemLevels<'LockFortifier'>(
+    'neural_feedback_spore', 'Neural Feedback Spore',
+    { category: 'Lock Fortifiers', description: 'Sends a disruptive neural burst back through an attacker\'s link when struck, potentially disabling their gadget briefly.', strength: {current: 100, max:100}, resistance: {current: 20, max:20}, type: 'Rechargeable', functionDescription: 'Randomizes the symbol keypad. An L8 lock randomizes the keypad every 3rd round, L7 every 4th round, L6 every 5th round, L5 every 6th round, L4 every 7th round, L3 every 8th round, L2 every 9th round, and L1 every 10th round.', minigameInfluence: 'Randomizes the order of the symbols the player has to select. The randomization follows a circular shift pattern, where each symbol shifts a fixed number of positions. The shift amount changes with each randomization to create a new, unpredictable layout.', dataAiHint: "neural disruptor" }, // [cite: 56, 57, 58, 59, 60]
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 800, 1500), perUseCost: calculateScaledValue(l, 80, 255), scarcity: 'Super Rare' })) // [cite: 56]
+  ),
+  ...generateItemLevels<'LockFortifier'>(
+    'entanglement_field_inhibitor', 'Entanglement Field Inhibitor',
+    { category: 'Lock Fortifiers', description: 'Actively disrupts quantum entanglement fields around its lock, making quantum-based attacks unstable and unreliable.', strength: {current: 100, max:100}, resistance: {current: 70, max:70}, type: 'Rechargeable', functionDescription: 'Inserts random emojis into the displayed code, with the amount equal to the inhibitor\'s level (L1 adds 1 emoji, L2 adds 2, etc.). Additionally, when an incorrect sequence is entered, the lock failure resets the game. The reset amount is equal to the level number (L1 resets once, L2 resets twice, etc.).', minigameInfluence: 'Adds visual clutter and increases the penalty for failure. When an incorrect sequence is entered, the lock failure resets the current lock attempt. The number of retries is reduced by an amount equal to the inhibitor\'s level (L1 reduces by 1, L2 reduces by 2, etc.).', dataAiHint: "quantum inhibitor" }, // [cite: 60, 61, 62]
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 800, 1500), perUseCost: calculateScaledValue(l, 80, 255), scarcity: 'Super Rare' })) // [cite: 60]
   ),
 ];
 
 export const ENTRY_TOOL_ITEMS: EntryToolItem[] = [
   ...generateItemLevels<'EntryTool'>(
     'basic_pick', 'Basic Pick',
-    { category: 'Entry Tools', description: 'Standard lock pick.', attackFactor: 10, type: 'Not Applicable', minigameEffect: "Reduces required entries.", levelScalingNote: "Efficiency up by Lvl*1", lockTypeEffectiveness: { idealCounterAgainst: ["Standard Cypher Lock"], poorMatchPenaltyAgainst: ["Reinforced Deadbolt"]}, strengthPerEntryClarification: "Base effectiveness", lockFortifierEffectsDefinition: "None", dataAiHint: "lock pick", tileImageSrc: "/spyshop/tiles/BasicPick.png", imageSrc: "/spyshop/items/BasicPick_L1.png"},
-    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 50, 400), attackFactor: calculateScaledValue(l, 10, 80), scarcity: l < 5 ? 'Common' : 'Uncommon' }))
+    { category: 'Entry Tools', description: 'Your standard tool. Effective against basic locks, struggles against advanced defenses.', attackFactor: 12.5, type: 'Not Applicable', minigameEffect: "Reduces the 'Correct Entries Required'.", levelScalingNote: "Reduces the number of 'Correct Entries Required' by 1 per level.", lockTypeEffectiveness: { idealCounterAgainst: ["Standard Cypher Lock"], poorMatchPenaltyAgainst: ["Reinforced Deadbolt"]}, strengthPerEntryClarification: "The Basic Pick's Attack Factor functions as its 'strength per entry.' Each level of the pick has a corresponding Attack Factor, scaling from 12.5 at Level 1 to 100 at Level 8. This Attack Factor is used in the formula to determine how much the lock's strength is reduced per successful entry.", lockFortifierEffectsDefinition: "Not applicable to this tool.", dataAiHint: "lock pick", tileImageSrc: "/spyshop/tiles/BasicPick.png", imageSrc: "/spyshop/items/BasicPick_L1.png"},
+    ITEM_LEVELS.map(l => ({ cost: l === 1 ? 0 : calculateScaledValue(l, 200, 800, 2, 8), attackFactor: calculateScaledValue(l, 12.5, 100), scarcity: 'Common' })) // [cite: 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126]
+  ),
+  // New Infiltration Gear Items
+  ...generateItemLevels<'EntryTool'>(
+    'hydraulic_drill', 'Hydraulic Drill',
+    { category: 'Entry Tools', description: 'A heavy-duty tool. Slow but effective against resilient barriers.', attackFactor: 12.5, type: 'Rechargeable', minigameEffect: "Slightly increases the 'Time Allowed Per Sequence'.", levelScalingNote: "Increases the 'Time Allowed Per Sequence' by 1 second per level of the drill.", lockTypeEffectiveness: { idealCounterAgainst: ["Reinforced Deadbolt"], poorMatchPenaltyAgainst: ["Quantum Entanglement Lock", "Neural Network Lock", "Temporal Flux Lock"]}, strengthPerEntryClarification: "The Hydraulic Drill's Attack Factor functions as its 'strength per entry.' Drills remove fewer strength points per use compared to picks of the same level.", lockFortifierEffectsDefinition: "Not applicable to this tool.", dataAiHint: "heavy drill" }, // [cite: 127, 128, 129, 130, 131, 132]
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 200, 900), attackFactor: calculateScaledValue(l, 12.5, 100), perUseCost: calculateScaledValue(l, 15, 85), scarcity: 'Common' })) // [cite: 127]
+  ),
+  ...generateItemLevels<'EntryTool'>(
+    'code_injector', 'Code Injector',
+    { category: 'Entry Tools', description: 'A precision tool. Best against logic-based defenses, weak against others. Injects code to reduce symbols.', attackFactor: 12.5, type: 'Rechargeable', minigameEffect: "Reduces the number of 'Symbols Displayed' by 1 per level of the injector. This reduction is halved (rounded down) when used against Quantum Entanglement Locks and Plasma Conduit Locks. The tool's Strength per entry is halved against Plasma Conduit Locks.", levelScalingNote: "Reduces the number of 'Symbols Displayed' by 1 per level of the injector (halved against Quantum Entanglement Locks).", lockTypeEffectiveness: { idealCounterAgainst: ["Standard Cypher Lock", "Neural Network Lock"], idealMatchBonus: "Damage dealt to these targets is multiplied by 1.5.", poorMatchPenaltyAgainst: ["Biometric Seal", "Reactive Armor", "Feedback Loop"]}, strengthPerEntryClarification: "The Code Injector's Attack Factor functions as its 'strength per entry.'", lockFortifierEffectsDefinition: "Not applicable to this tool.", specialEffectsDefinition: "Not applicable to this tool.", dataAiHint: "code tool" }, // [cite: 133, 134, 135, 136, 137, 138, 139, 140, 141]
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 400, 1100), attackFactor: calculateScaledValue(l, 12.5, 100), perUseCost: calculateScaledValue(l, 20, 90), scarcity: 'Scarce' })) // [cite: 133]
+  ),
+  ...generateItemLevels<'EntryTool'>(
+    'sonic_pulser', 'Sonic Pulser',
+    { category: 'Entry Tools', description: 'A frequency-based tool. Effective against sound-based defenses.', attackFactor: 12.5, type: 'Rechargeable', minigameEffect: "Slightly increases the 'Time Allowed Per Sequence'.", levelScalingNote: "Increases the 'Time Allowed Per Sequence' by 0.5 seconds per level of the pulser.", lockTypeEffectiveness: { idealCounterAgainst: ["Sonic Pulse Lock"], poorMatchPenaltyAgainst: ["Temporal Flux Lock", "Quantum Entanglement Lock"]}, strengthPerEntryClarification: "The Sonic Pulser's Attack Factor functions as its 'strength per entry.'", lockFortifierEffectsDefinition: "Not applicable to this tool.", dataAiHint: "sonic tool" }, // [cite: 142, 143, 144, 145, 146, 147]
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 400, 1100), attackFactor: calculateScaledValue(l, 12.5, 100), perUseCost: calculateScaledValue(l, 20, 90), scarcity: 'Scarce' })) // [cite: 142]
+  ),
+  ...generateItemLevels<'EntryTool'>(
+    'bio_scanner_override', 'Bio-Scanner Override',
+    { category: 'Entry Tools', description: 'Bypasses biological security measures.', attackFactor: 12.5, type: 'Consumable', minigameEffect: "Reduces the number of 'Correct Entries Required' against Biometric Seals.", levelScalingNote: "Reduces the 'Correct Entries Required' by 2 per level of the override.", lockTypeEffectiveness: { idealCounterAgainst: ["Biometric Seal"], poorMatchPenaltyAgainst: ["Other lock types"]}, strengthPerEntryClarification: "The Bio-Scanner Override's Attack Factor functions as its 'strength per entry.'", lockFortifierEffectsDefinition: "Not applicable to this tool.", dataAiHint: "bio scanner" }, // [cite: 148, 149, 150, 151, 152, 153]
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 600, 1300), attackFactor: calculateScaledValue(l, 12.5, 100), scarcity: 'Rare' })) // [cite: 148]
+  ),
+  ...generateItemLevels<'EntryTool'>(
+    'temporal_dephaser', 'Temporal Dephaser',
+    { category: 'Entry Tools', description: 'Manipulates time flow. Effective against time-based defenses.', attackFactor: 12.5, type: 'Rechargeable', minigameEffect: "Increases the 'Time Allowed Per Sequence' and may reverse the sequence.", levelScalingNote: "Increases the 'Time Allowed Per Sequence' by 0.75 seconds per level. The probability of reversing the sequence increases by 10% per level.", lockTypeEffectiveness: { idealCounterAgainst: ["Temporal Flux Lock", "Temporal Anchor"], poorMatchPenaltyAgainst: ["Other lock types"]}, strengthPerEntryClarification: "The Temporal Dephaser's Attack Factor functions as its 'strength per entry.'", specialEffectsDefinition: "The 'reverse the sequence' effect is a special effect that Temporal Locks have. The Temporal Dephaser is effective against this.", lockFortifierEffectsDefinition: "Not applicable to this tool.", dataAiHint: "time dephaser" }, // [cite: 154, 155, 156, 157, 158, 159, 160, 161]
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 800, 1500), attackFactor: calculateScaledValue(l, 12.5, 100), perUseCost: calculateScaledValue(l, 40, 180), scarcity: 'Super Rare' })) // [cite: 154]
+  ),
+  ...generateItemLevels<'EntryTool'>(
+    'quantum_dephaser', 'Quantum Dephaser',
+    { category: 'Entry Tools', description: 'Disrupts quantum fields. Best against quantum-based defenses.', attackFactor: 12.5, type: 'Rechargeable', minigameEffect: "Reduces the 'Symbols Displayed' and may disable special effects.", levelScalingNote: "Reduces the 'Symbols Displayed' by 0.5 per level (round down). The probability of disabling special effects increases by 12.5% per level.", lockTypeEffectiveness: { idealCounterAgainst: ["Quantum Entanglement Lock", "Entanglement Field Inhibitor"], idealMatchBonus: "Damage dealt to these targets is multiplied by 1.5 OR may temporarily disable their special effects.", poorMatchPenaltyAgainst: ["Physical locks", "Electronic locks (non-quantum)", "Reactive Armor"]}, strengthPerEntryClarification: "The Quantum Dephaser's Attack Factor functions as its 'strength per entry.'", specialEffectsDefinition: "Special effects include the extra symbol added by the Quantum Entanglement Lock and the random emojis added by the Entanglement Field Inhibitor.", lockFortifierEffectsDefinition: "Not applicable to this tool.", dataAiHint: "quantum disruptor" }, // [cite: 162, 163, 164, 165, 166, 167, 168, 169, 170, 171]
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 800, 1500), attackFactor: calculateScaledValue(l, 12.5, 100), perUseCost: calculateScaledValue(l, 40, 180), scarcity: 'Super Rare' })) // [cite: 162]
+  ),
+  ...generateItemLevels<'EntryTool'>(
+    'universal_key', 'Universal Key',
+    { category: 'Entry Tools', description: 'The master bypass tool. Ignores defensive gadgets.', attackFactor: 12.5, type: 'Rechargeable', minigameEffect: "Disables fortifier effects on the target lock if the Universal Key's level is equal to or greater than the fortifier's level. If disabled, the fortifier's bonuses to the lock are ignored for the duration of the infiltration attempt.", levelScalingNote: "The level of the Universal Key determines the level of fortifier effects it can disable. A level X Universal Key can disable fortifier effects up to level X.", lockTypeEffectiveness: { idealCounterAgainst: ["Any lock with Lock Fortifiers"], poorMatchPenaltyAgainst: ["Locks without Lock Fortifiers"]}, strengthPerEntryClarification: "The Universal Key's Attack Factor functions as its 'strength per entry.'", lockFortifierEffectsDefinition: "Lock Fortifier effects are the special defensive gadgets that can be attached to locks, such as Dummy Node, Adaptive Shield, Feedback Loop, Sonic Dampener, Temporal Anchor, Reactive Armor, Neural Feedback Spore, and Entanglement Field Inhibitor. Mechanically, the 'Required Successful Entries' and other Key Cracker parameters should not be affected by the disabled fortifier.", dataAiHint: "master key" }, // [cite: 172, 173, 174, 175, 176, 177, 178, 179]
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 800, 1500), attackFactor: calculateScaledValue(l, 12.5, 100), perUseCost: calculateScaledValue(l, 50, 260), scarcity: 'Super Rare' })) // [cite: 172]
   ),
 ];
 
 export const NEXUS_UPGRADE_ITEMS: NexusUpgradeItem[] = [
     ...generateItemLevels<'NexusUpgrade'>(
     'security_camera', 'Security Camera',
-    { category: 'Nexus Upgrades', description: 'Alerts on infiltration attempts.', functionDescription: "Alerts on attack, provides intel.", placement: "Vault-Wide Upgrade slot", durability: "Rechargeable", cooldown: "5 mins", dataAiHint: "security camera", tileImageSrc: "/spyshop/tiles/SecurityCamera.png", imageSrc: "/spyshop/items/SecurityCamera_L1.png"},
-    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 250, 2000), rechargeCost: calculateScaledValue(l, 10, 80, 1, 8), rechargeCapacity: `${l} alerts`, scarcity: 'Uncommon' }))
+    { category: 'Nexus Upgrades', description: 'Automatically detects an infiltration attempt on the Vault. Upon detection, it alerts with an audible sound, a notification and a Comms message, and provides you with an overview of the attacker: Agent Name, Level, and gadget used. The level of the Security Camera determines the amount of attacks that will create an alert before needing to be recharged. Example: A level 3 camera will alert you three separate infiltrations before it needs recharging.', functionDescription: "Alerts on attack, provides intel.", placement: "Vault-Wide Upgrade slot", durability: "Rechargeable", cooldown: "5 mins", destructionDescription: "Upon reaching the end of its total recharge capacity (initial + 10 recharges) and that capacity being fully depleted, the Security Camera gadget is destroyed and automatically removed from the Vault slot it occupied. Players will receive an in-game notification when a Security Camera is destroyed this way.", dataAiHint: "security camera", tileImageSrc: "/spyshop/tiles/SecurityCamera.png", imageSrc: "/spyshop/items/SecurityCamera_L1.png"},
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 800, 6400), rechargeCost: calculateScaledValue(l, 50, 400), rechargeCapacity: `${l*10} alerts`, scarcity: 'Scarce' })) // [cite: 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74]
   ),
   ...generateItemLevels<'NexusUpgrade'>(
     'reinforced_foundation', 'Reinforced Foundation',
-    { category: 'Nexus Upgrades', description: 'Increases structural integrity.', functionDescription: "Increases vault structural integrity.", placement: "Vault-Wide Upgrade slot", durability: "Permanent", dataAiHint: "strong foundation", tileImageSrc: "/spyshop/tiles/ReinforcedFoundation.png", imageSrc: "/spyshop/items/ReinforcedFoundation_L1.png"},
-    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 500, 4000), scarcity: 'Rare' }))
+    { category: 'Nexus Upgrades', description: 'A permanent Vault upgrade that increases the inherent structural integrity and difficulty of infiltrating the Vault it is installed on. It makes the entire Vault harder to crack.', functionDescription: "Provides a passive, permanent increase to the base difficulty of infiltrating this Vault. This effect applies to all Locks installed on the Vault while the Reinforced Foundation is in place. The magnitude of the difficulty scales with the Foundation's level.", placement: "Vault-Wide Upgrade slot", durability: "Permanent", minigameInfluence: 'While the Reinforced Foundation is installed, it adds a permanent penalty to the required number of successful code entries needed to bypass any Lock on this Vault. This penalty contributes to the "Vault Gadget Penalty" in the calculation for required successful attempts. The amount added scales with the Reinforced Foundation\'s level.', dataAiHint: "strong foundation", tileImageSrc: "/spyshop/tiles/ReinforcedFoundation.png", imageSrc: "/spyshop/items/ReinforcedFoundation_L1.png"},
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 600, 4800), scarcity: 'Common' })) // [cite: 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85]
   ),
   ...generateItemLevels<'NexusUpgrade'>(
     'ers', 'Emergency Repair System (ERS)',
-    { category: 'Nexus Upgrades', description: 'Provides reserve strength for locks.', functionDescription: "Reserve strength for locks.", placement: "Vault-Wide Upgrade slot", durability: "Rechargeable", cooldown: "1 hour", dataAiHint: "repair system", tileImageSrc: "/spyshop/tiles/ERS.png", imageSrc: "/spyshop/items/ERS_L1.png"},
-    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 750, 6000), rechargeCost: calculateScaledValue(l, 50, 400), rechargeCapacity: `${l*100} strength points`, scarcity: 'Very Rare' }))
+    { category: 'Nexus Upgrades', description: 'A crucial defensive gadget that enhances the durability of your Vault\'s Locks during an infiltration attempt. It acts as a reserve pool of strength that your Locks can draw upon before their own structural integrity is compromised.', functionDescription: "Provides a reserve of strength exclusively for Locks installed on the Vault. This reserve is depleted before the Lock's own strength is affected when taking damage. It takes effect automatically and immediately upon a Lock receiving damage. The ERS does not affect Lock Fortifiers or other items. An ERS’s strength is shared between the installed locks. ERS gadgets range from Level 1 (100 strength) through to Level 8 (800 strength). When an ERS is active, its effective strength is made available to the Locks on the vault. For instance, a single L1 Lock protected by an L8 ERS effectively has the strength of a L8 Lock plus its own L1 base strength, as the ERS reserve is used first.", placement: "Vault-Wide Upgrade slot", durability: "Rechargeable", cooldown: "1 hour", destructionDescription: "Upon reaching the end of its total recharge capacity (initial + 3 recharges) and that capacity being fully depleted, the ERS gadget is destroyed and automatically removed from its Vault slot it occupied. Players will receive an in-game notification when an ERS is destroyed this way.", minigameInfluence: 'Reduces the target\'s Lock Strength by an amount equal to its level. This reduction in Lock Strength then decreases the number of \'Required Successful Entries\' needed to bypass the target.', dataAiHint: "repair system", tileImageSrc: "/spyshop/tiles/ERS.png", imageSrc: "/spyshop/items/ERS_L1.png"},
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 1000, 8000), rechargeCost: calculateScaledValue(l, 75, 600), rechargeCapacity: `${l*100} strength points`, scarcity: 'Rare' })) // [cite: 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103]
   ),
-   ...generateItemLevels<'NexusUpgrade'>(
+    ...generateItemLevels<'NexusUpgrade'>(
     'epc', 'Emergency Power Cell (EPC)',
-    { category: 'Nexus Upgrades', description: 'Single-use defense boost.', functionDescription: "Boosts defenses, increases minigame difficulty.", placement: "Vault-Wide Upgrade slot", durability: "One-Time Use", repurchaseCost: calculateScaledValue(1, 1000, 8000), dataAiHint: "power cell", tileImageSrc: "/spyshop/tiles/EPC.png", imageSrc: "/spyshop/items/EPC_L1.png"},
-    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 1000, 8000), repurchaseCost: calculateScaledValue(l, 800, 6400), scarcity: 'Super Rare' }))
+    { category: 'Nexus Upgrades', description: 'A single-use defensive gadget designed to provide an immediate boost to your Vault\'s defenses when under infiltration. It\'s a quick shot of energy to help weather an unexpected assault.', functionDescription: "The Emergency Power Cell provides a defensive effect when an attacker is engaged in an infiltration. It increases the difficulty of the lock’s Key Cracker.", placement: "Vault-Wide Upgrade slot", durability: "One-Time Use", destructionDescription: "This gadget is consumed when its strength reaches zero. The Power Cell has a 'strength' equal to its level (an L1 EPC has 1 strength, an L8 EPC has 8 strength). Once the EPC's strength is depleted to 0, the Emergency Power Cell is destroyed and automatically removed from its Vault slot. Players will receive an in-game notification when an EPC is destroyed this way.", minigameInfluence: 'When the EPC is active, it increases the difficulty of the Key Cracker by adding 3 extra digits to the code sequence the attacker must remember. Each time the attacker successfully enters a code sequence while the EPC is active, the EPC\'s strength is reduced by 1.', dataAiHint: "power cell", tileImageSrc: "/spyshop/tiles/EPC.png", imageSrc: "/spyshop/items/EPC_L1.png"},
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 1200, 9600), repurchaseCost: calculateScaledValue(l, 800, 6400), scarcity: 'Super Rare' })) // [cite: 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115]
   ),
 ];
 
 export const ASSAULT_TECH_ITEMS: AssaultTechItem[] = [
   ...generateItemLevels<'AssaultTech'>(
     'system_hack', 'System Hack',
-    { category: 'Assault Tech', description: 'Reduces lock difficulty.', functionDescription: "Reduces required entries for a lock.", placement: "Inventory (Consumable)", durability: "Single-use", dataAiHint: "system hack", tileImageSrc: "/spyshop/tiles/SystemHack.png", imageSrc: "/spyshop/items/SystemHack_L1.png"},
-    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 300, 2400), repurchaseCost: calculateScaledValue(l,200,1800), scarcity: 'Rare' }))
+    { category: 'Assault Tech', description: 'A single-use offensive program designed to reduce the difficulty of bypassing a target Vault\'s Locks during an infiltration attempt.', functionDescription: "When used against a target Lock during an infiltration, the System Hack reduces the difficulty of bypassing that specific Lock. The magnitude of the difficulty reduction scales with the System Hack's level.", placement: "Used from the player's Inventory against a selected Lock during an active infiltration attempt. It does not occupy a Vault slot.", durability: "Single-use, consumable upon activation against a Lock.", minigameInfluence: 'When the System Hack is used on a target Lock, it reduces the required number of successful code entries needed to bypass that Lock. This reduction contributes to the "Attacking Gadget Multiplier" effect in the calculation for required successful attempts, effectively making the Lock easier to crack. The amount of reduction scales with the System Hack\'s level.', dataAiHint: "system hack", tileImageSrc: "/spyshop/tiles/SystemHack.png", imageSrc: "/spyshop/items/SystemHack_L1.png"},
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 800, 6400), repurchaseCost: calculateScaledValue(l, 640, 5120), scarcity: 'Scarce' })) // [cite: 180, 181, 182, 183, 184, 185, 186, 187, 188, 189]
   ),
-   ...generateItemLevels<'AssaultTech'>(
+    ...generateItemLevels<'AssaultTech'>(
     'stealth_program', 'Stealth Program',
-    { category: 'Assault Tech', description: 'Reduces code digits.', functionDescription: "Reduces code digits, harder to detect.", placement: "Inventory (Consumable)", durability: "Single-use", dataAiHint: "stealth software", tileImageSrc: "/spyshop/tiles/StealthProgram.png", imageSrc: "/spyshop/items/StealthProgram_L1.png"},
-    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 400, 3200), repurchaseCost: calculateScaledValue(l,300,2400), scarcity: 'Very Rare' }))
+    { category: 'Assault Tech', description: 'A single-use offensive program designed to help an attacker avoid detection and defensive countermeasures during an infiltration attempt.', functionDescription: "When activated during an infiltration, the Stealth Program makes the attacker harder to detect by defensive systems like Security Cameras or makes it more difficult for the defender to manually activate certain countermeasures like the Emergency Power Cell for a limited duration. The effectiveness and duration of the stealth effect scale with the Stealth Program's level.", placement: "Used from the player's Inventory during an active infiltration attempt. It does not occupy a Vault slot.", durability: "Single-use, consumable upon activation.", minigameInfluence: 'While the Stealth Program is active, it reduces the number of digits in the code sequence the attacker must remember. The reduction in digits scales with the Stealth Program\'s level (e.g., reduces digits by Level * 1), making the code easier to memorize.', idealMatch: "Security Camera", poorMatch: "Emergency Power Cell, Reinforced Foundation (Gadgets that directly affect code difficulty or required attempts/ are not directly countered by stealth).", dataAiHint: "stealth software", tileImageSrc: "/spyshop/tiles/StealthProgram.png", imageSrc: "/spyshop/items/StealthProgram_L1.png"},
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 600, 4800), repurchaseCost: calculateScaledValue(l, 480, 3840), scarcity: 'Common' })) // [cite: 190, 191, 192, 193, 194, 195, 196, 197, 198, 199]
   ),
   ...generateItemLevels<'AssaultTech'>(
     'code_scrambler', 'Code Scrambler',
-    { category: 'Assault Tech', description: 'Randomizes defender keypad.', functionDescription: "Interferes with defender's visual interface.", placement: "Inventory (Consumable)", durability: "Single-use", dataAiHint: "code scrambler", tileImageSrc: "/spyshop/tiles/CodeScrambler.png", imageSrc: "/spyshop/items/CodeScrambler_L1.png"},
-    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 600, 4800), repurchaseCost: calculateScaledValue(l,450,3600), scarcity: 'Super Rare' }))
+    { category: 'Assault Tech', description: 'A single-use offensive program designed to disrupt the defender\'s ability to react effectively during an infiltration by interfering with their visual interface.', functionDescription: "When activated during an infiltration, the Code Scrambler interferes with the defender's view of the Key Cracker interface, making it harder for them to accurately perceive or input information for a limited duration. The intensity and duration of the scrambling effect scale with the Code Scrambler's level.", placement: "Used from the player's Inventory during an active infiltration attempt. It does not occupy a Vault slot.", durability: "Single-use, consumable upon activation.", minigameInfluence: 'When the Code Scrambler is active, it temporarily randomizes the position of the symbol buttons on the defender\'s Keypad interface during the code input phase. The duration of this effect scales with the Code Scrambler\'s level (e.g., lasts for Level * 2 code input rounds).', idealMatch: "Security Camera (Counters defender's visual intel), Emergency Power Cell (Makes manual activation harder).", poorMatch: "Emergency Repair System, Reinforced Foundation (Doesn't affect passive defensive boosts).", dataAiHint: "code scrambler", tileImageSrc: "/spyshop/tiles/CodeScrambler.png", imageSrc: "/spyshop/items/CodeScrambler_L1.png"},
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 1000, 8000), repurchaseCost: calculateScaledValue(l, 800, 6400), scarcity: 'Rare' })) // [cite: 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210]
+  ),
+  // New Assault Tech Items
+  ...generateItemLevels<'AssaultTech'>(
+    'power_spike', 'Power Spike',
+    { category: 'Assault Tech', description: 'A single-use offensive program designed to temporarily disable or disrupt a specific defensive gadget installed on the target Vault.', functionDescription: 'When activated during an infiltration and targeted at a specific defensive gadget (like a Security Camera or Emergency Power Cell) installed on the Vault, the Power Spike temporarily disables that gadget\'s active effects for a limited duration. The duration of the disable effect scales with the Power Spike\'s level.', placement: 'Used from the player\'s Inventory against a selected defensive gadget during an active infiltration attempt. It does not occupy a Vault slot.', durability: 'Single-use, consumable upon activation against a target gadget.', minigameInfluence: 'While the Power Spike is active on a defensive gadget that influences the Key Cracker (like the Emergency Power Cell or potentially a specialized Key Cracker-specific defensive gadget), the influence of that disabled gadget on the Key Cracker is nullified for the duration of the Power Spike\'s effect.', idealMatch: 'Security Camera, Emergency Power Cell (Gadgets with active or triggered effects).', poorMatch: 'Reinforced Foundation, Locks themselves (Gadgets with passive or inherent effects that cannot be temporarily disabled).', dataAiHint: "power disruptor" }, // [cite: 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221]
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 1200, 9600), repurchaseCost: calculateScaledValue(l, 960, 7680), scarcity: 'Super Rare' })) // [cite: 213]
+  ),
+  ...generateItemLevels<'AssaultTech'>(
+    'seismic_charge', 'Seismic Charge',
+    { category: 'Assault Tech', description: 'A single-use offensive program designed to bypass a portion of a target Lock\'s security by simulating structural stress, effectively skipping some of the required hacking process.', functionDescription: 'When used against a target Lock during an infiltration, the Seismic Charge instantly reduces the required number of successful code entries needed to bypass that specific Lock by a fixed amount. This effectively allows the attacker to skip a portion of the Key Cracker for that lock. The amount of required entries bypassed scales with the Seismic Charge\'s level.', placement: 'Used from the player\'s Inventory against a selected Lock during an active infiltration attempt. It does not occupy a Vault slot.', durability: 'Single-use, consumable upon activation against a Lock.', minigameInfluence: 'When the Seismic Charge is used on a target Lock, it instantly reduces the required number of successful code entries needed to bypass that Lock by an amount that scales with the Seismic Charge\'s level (e.g., reduces required entries by Level * 10). This directly progresses the attacker towards bypassing the lock without needing to complete those specific code sequences.', idealMatch: 'Any Lock (Especially high-level Locks, as the fixed bypass amount is more valuable against a higher total requirement).', poorMatch: 'Nexus Upgrades (Low resistance locks, Non-physical Nexus Upgrades.)', dataAiHint: "explosive bypass" }, // [cite: 222, 223, 224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234]
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 1000, 8000), repurchaseCost: calculateScaledValue(l, 800, 6400), scarcity: 'Rare' })) // [cite: 224]
   ),
 ];
 
@@ -320,10 +436,10 @@ export const AESTHETIC_SCHEME_ITEMS: AestheticSchemeItem[] = [
 
 // IMPORTANT: Define ALL_ITEMS_BY_CATEGORY *before* functions/constants that use it.
 export const ALL_ITEMS_BY_CATEGORY: Record<ItemCategory, GameItemBase[]> = {
-  'Vault Hardware': VAULT_HARDWARE_ITEMS,
+  'Hardware': HARDWARE_ITEMS,
   'Lock Fortifiers': LOCK_FORTIFIER_ITEMS,
-  'Entry Tools': ENTRY_TOOL_ITEMS,
-  'Infiltration Gear': [], 
+  // 'Entry Tools' are now handled by Infiltration Gear category mapping
+  'Infiltration Gear': ENTRY_TOOL_ITEMS, // Map Entry Tools to Infiltration Gear
   'Nexus Upgrades': NEXUS_UPGRADE_ITEMS,
   'Assault Tech': ASSAULT_TECH_ITEMS,
   'Aesthetic Schemes': AESTHETIC_SCHEME_ITEMS,
@@ -331,6 +447,7 @@ export const ALL_ITEMS_BY_CATEGORY: Record<ItemCategory, GameItemBase[]> = {
 
 // Function to get item by ID
 export function getItemById(id: string): GameItemBase | undefined {
+  // Check main categories first
   for (const categoryKey in ALL_ITEMS_BY_CATEGORY) {
     const itemsInCategory = ALL_ITEMS_BY_CATEGORY[categoryKey as ItemCategory];
     const item = itemsInCategory.find(i => i.id === id);
@@ -347,17 +464,13 @@ export function getL1ItemByBaseName(category: ItemCategory, baseName: string): G
 }
 
 // Helper function to create an ItemTile
-// MODIFIED: Accepts l1TileImageSrc, does NOT reference ALL_ITEMS_BY_CATEGORY for this.
 function createItemTile(
   category: ItemCategory, 
   baseItemName: string,
   l1TileImageSrc: string | undefined // New parameter
 ): ItemTile | null {
-  // The logic to find L1 item for tileImageSrc is now done *before* calling this function.
   if (!l1TileImageSrc) {
-    // console.warn(`No L1 tile image source provided for ${baseItemName} in category ${category} for ItemTile creation.`);
-    // Fallback placeholder if needed, or handle error
-    l1TileImageSrc = `https://placehold.co/80x80/333/ccc&text=${baseItemName.substring(0,3)}?`;
+    l1TileImageSrc = `/spyshop/tiles/placeholder_${baseItemName.toLowerCase().replace(/\s+/g, '_').replace(/[()]/g, '')}_L1.png`; // Placeholder [cite: 1]
   }
 
   return {
@@ -366,7 +479,6 @@ function createItemTile(
     tileImageSrc: l1TileImageSrc,
     category: category,
     getItemLevelData: (level: ItemLevel) => {
-      // This function is called at runtime, so ALL_ITEMS_BY_CATEGORY will be initialized.
       const itemsInThisCategory = ALL_ITEMS_BY_CATEGORY[category];
       return itemsInThisCategory.find(item => item.name === baseItemName && item.level === level);
     }
@@ -376,17 +488,19 @@ function createItemTile(
 // SHOP_CATEGORIES definition using the modified createItemTile
 export const SHOP_CATEGORIES: ProductCategory[] = [
   {
-    id: 'vaultHardware',
-    name: 'Vault Hardware',
-    iconImageSrc: '/spyshop/icons/cat_vault_hardware.png',
+    id: 'Hardware',
+    name: 'Hardware',
+    iconImageSrc: '/spyshop/icons/cat_hardware.png',
     itemSubCategories: [
       {
-        name: 'All Vault Hardware',
+        name: 'All Hardware',
         items: [
           'Standard Cypher Lock', 'Reinforced Deadbolt', 'Quantum Entanglement Lock',
+          'Sonic Pulse Lock', 'Plasma Conduit Lock', 'Biometric Seal',
+          'Neural Network Lock', 'Temporal Flux Lock',
         ].map(baseName => {
-          const l1Item = getL1ItemByBaseName('Vault Hardware', baseName);
-          return createItemTile('Vault Hardware', baseName, l1Item?.tileImageSrc || l1Item?.imageSrc);
+          const l1Item = getL1ItemByBaseName('Hardware', baseName);
+          return createItemTile('Hardware', baseName, l1Item?.tileImageSrc || l1Item?.imageSrc);
         }).filter(Boolean) as ItemTile[]
       }
     ]
@@ -399,26 +513,12 @@ export const SHOP_CATEGORIES: ProductCategory[] = [
       {
         name: 'All Lock Fortifiers',
         items: [
-          'Dummy Node',
+          'Dummy Node', 'Adaptive Shield', 'Feedback Loop', 'Sonic Dampener',
+          'Temporal Anchor', 'Reactive Armor', 'Neural Feedback Spore',
+          'Entanglement Field Inhibitor',
         ].map(baseName => {
           const l1Item = getL1ItemByBaseName('Lock Fortifiers', baseName);
           return createItemTile('Lock Fortifiers', baseName, l1Item?.tileImageSrc || l1Item?.imageSrc);
-        }).filter(Boolean) as ItemTile[]
-      }
-    ]
-  },
-  {
-    id: 'entryTools',
-    name: 'Entry Tools',
-    iconImageSrc: '/spyshop/icons/cat_entry_tools.png',
-    itemSubCategories: [
-      {
-        name: 'All Entry Tools',
-        items: [
-          'Basic Pick',
-        ].map(baseName => {
-          const l1Item = getL1ItemByBaseName('Entry Tools', baseName);
-          return createItemTile('Entry Tools', baseName, l1Item?.tileImageSrc || l1Item?.imageSrc);
         }).filter(Boolean) as ItemTile[]
       }
     ]
@@ -440,6 +540,24 @@ export const SHOP_CATEGORIES: ProductCategory[] = [
     ]
   },
   {
+    id: 'infiltrationGear',
+    name: 'Infiltration Gear',
+    iconImageSrc: '/spyshop/icons/cat_infiltration_gear.png',
+    itemSubCategories: [
+      {
+        name: 'All Infiltration Gear',
+        items: [
+          'Basic Pick', 'Hydraulic Drill', 'Code Injector', 'Sonic Pulser',
+          'Bio-Scanner Override', 'Temporal Dephaser', 'Quantum Dephaser', 'Universal Key',
+        ].map(baseName => {
+          // Use 'Entry Tools' as the source category since the data is still stored there.
+          const l1Item = ENTRY_TOOL_ITEMS.find(item => item.name === baseName && item.level === 1); 
+          return createItemTile('Infiltration Gear', baseName, l1Item?.tileImageSrc || l1Item?.imageSrc);
+        }).filter(Boolean) as ItemTile[]
+      }
+    ]
+  },
+  {
     id: 'assaultTech',
     name: 'Assault Tech',
     iconImageSrc: '/spyshop/icons/cat_assault_tech.png',
@@ -448,6 +566,7 @@ export const SHOP_CATEGORIES: ProductCategory[] = [
         name: 'All Assault Tech',
         items: [
           'System Hack', 'Stealth Program', 'Code Scrambler',
+          'Power Spike', 'Seismic Charge',
         ].map(baseName => {
           const l1Item = getL1ItemByBaseName('Assault Tech', baseName);
           return createItemTile('Assault Tech', baseName, l1Item?.tileImageSrc || l1Item?.imageSrc);
@@ -471,12 +590,6 @@ export const SHOP_CATEGORIES: ProductCategory[] = [
         }))
       }
     ]
-  },
-  {
-    id: 'infiltrationGear',
-    name: 'Infiltration Gear',
-    iconImageSrc: '/spyshop/icons/cat_infiltration_gear.png',
-    itemSubCategories: [{ name: 'All Infiltration Gear', items: [] }]
   },
 ];
 
