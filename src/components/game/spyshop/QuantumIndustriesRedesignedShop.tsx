@@ -14,6 +14,7 @@ interface NewStickyHeaderProps {
   setActivePage: (page: 'products' | 'aboutUs') => void;
   onClose: () => void;
   isScrolled: boolean;
+  isSmallHeader: boolean;
 }
 
 interface ProductNavProps {
@@ -60,6 +61,10 @@ export function QuantumIndustriesRedesignedShop() {
   const [selectedLevel, setSelectedLevel] = useState<ItemLevel>(playerInfo?.level || ITEM_LEVELS[0]); // Default to player level or L1
   
   const [currentViewItemData, setCurrentViewItemData] = useState<SpecificItemData | null>(null);
+  
+  // Calculate isSmallHeader
+  const isSmallHeader = selectedProductCategory !== null || selectedItemBaseName !== null || activePage === 'aboutUs';
+
 
   useEffect(() => {
     const mainScrollArea = scrollContainerRef.current;
@@ -139,17 +144,9 @@ export function QuantumIndustriesRedesignedShop() {
 
 
   const renderProductsPage = () => {
+    const isSmallHeader = selectedProductCategory !== null || selectedItemBaseName !== null || activePage === 'aboutUs';
     return (
       <div className="flex flex-col h-full">
-        {/* Info Area - Scrollable */}
-        <div className="flex-grow relative overflow-hidden"> {/* This div is important for AnimatePresence child */}
-          <div
-            ref={scrollContainerRef}
-            className={`flex-grow overflow-y-auto pb-24 relative scrollbar-hide ${
-              currentViewItemData ? 'pt-[calc(var(--sub-header-height,46px)+var(--level-bar-height,38px)+40px)]' :
-              selectedItemSubCategory ? 'pt-[calc(var(--sub-header-height,46px)+30px)]' :
-              'pt-4' // Default padding when no sub-bars are visible
-            }`}> {/* pb-24 for bottom nav */}
             {/* Conditional Content */}
             <AnimatePresence mode="wait">
               {currentViewItemData ? (
@@ -201,9 +198,7 @@ export function QuantumIndustriesRedesignedShop() {
                   </motion.div>
               )}
             </AnimatePresence>
-        </div>
-  </div>
-        <ProductNav selectedCategory={selectedProductCategory} onSelectCategory={handleSelectProductCategory} />
+            <ProductNav selectedCategory={selectedProductCategory} onSelectCategory={handleSelectProductCategory} />
     </div>
     );
   };
@@ -247,7 +242,13 @@ export function QuantumIndustriesRedesignedShop() {
             }}
         >
             {/* Sticky Header */}
-            <NewStickyHeader activePage={activePage} setActivePage={setActivePage} onClose={closeSpyShop} isScrolled={isScrolled} />
+            <NewStickyHeader
+              activePage={activePage}
+              setActivePage={setActivePage}
+              onClose={closeSpyShop}
+              isScrolled={isScrolled}
+              isSmallHeader={isSmallHeader}
+            />
             
             {/* Item SubCategory Bar (Horizontally scrolling, below header) */}
             {activePage === 'products' && selectedProductCategory && selectedItemSubCategory && (
@@ -268,8 +269,11 @@ export function QuantumIndustriesRedesignedShop() {
                 />
             )}
 
-            {/* Page Content */}
-            {activePage === 'products' ? renderProductsPage() : renderAboutUsPage()}
+            {/* Page Content - This will now be the scrollable area */}
+            {/* Add background image here */}
+            <div className="flex-grow relative overflow-hidden">
+             {activePage === 'products' ? renderProductsPage() : renderAboutUsPage()}
+        </div>
 
              {/* Optional: Futuristic background elements like in your globals.css */}
             <div className="absolute inset-0 pointer-events-none z-[-1] overflow-hidden">
@@ -285,50 +289,82 @@ export function QuantumIndustriesRedesignedShop() {
 
 // --- Sub-Components (Ideally in separate files) ---
 
-const NewStickyHeader: React.FC<NewStickyHeaderProps> = ({ activePage, setActivePage, onClose, isScrolled }) => {
+const NewStickyHeader: React.FC<NewStickyHeaderProps> = ({ activePage, setActivePage, onClose, isSmallHeader }) => {
+    
   return (
     <div className={`sticky top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out bg-slate-900/80 backdrop-blur-md border-b border-cyan-700/50 shadow-lg
-                    ${isScrolled ? 'py-2 px-4' : 'py-4 px-6'}`}>
-      <div className="flex justify-between items-center w-full max-w-6xl mx-auto">
-        <div className={`flex items-center transition-all duration-300 ${isScrolled ? 'space-x-2' : 'space-x-3'}`}>
-          <div className={`relative ${isScrolled ? 'w-8 h-8' : 'w-10 h-10 md:w-12 md:h-12'}`}>
-            <Image src="/spyshop/Quantum Industries Icon Logo.png" alt="QI Logo" layout="fill" objectFit="contain" data-ai-hint="logo quantum" />
-          </div>
-          {!isScrolled && <span className="font-orbitron text-xl md:text-2xl text-cyan-300 hidden sm:inline">QUANTUM INDUSTRIES</span>}
-        </div>
+                    ${isSmallHeader ? 'py-2 px-4' : 'py-8 px-6'}`}>
+        {isSmallHeader ? (
+            <div className="flex justify-between items-center w-full max-w-6xl mx-auto">
+                <div className="flex items-center transition-all duration-300 space-x-2">
+                    <div className="relative w-8 h-8">
+                        <Image src="/spyshop/Quantum Industries Icon Logo.png" alt="QI Logo" layout="fill" objectFit="contain" data-ai-hint="logo quantum" />
+                    </div>
+                </div>
 
-        <div className="flex items-center space-x-2 sm:space-x-4">
-          {/* Page Tabs */}
-          <button
-            onClick={() => setActivePage('products')}
-            className={`px-3 py-1.5 text-sm sm:text-base font-semibold rounded-md transition-colors duration-200
-                        ${activePage === 'products' ? 'bg-cyan-500 text-slate-900 shadow-md' : 'text-cyan-300 hover:bg-cyan-700/50 hover:text-cyan-100'}`}
-          >
-            Products
-          </button>
-          <button
-            onClick={() => setActivePage('aboutUs')}
-            className={`px-3 py-1.5 text-sm sm:text-base font-semibold rounded-md transition-colors duration-200
-                        ${activePage === 'aboutUs' ? 'bg-cyan-500 text-slate-900 shadow-md' : 'text-cyan-300 hover:bg-cyan-700/50 hover:text-cyan-100'}`}
-          >
-            About Us
-          </button>
-           <button
-            onClick={onClose}
-            className="p-2 text-cyan-300 hover:text-red-400 hover:bg-red-700/30 rounded-full transition-colors duration-300"
-            aria-label="Close Spy Shop"
-          >
-            <X className="w-6 h-6 sm:w-7 sm:h-7" />
-          </button>
-        </div>
-      </div>
+                <div className="flex items-center space-x-2 sm:space-x-4">
+                    {/* Page Tabs */}
+                    <button
+                        onClick={() => setActivePage('products')}
+                        className={`px-3 py-1.5 text-sm sm:text-base font-semibold rounded-md transition-colors duration-200
+                                    ${activePage === 'products' ? 'bg-cyan-500 text-slate-900 shadow-md' : 'text-cyan-300 hover:bg-cyan-700/50 hover:text-cyan-100'}`}
+                    >
+                        Products
+                    </button>
+                    <button
+                        onClick={() => setActivePage('aboutUs')}
+                        className={`px-3 py-1.5 text-sm sm:text-base font-semibold rounded-md transition-colors duration-200
+                                    ${activePage === 'aboutUs' ? 'bg-cyan-500 text-slate-900 shadow-md' : 'text-cyan-300 hover:bg-cyan-700/50 hover:text-cyan-100'}`}
+                    >
+                        About Us
+                    </button>
+                    <button
+                        onClick={onClose}
+                        className="p-2 text-cyan-300 hover:text-red-400 hover:bg-red-700/30 rounded-full transition-colors duration-300"
+                        aria-label="Close Spy Shop"
+                    >
+                        <X className="w-6 h-6 sm:w-7 sm:h-7" />
+                    </button>
+                </div>
+            </div>
+        ) : (
+            <div className="flex flex-col items-center w-full max-w-6xl mx-auto relative">
+                 <div className="relative w-12 h-12 md:w-16 md:h-16 mb-4">
+                    <Image src="/spyshop/Quantum Industries Icon Logo.png" alt="QI Logo" layout="fill" objectFit="contain" data-ai-hint="logo quantum" />
+                </div>
+                <div className="flex items-center space-x-4">
+                     {/* Page Tabs */}
+                    <button
+                        onClick={() => setActivePage('products')}
+                        className={`px-3 py-1.5 text-sm sm:text-base font-semibold rounded-md transition-colors duration-200
+                                    ${activePage === 'products' ? 'bg-cyan-500 text-slate-900 shadow-md' : 'text-cyan-300 hover:bg-cyan-700/50 hover:text-cyan-100'}`}
+                    >
+                        Products
+                    </button>
+                    <button
+                        onClick={() => setActivePage('aboutUs')}
+                        className={`px-3 py-1.5 text-sm sm:text-base font-semibold rounded-md transition-colors duration-200
+                                    ${activePage === 'aboutUs' ? 'bg-cyan-500 text-slate-900 shadow-md' : 'text-cyan-300 hover:bg-cyan-700/50 hover:text-cyan-100'}`}
+                    >
+                        About Us
+                    </button>
+                </div>
+                 <button
+                    onClick={onClose}
+                    className="absolute top-0 right-0 p-2 text-cyan-300 hover:text-red-400 hover:bg-red-700/30 rounded-full transition-colors duration-300"
+                    aria-label="Close Spy Shop"
+                >
+                    <X className="w-6 h-6 sm:w-7 sm:h-7" />
+                </button>
+            </div>
+        )}
     </div>
   );
 };
 
 const ProductNav: React.FC<ProductNavProps> = ({ selectedCategory, onSelectCategory }) => {
   return (
-    <div className="absolute bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-sm border-t border-cyan-700/50 p-3 shadow-top-lg">
+    <div className="absolute bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-sm border-t border-cyan-700/50 p-3 shadow-top-lg z-20">
       <div className="flex justify-around items-center max-w-md mx-auto">
         {SHOP_CATEGORIES.map((cat) => (
           <button
