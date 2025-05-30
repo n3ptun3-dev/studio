@@ -235,11 +235,26 @@ export function QuantumIndustriesRedesignedShop() {
             exit={{ scale: 0.9, opacity: 0 }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
             className="w-full h-full max-w-2xl md:max-w-4xl lg:max-w-6xl md:h-[90vh] md:max-h-[800px] bg-slate-950 text-slate-100 flex flex-col shadow-2xl shadow-cyan-500/30 md:rounded-lg overflow-hidden border border-cyan-700/50 relative"
+            // Base opaque background for the shop container
             style={{
                 backgroundImage: "url('/spyshop/bg_quantum_pattern.png')", 
-                backgroundSize: 'cover',
+                backgroundSize: 'cover', // Ensure this base background covers the area
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
             }}
         >
+            {/* Hexagonal Pattern Overlay - positioned above the base background */}
+            <div 
+                className="absolute inset-0 z-0 animate-pulse-grid" // z-0 keeps it behind content but above the base bg, added animate-pulse-grid
+                style={{ 
+                    backgroundImage: "url('/spyshop/hexagons.png')", 
+                    backgroundSize: 'cover', // Make the hexagons cover the available space
+                    backgroundRepeat: 'no-repeat', // Prevent repetition
+                    backgroundPosition: 'center',
+                }}
+            ></div>
+            
+            {/* The main content (header, product pages, etc.) will have a higher z-index by default or explicit z-index */}
             <NewStickyHeader
               activePage={activePage}
               setActivePage={setActivePage}
@@ -249,7 +264,7 @@ export function QuantumIndustriesRedesignedShop() {
             />
             
             {/* Main scrollable content area */}
-            <div ref={contentScrollContainerRef} className="flex-grow overflow-y-auto scrollbar-hide relative">
+            <div ref={contentScrollContainerRef} className="flex-grow overflow-y-auto scrollbar-hide relative z-10"> {/* z-10 to ensure content is above backgrounds */}
              {activePage === 'products' ? renderProductsPage() : renderAboutUsPage()}
             </div>
 
@@ -258,9 +273,10 @@ export function QuantumIndustriesRedesignedShop() {
               <ProductNav selectedCategory={selectedProductCategory} onSelectCategory={handleSelectProductCategory} />
             )}
 
-            {/* Background decorative elements */}
-            <div className="absolute inset-0 pointer-events-none z-[-1] overflow-hidden">
-                <div className="absolute inset-0 bg-[size:30px_30px] [background-image:linear-gradient(to_right,rgba(0,128,255,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(0,128,255,0.03)_1px,transparent_1px)] animate-pulse-grid opacity-50"></div>
+            {/* Background decorative elements (other effects) - these are above the background layers */}
+            <div className="absolute inset-0 pointer-events-none z-[2] overflow-hidden"> {/* Adjusted z-index for effects */}
+                {/* The grid effect is now applied to the hexagonal background, so this div is removed */}
+                {/* The blurred circles remain as part of "other effects" */}
                 <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-700/5 rounded-full blur-3xl animate-float-one opacity-30"></div>
                 <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-700/5 rounded-full blur-3xl animate-float-two opacity-30"></div>
             </div>

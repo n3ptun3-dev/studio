@@ -438,8 +438,7 @@ export const AESTHETIC_SCHEME_ITEMS: AestheticSchemeItem[] = [
 export const ALL_ITEMS_BY_CATEGORY: Record<ItemCategory, GameItemBase[]> = {
   'Hardware': HARDWARE_ITEMS,
   'Lock Fortifiers': LOCK_FORTIFIER_ITEMS,
-  // 'Entry Tools' are now handled by Infiltration Gear category mapping
-  'Infiltration Gear': ENTRY_TOOL_ITEMS, // Map Entry Tools to Infiltration Gear
+  'Infiltration Gear': ENTRY_TOOL_ITEMS,
   'Nexus Upgrades': NEXUS_UPGRADE_ITEMS,
   'Assault Tech': ASSAULT_TECH_ITEMS,
   'Aesthetic Schemes': AESTHETIC_SCHEME_ITEMS,
@@ -490,7 +489,7 @@ export const SHOP_CATEGORIES: ProductCategory[] = [
   {
     id: 'Hardware',
     name: 'Hardware',
-    iconImageSrc: '/spyshop/icons/cat_hardware.png',
+    iconImageSrc: '/spyshop/icons/icon_hardware.png',
     itemSubCategories: [
       {
         name: 'All Hardware',
@@ -508,7 +507,7 @@ export const SHOP_CATEGORIES: ProductCategory[] = [
   {
     id: 'lockFortifiers',
     name: 'Lock Fortifiers',
-    iconImageSrc: '/spyshop/icons/cat_lock_fortifiers.png',
+    iconImageSrc: '/spyshop/icons/icon_fortifiers.png',
     itemSubCategories: [
       {
         name: 'All Lock Fortifiers',
@@ -526,7 +525,7 @@ export const SHOP_CATEGORIES: ProductCategory[] = [
   {
     id: 'nexusUpgrades',
     name: 'Nexus Upgrades',
-    iconImageSrc: '/spyshop/icons/cat_nexus_upgrades.png',
+    iconImageSrc: '/spyshop/icons/icon_nexus.png',
     itemSubCategories: [
       {
         name: 'All Nexus Upgrades',
@@ -542,7 +541,7 @@ export const SHOP_CATEGORIES: ProductCategory[] = [
   {
     id: 'infiltrationGear',
     name: 'Infiltration Gear',
-    iconImageSrc: '/spyshop/icons/cat_infiltration_gear.png',
+    iconImageSrc: '/spyshop/icons/icon_infiltration.png',
     itemSubCategories: [
       {
         name: 'All Infiltration Gear',
@@ -560,7 +559,7 @@ export const SHOP_CATEGORIES: ProductCategory[] = [
   {
     id: 'assaultTech',
     name: 'Assault Tech',
-    iconImageSrc: '/spyshop/icons/cat_assault_tech.png',
+    iconImageSrc: '/spyshop/icons/icon_assault.png',
     itemSubCategories: [
       {
         name: 'All Assault Tech',
@@ -577,7 +576,7 @@ export const SHOP_CATEGORIES: ProductCategory[] = [
   {
     id: 'aestheticSchemes',
     name: 'Aesthetic Schemes',
-    iconImageSrc: '/spyshop/icons/cat_aesthetic_schemes.png',
+    iconImageSrc: '/spyshop/icons/icon_aesthetic.png',
     itemSubCategories: [
       {
         name: 'All Aesthetic Schemes',
