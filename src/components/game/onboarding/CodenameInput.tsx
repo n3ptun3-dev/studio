@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 
 interface CodenameInputProps {
-  explicitTheme?: Theme;
+  explicitTheme?: Theme; // This will be passed by AppContext/HomePage
 }
 
 export function CodenameInput({ explicitTheme }: CodenameInputProps) {
@@ -17,25 +17,22 @@ export function CodenameInput({ explicitTheme }: CodenameInputProps) {
     setPlayerSpyName,
     setOnboardingStep,
     closeTODWindow,
-    faction,
-    onboardingStep // For logging or more complex conditional logic if needed
+    faction, 
+    addMessage
   } = useAppContext();
   const [codename, setCodename] = useState('');
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  console.log('[CodenameInput] Rendering. Faction from context:', faction, "Onboarding step:", onboardingStep, "Explicit theme:", explicitTheme);
+  console.log('[CodenameInput] Rendering. Faction from context:', faction, "Explicit theme received:", explicitTheme);
 
   useEffect(() => {
-    // This safeguard is important if an Observer somehow gets here.
-    // It should ideally be prevented by AppContext.handleAuthentication setting step to 'tod' for Observers.
-    if (faction === 'Observer' && onboardingStep === 'codenameInput') { // Check step too
-      toast({ title: "Observation Protocol", description: "Observers should not set codenames.", variant: "default" });
+    if (faction === 'Observer') {
+      toast({ title: "Observation Protocol", description: "Observers do not set codenames. System engaging.", variant: "default" });
       closeTODWindow();
-      // Let AppContext or HomePage handle the next step for an Observer if this state is reached.
-      // Typically, an Observer would already be at 'tod' step.
+      // No need to setOnboardingStep here, AppContext.handleAuthentication should have set it to 'tod' for Observers
     }
-  }, [faction, onboardingStep, setOnboardingStep, closeTODWindow, toast]);
+  }, [faction, closeTODWindow, toast]);
 
   const handleSubmit = async () => {
     setError(null);
@@ -54,47 +51,48 @@ export function CodenameInput({ explicitTheme }: CodenameInputProps) {
        return;
     }
 
-    await setPlayerSpyName(trimmedCodename); // Ensure this async operation completes
-    closeTODWindow();
-    setOnboardingStep('fingerprint'); // Proceed to fingerprint after codename
+    try {
+        await setPlayerSpyName(trimmedCodename); 
+        addMessage({ type: 'system', text: `Codename "${trimmedCodename}" registered.`});
+        closeTODWindow();
+        setOnboardingStep('fingerprint'); // Proceed to fingerprint after codename
+    } catch (e) {
+        console.error("Error setting player spy name:", e);
+        setError("Failed to register codename. Please try again.");
+        toast({ title: "Registration Error", description: "Could not save your codename.", variant: "destructive"});
+    }
   };
 
-  // If faction is Observer and this component somehow renders, return null to show nothing.
-  // The useEffect above should handle closing the window.
   if (faction === 'Observer') {
-    return null;
+    return null; // Don't render anything if faction is Observer (useEffect handles closing)
   }
 
   return (
     <div className="flex flex-col items-center justify-center p-4 space-y-4 font-rajdhani">
-      <div className="w-full max-w-sm space-y-1">
-        <Label htmlFor="codename-input" className="text-sm text-muted-foreground holographic-text">Enter Your Codename:</Label>
-        <HolographicInput
-          id="codename-input"
-          type="text"
-          value={codename}
-          onChange={(e) => setCodename(e.target.value)}
-          className="w-full text-center text-lg"
-          maxLength={20}
-          explicitTheme={explicitTheme}
-        />
-        {error && <p className="text-xs text-destructive text-center pt-1">{error}</p>}
-      </div>
+      <Label htmlFor="codename-input" className="text-sm text-muted-foreground holographic-text">Enter Your Codename:</Label>
+      <HolographicInput
+        id="codename-input"
+        type="text"
+        value={codename}
+        onChange={(e) => setCodename(e.target.value)}
+        className="w-full text-center text-lg"
+        maxLength={20}
+        explicitTheme={explicitTheme} // Use the theme passed from parent
+      />
+      {error && <p className="text-xs text-destructive text-center pt-1">{error}</p>}
+      
+      <p className="text-muted-foreground text-center text-xs leading-relaxed mt-1 mb-3 holographic-text px-2">
+        Choose wisely; altering it later may have... consequences.
+      </p>
 
       <HolographicButton
         onClick={handleSubmit}
-        className="w-full max-w-sm py-3 text-lg mt-2"
+        className="w-full max-w-sm py-3 text-lg"
         disabled={!codename.trim()}
-        explicitTheme={explicitTheme}
+        explicitTheme={explicitTheme} // Use the theme passed from parent
       >
         Register
       </HolographicButton>
-
-      <p className="text-muted-foreground text-center text-base leading-relaxed mb-2 holographic-text">
-        Choose wisely; altering it later may have... consequences.
-      </p>
     </div>
   );
 }
-
-    

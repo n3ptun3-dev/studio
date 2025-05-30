@@ -6,32 +6,26 @@ import Image from 'next/image';
 import { X, ChevronDown, ChevronUp, ArrowLeft, ShoppingCart, Search } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { AnimatePresence, motion } from 'framer-motion';
-import { SHOP_CATEGORIES, ITEM_LEVELS, type ProductCategory, type ItemSubCategory, type ItemTile, type SpecificItemData, type ItemLevel } from '@/lib/game-items';
+import { SHOP_CATEGORIES, ITEM_LEVELS, type ProductCategory, type ItemTile, type SpecificItemData, type ItemLevel } from '@/lib/game-items'; // ItemSubCategory no longer needed here
 
 // Helper components (to be defined below or in separate files)
 interface NewStickyHeaderProps {
   activePage: 'products' | 'aboutUs';
   setActivePage: (page: 'products' | 'aboutUs') => void;
   onClose: () => void;
-  isScrolled: boolean;
-  isSmallHeader: boolean;
+  isScrolled: boolean; // May not be needed if header doesn't change much with scroll
+  isSmallHeader: boolean; // Determines which logo/icon to show
 }
 
 interface ProductNavProps {
   selectedCategory: ProductCategory | null;
-  onSelectCategory: (category: ProductCategory) => void;
-}
-
-interface ItemSubCategoryBarProps {
-  subCategories: ItemSubCategory[];
-  selectedSubCategory: ItemSubCategory | null;
-  onSelectSubCategory: (subCategory: ItemSubCategory) => void;
+  onSelectCategory: (category: ProductCategory | null) => void; // Allow null for deselection
 }
 
 interface LevelSelectorBarProps {
   selectedLevel: ItemLevel;
   onSelectLevel: (level: ItemLevel) => void;
-  playerLevel: ItemLevel; // Assuming you can get this
+  playerLevel: ItemLevel; 
   levelsAvailable: ItemLevel[];
 }
 
@@ -44,60 +38,60 @@ interface SpecificItemDetailViewProps {
   itemData: SpecificItemData;
   onBack: () => void;
   onPurchase: (itemId: string) => void;
+  selectedLevel: ItemLevel; // Pass current level
+  onSelectLevel: (level: ItemLevel) => void; // Pass level selector handler
+  playerLevel: ItemLevel;
+  levelsAvailableForItem: ItemLevel[];
 }
 
 
 // --- Main Shop Component ---
 export function QuantumIndustriesRedesignedShop() {
-  const { closeSpyShop, playerInfo } = useAppContext(); // Assuming playerInfo might have playerLevel
+  const { closeSpyShop, playerInfo } = useAppContext(); 
   const [activePage, setActivePage] = useState<'products' | 'aboutUs'>('products');
-  const [isScrolled, setIsScrolled] = useState(false);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [isScrolled, setIsScrolled] = useState(false); // Potentially remove if not used
+  const contentScrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Product Page State
   const [selectedProductCategory, setSelectedProductCategory] = useState<ProductCategory | null>(null);
-  const [selectedItemSubCategory, setSelectedItemSubCategory] = useState<ItemSubCategory | null>(null);
-  const [selectedItemBaseName, setSelectedItemBaseName] = useState<string | null>(null); // e.g., "Standard Cypher Lock"
-  const [selectedLevel, setSelectedLevel] = useState<ItemLevel>(playerInfo?.level || ITEM_LEVELS[0]); // Default to player level or L1
+  // selectedItemSubCategory is removed
+  const [selectedItemBaseName, setSelectedItemBaseName] = useState<string | null>(null); 
+  const [selectedLevel, setSelectedLevel] = useState<ItemLevel>(playerInfo?.stats.level as ItemLevel || ITEM_LEVELS[0]); 
   
   const [currentViewItemData, setCurrentViewItemData] = useState<SpecificItemData | null>(null);
   
-  // Calculate isSmallHeader
-  const isSmallHeader = selectedProductCategory !== null || selectedItemBaseName !== null || activePage === 'aboutUs';
+  // Calculate isSmallHeader - this logic might simplify if large header is always used or based on a fixed breakpoint
+  const isSmallHeader = selectedItemBaseName !== null || activePage === 'aboutUs';
 
 
   useEffect(() => {
-    const mainScrollArea = scrollContainerRef.current;
+    const mainScrollArea = contentScrollContainerRef.current;
     if (!mainScrollArea) return;
 
     const handleScroll = () => {
-      setIsScrolled(mainScrollArea.scrollTop > 50);
+      setIsScrolled(mainScrollArea.scrollTop > 10); // Minimal scroll to trigger
     };
     mainScrollArea.addEventListener('scroll', handleScroll);
     return () => mainScrollArea.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Reset selections when category changes
+  // Reset selections when category changes (or is deselected)
   useEffect(() => {
-    setSelectedItemSubCategory(null);
     setSelectedItemBaseName(null);
     setCurrentViewItemData(null);
-    if (selectedProductCategory && selectedProductCategory.itemSubCategories.length > 0) {
-        // Auto-select first sub-category
-        setSelectedItemSubCategory(selectedProductCategory.itemSubCategories[0]);
-    }
+    // No sub-category to auto-select
   }, [selectedProductCategory]);
-
-  // Reset item and level when sub-category changes
-  useEffect(() => {
-    setSelectedItemBaseName(null);
-    setCurrentViewItemData(null);
-  }, [selectedItemSubCategory]);
   
   // Fetch and set item data when base name or level changes
   useEffect(() => {
-    if (selectedItemBaseName && selectedItemSubCategory) {
-      const parentItemTile = selectedItemSubCategory.items.find(it => it.name === selectedItemBaseName);
+    if (selectedItemBaseName && selectedProductCategory) {
+      // Find the item tile across all subcategories of the selectedProductCategory
+      let parentItemTile: ItemTile | undefined;
+      for (const subCat of selectedProductCategory.itemSubCategories) {
+        parentItemTile = subCat.items.find(it => it.name === selectedItemBaseName);
+        if (parentItemTile) break;
+      }
+
       if (parentItemTile) {
         const data = parentItemTile.getItemLevelData(selectedLevel);
         setCurrentViewItemData(data || null);
@@ -107,20 +101,19 @@ export function QuantumIndustriesRedesignedShop() {
     } else {
       setCurrentViewItemData(null);
     }
-  }, [selectedItemBaseName, selectedLevel, selectedItemSubCategory]);
+  }, [selectedItemBaseName, selectedLevel, selectedProductCategory]);
 
-  const handleSelectProductCategory = (category: ProductCategory) => {
-    setSelectedProductCategory(category);
-  };
-
-  const handleSelectItemSubCategory = (subCategory: ItemSubCategory) => {
-    setSelectedItemSubCategory(subCategory);
+  const handleSelectProductCategory = (category: ProductCategory | null) => {
+    if (category && selectedProductCategory?.id === category.id) {
+      setSelectedProductCategory(null); // Deselect if already selected
+    } else {
+      setSelectedProductCategory(category);
+    }
   };
 
   const handleSelectItemTile = (itemBaseName: string) => {
     setSelectedItemBaseName(itemBaseName);
-    // Optional: Reset to player level or lowest available if not already on specific item view
-    // setSelectedLevel(playerInfo?.level || ITEM_LEVELS[0]);
+    setSelectedLevel(playerInfo?.stats.level as ItemLevel || ITEM_LEVELS[0]); // Reset level on new item selection
   };
   
   const handleSelectLevel = (level: ItemLevel) => {
@@ -128,7 +121,7 @@ export function QuantumIndustriesRedesignedShop() {
   };
 
   const handleBackFromItemDetail = () => {
-    setSelectedItemBaseName(null); // This will hide SpecificItemDetailView
+    setSelectedItemBaseName(null); 
     setCurrentViewItemData(null);
   };
 
@@ -137,77 +130,83 @@ export function QuantumIndustriesRedesignedShop() {
     // Add to cart logic or direct purchase
   };
 
-  // Determine levels available for the currently selected item base name
-  const levelsAvailableForItem = selectedItemBaseName && selectedItemSubCategory
-    ? selectedItemSubCategory.items.find(it => it.name === selectedItemBaseName)?.getItemLevelData('L1') ? ITEM_LEVELS : [] // Simplification, real logic would check specific item's available levels
+  const levelsAvailableForItem = selectedItemBaseName && selectedProductCategory
+    ? selectedProductCategory.itemSubCategories
+        .flatMap(sc => sc.items)
+        .find(it => it.name === selectedItemBaseName)
+        ?.getItemLevelData(ITEM_LEVELS[0]) // Check if L1 exists to imply other levels might
+      ? ITEM_LEVELS 
+      : []
     : [];
 
+  const itemsToDisplayInGrid = selectedProductCategory
+    ? selectedProductCategory.itemSubCategories.flatMap(subCat => subCat.items)
+    : [];
 
   const renderProductsPage = () => {
-    const isSmallHeader = selectedProductCategory !== null || selectedItemBaseName !== null || activePage === 'aboutUs';
     return (
-      <div className="flex flex-col h-full">
-            {/* Conditional Content */}
-            <AnimatePresence mode="wait">
-              {currentViewItemData ? (
-                  <motion.div
-                      key="item-detail-view"
-                      initial={{ opacity: 0, x: 50 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -50 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <SpecificItemDetailView
-                          itemData={currentViewItemData}
-                          onBack={handleBackFromItemDetail}
-                          onPurchase={handlePurchase}
-                      />
-                  </motion.div>
-              ) : selectedItemSubCategory ? (
-                  <motion.div
-                      key="item-grid-view"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className=""
-                    >
-                      <ItemDisplayGrid
-                          items={selectedItemSubCategory.items}
-                          onSelectItem={handleSelectItemTile}
-                      />
-                  </motion.div>
-              ) : (
-                  <motion.div
-                      key="welcome-view"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="flex flex-col items-center justify-center h-full p-8 text-center relative"
-                  >
-                      <div className="absolute inset-0 z-0 opacity-10">
-                          <Image src="/spyshop/Quantum Industries Icon.png" alt="Quantum Industries Icon" layout="fill" objectFit="contain" data-ai-hint="logo abstract" />
-                      </div>
-                      <div className="relative z-10">
-                          <h2 className="text-3xl font-orbitron text-cyan-300 mb-4">Welcome, Agent.</h2>
-                          <p className="text-slate-300 text-lg max-w-md mx-auto">
-                              Quantum Industries provides elite tools for the discerning operative. Please select a product category below to explore our arsenal.
-                          </p>
-                      </div>
-                  </motion.div>
-              )}
-            </AnimatePresence>
-            <ProductNav selectedCategory={selectedProductCategory} onSelectCategory={handleSelectProductCategory} />
-    </div>
+      <AnimatePresence mode="wait">
+        {currentViewItemData ? (
+            <motion.div
+                key="item-detail-view"
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -50 }}
+                transition={{ duration: 0.3 }}
+                className="h-full" // Ensure it can scroll if content is tall
+              >
+                <SpecificItemDetailView
+                    itemData={currentViewItemData}
+                    onBack={handleBackFromItemDetail}
+                    onPurchase={handlePurchase}
+                    selectedLevel={selectedLevel}
+                    onSelectLevel={handleSelectLevel}
+                    playerLevel={playerInfo?.stats.level as ItemLevel || ITEM_LEVELS[0]}
+                    levelsAvailableForItem={levelsAvailableForItem}
+                />
+            </motion.div>
+        ) : selectedProductCategory ? ( // Show grid if a category is selected
+            <motion.div
+                key="item-grid-view"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <ItemDisplayGrid
+                    items={itemsToDisplayInGrid}
+                    onSelectItem={handleSelectItemTile}
+                />
+            </motion.div>
+        ) : ( // Welcome view
+            <motion.div
+                key="welcome-view"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="flex flex-col items-center justify-center h-full p-8 text-center relative"
+            >
+                <div className="absolute inset-0 z-0 opacity-10">
+                    <Image src="/spyshop/Quantum Industries Icon.png" alt="Quantum Industries Icon" layout="fill" objectFit="contain" data-ai-hint="logo abstract"/>
+                </div>
+                <div className="relative z-10">
+                    <h2 className="text-3xl font-orbitron text-cyan-300 mb-4">Welcome, Agent.</h2>
+                    <p className="text-slate-300 text-lg max-w-md mx-auto">
+                        Quantum Industries provides elite tools for the discerning operative. Please select a product category below to explore our arsenal.
+                    </p>
+                </div>
+            </motion.div>
+        )}
+      </AnimatePresence>
     );
   };
 
   const renderAboutUsPage = () => {
     return (
-      <div ref={scrollContainerRef} className="flex-grow overflow-y-auto p-6 md:p-10 text-slate-300 relative scrollbar-hide">
+      <div className="p-6 md:p-10 text-slate-300 relative">
           <div className="absolute inset-0 z-0 opacity-5">
-              <Image src="/spyshop/Quantum Industries Logo.png" alt="Quantum Industries Logo" layout="fill" objectFit="contain" objectPosition="center" data-ai-hint="logo text" />
+              <Image src="/spyshop/Quantum Industries Logo.png" alt="Quantum Industries Logo" layout="fill" objectFit="contain" objectPosition="center" data-ai-hint="logo text"/>
           </div>
           <div className="relative z-10 max-w-3xl mx-auto">
               <h2 className="text-4xl font-orbitron text-cyan-300 mb-8 text-center">About Quantum Industries</h2>
@@ -237,45 +236,29 @@ export function QuantumIndustriesRedesignedShop() {
             transition={{ duration: 0.3, ease: "easeInOut" }}
             className="w-full h-full max-w-2xl md:max-w-4xl lg:max-w-6xl md:h-[90vh] md:max-h-[800px] bg-slate-950 text-slate-100 flex flex-col shadow-2xl shadow-cyan-500/30 md:rounded-lg overflow-hidden border border-cyan-700/50 relative"
             style={{
-                backgroundImage: "url('/path/to/your/bg_quantum_pattern.png')", // Optional: Add your subtle background pattern here
+                backgroundImage: "url('/spyshop/bg_quantum_pattern.png')", 
                 backgroundSize: 'cover',
             }}
         >
-            {/* Sticky Header */}
             <NewStickyHeader
               activePage={activePage}
               setActivePage={setActivePage}
               onClose={closeSpyShop}
-              isScrolled={isScrolled}
-              isSmallHeader={isSmallHeader}
+              isScrolled={isScrolled} 
+              isSmallHeader={activePage === 'aboutUs' || !!selectedProductCategory || !!currentViewItemData} // Simplified logic for small header
             />
             
-            {/* Item SubCategory Bar (Horizontally scrolling, below header) */}
-            {activePage === 'products' && selectedProductCategory && selectedItemSubCategory && (
-                 <ItemSubCategoryBar
-                    subCategories={selectedProductCategory.itemSubCategories}
-                    selectedSubCategory={selectedItemSubCategory}
-                    onSelectSubCategory={handleSelectItemSubCategory}
-                />
-            )}
-
-            {/* Level Selector Bar (Horizontally scrolling, below item type bar) */}
-            {activePage === 'products' && selectedItemBaseName && currentViewItemData && (
-                 <LevelSelectorBar
-                    selectedLevel={selectedLevel}
-                    onSelectLevel={handleSelectLevel}
-                    playerLevel={playerInfo?.level || ITEM_LEVELS[0]}
-                    levelsAvailable={levelsAvailableForItem}
-                />
-            )}
-
-            {/* Page Content - This will now be the scrollable area */}
-            {/* Add background image here */}
-            <div className="flex-grow relative overflow-hidden">
+            {/* Main scrollable content area */}
+            <div ref={contentScrollContainerRef} className="flex-grow overflow-y-auto scrollbar-hide relative">
              {activePage === 'products' ? renderProductsPage() : renderAboutUsPage()}
-        </div>
+            </div>
 
-             {/* Optional: Futuristic background elements like in your globals.css */}
+            {/* Product Navigation Bar (Bottom) - Only for products page */}
+            {activePage === 'products' && (
+              <ProductNav selectedCategory={selectedProductCategory} onSelectCategory={handleSelectProductCategory} />
+            )}
+
+            {/* Background decorative elements */}
             <div className="absolute inset-0 pointer-events-none z-[-1] overflow-hidden">
                 <div className="absolute inset-0 bg-[size:30px_30px] [background-image:linear-gradient(to_right,rgba(0,128,255,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(0,128,255,0.03)_1px,transparent_1px)] animate-pulse-grid opacity-50"></div>
                 <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-700/5 rounded-full blur-3xl animate-float-one opacity-30"></div>
@@ -287,94 +270,90 @@ export function QuantumIndustriesRedesignedShop() {
 }
 
 
-// --- Sub-Components (Ideally in separate files) ---
+// --- Sub-Components (Ideally in separate files for larger apps) ---
 
 const NewStickyHeader: React.FC<NewStickyHeaderProps> = ({ activePage, setActivePage, onClose, isSmallHeader }) => {
-    
   return (
-    <div className={`sticky top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out bg-slate-900/80 backdrop-blur-md border-b border-cyan-700/50 shadow-lg
-                    ${isSmallHeader ? 'py-2 px-4' : 'py-8 px-6'}`}>
-        {isSmallHeader ? (
-            <div className="flex justify-between items-center w-full max-w-6xl mx-auto">
-                <div className="flex items-center transition-all duration-300 space-x-2">
-                    <div className="relative w-8 h-8">
-                        <Image src="/spyshop/Quantum Industries Icon Logo.png" alt="QI Logo" layout="fill" objectFit="contain" data-ai-hint="logo quantum" />
-                    </div>
-                </div>
-
-                <div className="flex items-center space-x-2 sm:space-x-4">
-                    {/* Page Tabs */}
-                    <button
-                        onClick={() => setActivePage('products')}
-                        className={`px-3 py-1.5 text-sm sm:text-base font-semibold rounded-md transition-colors duration-200
-                                    ${activePage === 'products' ? 'bg-cyan-500 text-slate-900 shadow-md' : 'text-cyan-300 hover:bg-cyan-700/50 hover:text-cyan-100'}`}
-                    >
-                        Products
-                    </button>
-                    <button
-                        onClick={() => setActivePage('aboutUs')}
-                        className={`px-3 py-1.5 text-sm sm:text-base font-semibold rounded-md transition-colors duration-200
-                                    ${activePage === 'aboutUs' ? 'bg-cyan-500 text-slate-900 shadow-md' : 'text-cyan-300 hover:bg-cyan-700/50 hover:text-cyan-100'}`}
-                    >
-                        About Us
-                    </button>
-                    <button
-                        onClick={onClose}
-                        className="p-2 text-cyan-300 hover:text-red-400 hover:bg-red-700/30 rounded-full transition-colors duration-300"
-                        aria-label="Close Spy Shop"
-                    >
-                        <X className="w-6 h-6 sm:w-7 sm:h-7" />
-                    </button>
-                </div>
+    <div className={`sticky top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out bg-slate-900/80 backdrop-blur-md border-b border-cyan-700/50 shadow-lg`}>
+      {isSmallHeader ? (
+        // Small Header Layout
+        <div className="flex justify-between items-center w-full max-w-6xl mx-auto px-4 py-2">
+          <div className="flex items-center space-x-2">
+            <div className="relative w-8 h-8 sm:w-9 sm:h-9"> {/* Icon size */}
+              <Image src="/spyshop/Quantum Industries Icon.png" alt="QI Icon" layout="fill" objectFit="contain" data-ai-hint="logo quantum small"/>
             </div>
-        ) : (
-            <div className="flex flex-col items-center w-full max-w-6xl mx-auto relative">
-                 <div className="relative w-12 h-12 md:w-16 md:h-16 mb-4">
-                    <Image src="/spyshop/Quantum Industries Icon Logo.png" alt="QI Logo" layout="fill" objectFit="contain" data-ai-hint="logo quantum" />
-                </div>
-                <div className="flex items-center space-x-4">
-                     {/* Page Tabs */}
-                    <button
-                        onClick={() => setActivePage('products')}
-                        className={`px-3 py-1.5 text-sm sm:text-base font-semibold rounded-md transition-colors duration-200
-                                    ${activePage === 'products' ? 'bg-cyan-500 text-slate-900 shadow-md' : 'text-cyan-300 hover:bg-cyan-700/50 hover:text-cyan-100'}`}
-                    >
-                        Products
-                    </button>
-                    <button
-                        onClick={() => setActivePage('aboutUs')}
-                        className={`px-3 py-1.5 text-sm sm:text-base font-semibold rounded-md transition-colors duration-200
-                                    ${activePage === 'aboutUs' ? 'bg-cyan-500 text-slate-900 shadow-md' : 'text-cyan-300 hover:bg-cyan-700/50 hover:text-cyan-100'}`}
-                    >
-                        About Us
-                    </button>
-                </div>
-                 <button
-                    onClick={onClose}
-                    className="absolute top-0 right-0 p-2 text-cyan-300 hover:text-red-400 hover:bg-red-700/30 rounded-full transition-colors duration-300"
-                    aria-label="Close Spy Shop"
-                >
-                    <X className="w-6 h-6 sm:w-7 sm:h-7" />
-                </button>
-            </div>
-        )}
+          </div>
+          <div className="flex items-center space-x-2 sm:space-x-4">
+            <button
+              onClick={() => setActivePage('products')}
+              className={`px-3 py-1.5 text-sm sm:text-base font-semibold rounded-md transition-colors duration-200 ${activePage === 'products' ? 'bg-cyan-500 text-slate-900 shadow-md' : 'text-cyan-300 hover:bg-cyan-700/50 hover:text-cyan-100'}`}
+            >
+              Products
+            </button>
+            <button
+              onClick={() => setActivePage('aboutUs')}
+              className={`px-3 py-1.5 text-sm sm:text-base font-semibold rounded-md transition-colors duration-200 ${activePage === 'aboutUs' ? 'bg-cyan-500 text-slate-900 shadow-md' : 'text-cyan-300 hover:bg-cyan-700/50 hover:text-cyan-100'}`}
+            >
+              About Us
+            </button>
+            <button
+              onClick={onClose}
+              className="p-1.5 sm:p-2 text-cyan-300 hover:text-red-400 hover:bg-red-700/30 rounded-full transition-colors duration-300"
+              aria-label="Close Spy Shop"
+            >
+              <X className="w-5 h-5 sm:w-6 sm:h-6" />
+            </button>
+          </div>
+        </div>
+      ) : (
+        // Large Header Layout
+        <div className="flex flex-col items-center w-full max-w-6xl mx-auto px-6 pt-4 pb-3">
+          <div className="relative w-full h-16 md:h-20 mb-3"> {/* Container for full logo */}
+            <Image src="/spyshop/Quantum Industries Logo.png" alt="Quantum Industries Logo" layout="fill" objectFit="contain" data-ai-hint="logo quantum large"/>
+          </div>
+          <div className="flex justify-center items-center space-x-4 w-full">
+            <button
+              onClick={() => setActivePage('products')}
+              className={`px-4 py-2 text-base font-semibold rounded-md transition-colors duration-200 ${activePage === 'products' ? 'bg-cyan-500 text-slate-900 shadow-md' : 'text-cyan-300 hover:bg-cyan-700/50 hover:text-cyan-100'}`}
+            >
+              Products
+            </button>
+            <button
+              onClick={() => setActivePage('aboutUs')}
+              className={`px-4 py-2 text-base font-semibold rounded-md transition-colors duration-200 ${activePage === 'aboutUs' ? 'bg-cyan-500 text-slate-900 shadow-md' : 'text-cyan-300 hover:bg-cyan-700/50 hover:text-cyan-100'}`}
+            >
+              About Us
+            </button>
+             <button
+                onClick={onClose}
+                className="absolute top-3 right-3 p-2 text-cyan-300 hover:text-red-400 hover:bg-red-700/30 rounded-full transition-colors duration-300"
+                aria-label="Close Spy Shop"
+            >
+                <X className="w-6 h-6 sm:w-7 sm:h-7" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
+
 const ProductNav: React.FC<ProductNavProps> = ({ selectedCategory, onSelectCategory }) => {
   return (
-    <div className="absolute bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-sm border-t border-cyan-700/50 p-3 shadow-top-lg z-20">
-      <div className="flex justify-around items-center max-w-md mx-auto">
+    <div className="flex-shrink-0 bg-slate-900/90 backdrop-blur-sm border-t border-cyan-700/50 p-2 shadow-[0_-4px_10px_-1px_rgba(0,0,0,0.1),0_-2px_6px_-2px_rgba(0,0,0,0.1)] z-10">
+      <div className="flex space-x-2 overflow-x-auto scrollbar-hide justify-center items-center max-w-full mx-auto px-1">
         {SHOP_CATEGORIES.map((cat) => (
           <button
             key={cat.id}
             onClick={() => onSelectCategory(cat)}
-            className={`flex flex-col items-center p-2 rounded-md transition-all duration-200 w-28 h-20 justify-center
-                        ${selectedCategory?.id === cat.id ? 'bg-cyan-600/30 scale-105 ring-1 ring-cyan-400' : 'hover:bg-slate-700/50'}`}
+            className={`flex flex-col items-center p-2 rounded-md transition-all duration-200 w-24 h-[70px] justify-center flex-shrink-0
+                        ${selectedCategory?.id === cat.id ? 'bg-cyan-600/40 scale-105 ring-1 ring-cyan-400' : 'hover:bg-slate-700/50'}`}
           >
-            <Image src={cat.iconImageSrc} alt={cat.name} width={cat.id === 'aestheticSchemes' ? 28 : 24} height={cat.id === 'aestheticSchemes' ? 28 : 24} className="mb-1 opacity-80 group-hover:opacity-100" data-ai-hint="icon category" />
-            <span className={`text-xs text-center ${selectedCategory?.id === cat.id ? 'text-cyan-300 font-semibold' : 'text-slate-300'}`}>
+            <div className="relative w-6 h-6 mb-0.5"> {/* Adjusted icon size */}
+              <Image src={cat.iconImageSrc} alt={cat.name} layout="fill" objectFit="contain" className="opacity-80 group-hover:opacity-100" data-ai-hint="icon category"/>
+            </div>
+            <span className={`text-[10px] leading-tight text-center ${selectedCategory?.id === cat.id ? 'text-cyan-300 font-semibold' : 'text-slate-300'}`}>
               {cat.name}
             </span>
           </button>
@@ -384,44 +363,26 @@ const ProductNav: React.FC<ProductNavProps> = ({ selectedCategory, onSelectCateg
   );
 };
 
-const ItemSubCategoryBar: React.FC<ItemSubCategoryBarProps> = ({ subCategories, selectedSubCategory, onSelectSubCategory }) => {
-  if (!subCategories || subCategories.length === 0) return null;
-  return (
-    <div className="sticky top-[calc(var(--header-height,60px)+1px)] z-40 bg-slate-900/70 backdrop-blur-sm border-b border-cyan-800/30 shadow-md overflow-hidden" style={{ height: 'var(--sub-header-height, 46px)' }}> {/* Adjust top based on header height */}
-      <div className="flex space-x-1 p-2 overflow-x-auto scrollbar-hide justify-center">
-        {subCategories.map((sc) => (
-          <button
-            key={sc.name}
-            onClick={() => onSelectSubCategory(sc)}
-            className={`px-4 py-2 text-sm font-medium rounded-md whitespace-nowrap transition-colors
-                        ${selectedSubCategory?.name === sc.name ? 'bg-cyan-500 text-slate-900 shadow' : 'text-cyan-200 hover:bg-cyan-700/40'}`}
-          >
-            {sc.name}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-};
 
 const LevelSelectorBar: React.FC<LevelSelectorBarProps> = ({ selectedLevel, onSelectLevel, playerLevel, levelsAvailable }) => {
     if (!levelsAvailable || levelsAvailable.length === 0) return null;
   return (
-    <div className="sticky top-[calc(var(--header-height,60px)+var(--sub-header-height,46px)+2px)] z-30 bg-slate-800/80 backdrop-blur-sm border-b border-cyan-800/40 shadow-sm overflow-hidden" style={{ height: 'var(--level-bar-height, 38px)' }}> {/* Adjust top */}
-      <div className="flex space-x-1 p-1.5 overflow-x-auto scrollbar-hide justify-center">
+    <div className="bg-slate-800/80 backdrop-blur-sm border-b border-cyan-800/40 shadow-sm overflow-hidden py-1.5 px-2">
+      <div className="flex space-x-1 overflow-x-auto scrollbar-hide justify-center">
         {ITEM_LEVELS.map((level) => {
           const isAvailable = levelsAvailable.includes(level);
+          const isPlayerLevel = playerLevel === level;
           return (
             <button
               key={level}
               onClick={() => isAvailable && onSelectLevel(level)}
               disabled={!isAvailable}
-              className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all
-                          ${selectedLevel === level && isAvailable ? 'bg-orange-500 text-slate-900 shadow-md scale-105' : 
-                           isAvailable && playerLevel === level ? 'bg-sky-500 text-slate-900' :
+              className={`px-3 py-1 text-[11px] font-bold rounded-md transition-all duration-150
+                          ${selectedLevel === level && isAvailable ? 'bg-orange-500 text-slate-900 shadow-md scale-105 ring-1 ring-orange-300' : 
+                           isAvailable && isPlayerLevel ? 'bg-sky-500 text-slate-900 shadow-sm' :
                            isAvailable ? 'bg-slate-700 text-cyan-200 hover:bg-slate-600' : 'bg-slate-700/50 text-slate-500 cursor-not-allowed'}`}
             >
-              {level}
+              L{level}
             </button>
           );
         })}
@@ -432,7 +393,7 @@ const LevelSelectorBar: React.FC<LevelSelectorBarProps> = ({ selectedLevel, onSe
 
 const ItemDisplayGrid: React.FC<ItemDisplayGridProps> = ({ items, onSelectItem }) => {
   if (!items || items.length === 0) {
-    return <p className="text-center text-slate-400 mt-10">No items in this category yet.</p>;
+    return <p className="text-center text-slate-400 mt-10 p-4">No items in this category yet, or clear your selection below.</p>;
   }
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4 p-4">
@@ -444,10 +405,10 @@ const ItemDisplayGrid: React.FC<ItemDisplayGridProps> = ({ items, onSelectItem }
           whileHover={{ y: -3 }}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2, delay: Math.random() * 0.2 }}
+          transition={{ duration: 0.2, delay: Math.random() * 0.1 }}
         >
           <div className="w-full h-2/3 relative mb-2">
-            <Image src={item.tileImageSrc || '/spyshop/tiles/placeholder.png'} alt={item.name} layout="fill" objectFit="contain" className="rounded-sm" data-ai-hint="item icon" />
+            <Image src={item.tileImageSrc || '/spyshop/tiles/placeholder.png'} alt={item.name} layout="fill" objectFit="contain" className="rounded-sm" data-ai-hint="item icon"/>
           </div>
           <span className="text-xs sm:text-sm font-rajdhani font-semibold text-cyan-200 leading-tight">{item.name}</span>
         </motion.button>
@@ -470,89 +431,109 @@ const ProgressBar: React.FC<{ label: string; value: number; max: number; colorCl
 );
 
 
-const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({ itemData, onBack, onPurchase }) => {
+const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({ 
+  itemData, onBack, onPurchase, selectedLevel, onSelectLevel, playerLevel, levelsAvailableForItem 
+}) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   if (!itemData) return <p className="text-center text-slate-400 p-8">Item details not found.</p>;
 
   return (
-    <div className="p-4 md:p-6 min-h-[calc(100vh-var(--header-height)-var(--sub-header-height)-var(--level-bar-height)-var(--bottom-nav-height)-2rem)]"> {/* Adjust min-h calculation */}
-      <button onClick={onBack} className="absolute top-4 left-4 md:top-6 md:left-6 z-20 flex items-center text-sm text-cyan-300 hover:text-cyan-100 bg-slate-800/50 hover:bg-slate-700/70 px-3 py-1.5 rounded-md transition-colors">
-        <ArrowLeft className="w-4 h-4 mr-1.5" /> Back
-      </button>
+    <div className="h-full flex flex-col">
+        <LevelSelectorBar
+            selectedLevel={selectedLevel}
+            onSelectLevel={onSelectLevel}
+            playerLevel={playerLevel}
+            levelsAvailable={levelsAvailableForItem}
+        />
+      <div className="flex-grow overflow-y-auto p-4 md:p-6 scrollbar-hide">
+        <button onClick={onBack} className="absolute top-4 left-4 md:top-6 md:left-6 z-20 flex items-center text-sm text-cyan-300 hover:text-cyan-100 bg-slate-800/50 hover:bg-slate-700/70 px-3 py-1.5 rounded-md transition-colors">
+          <ArrowLeft className="w-4 h-4 mr-1.5" /> Back
+        </button>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-4xl mx-auto">
-        {/* Left Column: Image & Primary Info */}
-        <div className="flex flex-col items-center">
-          <h2 className="text-2xl md:text-3xl font-orbitron text-cyan-300 mb-3 text-center md:mt-8">{itemData.title}</h2>
-          <motion.div
-            className="relative w-full max-w-xs md:max-w-sm aspect-square bg-slate-800/50 border border-slate-700 rounded-lg shadow-xl overflow-hidden cursor-pointer mb-4"
-            onClick={() => setIsImageModalOpen(true)}
-            whileHover={{ scale: 1.03 }}
-          >
-            <Image src={itemData.imageSrc || '/spyshop/items/placeholder_large.png'} alt={itemData.title} layout="fill" objectFit="contain" data-ai-hint="item large" />
-            <div className="absolute inset-0 bg-black/20 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
-                <Search className="w-12 h-12 text-white/70"/>
-            </div>
-          </motion.div>
-          
-          <div className="text-center w-full max-w-xs md:max-w-sm">
-            <p className="text-3xl font-semibold text-orange-400 mb-1">{itemData.cost} <span className="text-xl text-slate-400">ELINT</span></p>
-            <button 
-                onClick={() => onPurchase(itemData.id)}
-                className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold py-2.5 px-4 rounded-md transition-colors duration-200 flex items-center justify-center text-lg shadow-md hover:shadow-lg"
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-4xl mx-auto pt-8 md:pt-0">
+          {/* Left Column: Image & Primary Info */}
+          <div className="flex flex-col items-center">
+            <h2 className="text-2xl md:text-3xl font-orbitron text-cyan-300 mb-3 text-center md:mt-8">{itemData.title} <span className="text-orange-400 text-xl">L{itemData.level}</span></h2>
+            <motion.div
+              className="relative w-full max-w-xs md:max-w-sm aspect-square bg-slate-800/50 border border-slate-700 rounded-lg shadow-xl overflow-hidden cursor-pointer mb-4"
+              onClick={() => setIsImageModalOpen(true)}
+              whileHover={{ scale: 1.03 }}
             >
-                <ShoppingCart className="w-5 h-5 mr-2" /> Purchase
-            </button>
-            <p className="text-xs text-slate-500 mt-1">Scarcity: <span className="font-medium text-slate-400">{itemData.scarcity}</span></p>
+              <Image src={itemData.imageSrc || '/spyshop/items/placeholder_large.png'} alt={itemData.title} layout="fill" objectFit="contain" data-ai-hint="item large"/>
+              <div className="absolute inset-0 bg-black/20 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Search className="w-12 h-12 text-white/70"/>
+              </div>
+            </motion.div>
+            
+            <div className="text-center w-full max-w-xs md:max-w-sm">
+              <p className="text-3xl font-semibold text-orange-400 mb-1">{itemData.cost} <span className="text-xl text-slate-400">ELINT</span></p>
+              <button 
+                  onClick={() => onPurchase(itemData.id)}
+                  className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold py-2.5 px-4 rounded-md transition-colors duration-200 flex items-center justify-center text-lg shadow-md hover:shadow-lg"
+              >
+                  <ShoppingCart className="w-5 h-5 mr-2" /> Purchase
+              </button>
+              <p className="text-xs text-slate-500 mt-1">Scarcity: <span className="font-medium text-slate-400">{itemData.scarcity}</span></p>
+            </div>
+          </div>
+
+          {/* Right Column: Details & Description */}
+          <div className="md:pt-10">
+              <div className="bg-slate-800/60 border border-slate-700/80 rounded-lg p-4 shadow-lg">
+                  <h3 className="text-xl font-orbitron text-sky-300 mb-2">Description</h3>
+                  <p className="text-sm text-slate-300 mb-4 leading-relaxed">{itemData.description}</p>
+
+                  <h3 className="text-xl font-orbitron text-sky-300 mb-3">Details</h3>
+                  {itemData.strength && <ProgressBar label="Strength" value={itemData.strength.current} max={itemData.strength.max} colorClass="bg-red-500" />}
+                  {itemData.resistance && <ProgressBar label="Resistance" value={itemData.resistance.current} max={itemData.resistance.max} colorClass="bg-blue-500" />}
+                  {itemData.attackFactor && <ProgressBar label="Attack Factor" value={itemData.attackFactor} max={100} colorClass="bg-yellow-500"/>}
+
+
+                  <div className="text-sm space-y-1.5 text-slate-300 mt-3">
+                      <p><strong className="text-slate-400">Category:</strong> {itemData.category}</p>
+                      {itemData.itemTypeDetail && <p><strong className="text-slate-400">Type:</strong> {itemData.itemTypeDetail}</p>}
+                      {itemData.perUseCost && <p><strong className="text-slate-400">Per-Use Cost:</strong> {itemData.perUseCost} ELINT</p>}
+                      {itemData.functionText && <p><strong className="text-slate-400">Function:</strong> {itemData.functionText}</p>}
+                      {itemData.keyCrackerInfluence && <p><strong className="text-slate-400">Key Cracker Influence:</strong> {itemData.keyCrackerInfluence}</p>}
+                      {itemData.minigameEffect && <p><strong className="text-slate-400">Minigame Effect:</strong> {itemData.minigameEffect}</p>}
+                      {itemData.levelScalingNote && <p><strong className="text-slate-400">Level Scaling:</strong> {itemData.levelScalingNote}</p>}
+                  </div>
+              </div>
           </div>
         </div>
 
-        {/* Right Column: Details & Description */}
-        <div className="md:pt-10">
-            <div className="bg-slate-800/60 border border-slate-700/80 rounded-lg p-4 shadow-lg">
-                <h3 className="text-xl font-orbitron text-sky-300 mb-2">Description</h3>
-                <p className="text-sm text-slate-300 mb-4 leading-relaxed">{itemData.description}</p>
-
-                <h3 className="text-xl font-orbitron text-sky-300 mb-3">Details</h3>
-                {itemData.strength && <ProgressBar label="Strength" value={itemData.strength.current} max={itemData.strength.max} colorClass="bg-red-500" />}
-                {itemData.resistance && <ProgressBar label="Resistance" value={itemData.resistance.current} max={itemData.resistance.max} colorClass="bg-blue-500" />}
-
-                <div className="text-sm space-y-1.5 text-slate-300">
-                    <p><strong className="text-slate-400">Type:</strong> {itemData.itemTypeDetail}</p>
-                    {itemData.perUseCost && <p><strong className="text-slate-400">Per-Use Cost:</strong> {itemData.perUseCost}</p>}
-                    <p><strong className="text-slate-400">Function:</strong> {itemData.functionText}</p>
-                    {itemData.keyCrackerInfluence && <p><strong className="text-slate-400">Key Cracker Influence:</strong> {itemData.keyCrackerInfluence}</p>}
-                </div>
-            </div>
-        </div>
+          {/* Image Modal */}
+          <AnimatePresence>
+          {isImageModalOpen && (
+              <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+                  onClick={() => setIsImageModalOpen(false)}
+              >
+              <motion.div
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                  exit={{ scale: 0.8 }}
+                  className="relative max-w-3xl max-h-[80vh]"
+                  onClick={(e) => e.stopPropagation()} // Prevents modal close on image click
+              >
+                  <Image src={itemData.imageSrc || '/spyshop/items/placeholder_large.png'} alt={itemData.title} width={800} height={800} objectFit="contain" className="rounded-lg shadow-2xl" data-ai-hint="item closeup"/>
+                  <button onClick={() => setIsImageModalOpen(false)} className="absolute -top-3 -right-3 bg-slate-800 text-white rounded-full p-1.5 shadow-lg hover:bg-red-500 transition-colors">
+                      <X className="w-5 h-5"/>
+                  </button>
+              </motion.div>
+              </motion.div>
+          )}
+          </AnimatePresence>
       </div>
-
-        {/* Image Modal */}
-        <AnimatePresence>
-        {isImageModalOpen && (
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
-                onClick={() => setIsImageModalOpen(false)}
-            >
-            <motion.div
-                initial={{ scale: 0.8 }}
-                animate={{ scale: 1 }}
-                exit={{ scale: 0.8 }}
-                className="relative max-w-3xl max-h-[80vh]"
-                onClick={(e) => e.stopPropagation()} // Prevents modal close on image click
-            >
-                <Image src={itemData.imageSrc || '/spyshop/items/placeholder_large.png'} alt={itemData.title} width={800} height={800} objectFit="contain" className="rounded-lg shadow-2xl" data-ai-hint="item closeup" />
-                <button onClick={() => setIsImageModalOpen(false)} className="absolute -top-3 -right-3 bg-slate-800 text-white rounded-full p-1.5 shadow-lg hover:bg-red-500 transition-colors">
-                    <X className="w-5 h-5"/>
-                </button>
-            </motion.div>
-            </motion.div>
-        )}
-        </AnimatePresence>
     </div>
   );
+};
+
+// Dummy Player Info for Shop context if needed
+const DUMMY_PLAYER_INFO = {
+    level: ITEM_LEVELS[2] // Example: Player is Level 3
 };

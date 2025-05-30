@@ -13,15 +13,15 @@ import {
   updatePlayer,
   type Player,
 } from '@/lib/player-data';
-import { getItemById, type ItemCategory, type GameItemBase, type PlayerInventoryItem, type VaultSlot } from '@/lib/game-items';
-import { CodenameInput } from '@/components/game/onboarding/CodenameInput'; // Import CodenameInput
+import { getItemById, type ItemCategory, type GameItemBase, type PlayerInventoryItem, type VaultSlot, type ItemLevel } from '@/lib/game-items';
+import { CodenameInput } from '@/components/game/onboarding/CodenameInput'; 
 
 export type Faction = 'Cyphers' | 'Shadows' | 'Observer';
 export type OnboardingStep = 'welcome' | 'factionChoice' | 'authPrompt' | 'codenameInput' | 'fingerprint' | 'tod';
 
 export interface PlayerStats {
   xp: number;
-  level: number;
+  level: ItemLevel; // Use ItemLevel type
   elintReserves: number;
   elintTransferred: number;
   successfulVaultInfiltrations: number;
@@ -70,7 +70,7 @@ interface AppContextType {
   isPiBrowser: boolean;
   onboardingStep: OnboardingStep;
   messages: GameMessage[];
-  dailyTeamCode: Record<Faction, string>;
+  dailyTeamCode: Record<Faction | 'Observer', string>; // Ensure Observer is a valid key type
   faction: Faction;
   isAuthenticated: boolean;
   playerSpyName: string | null;
@@ -109,13 +109,15 @@ interface AppContextType {
   isShopAuthenticated: boolean;
   setIsShopAuthenticated: (isAuthenticated: boolean) => void;
   todInventoryContext: {
-    category: ItemCategory;
+    category: ItemCategory; // Ensure ItemCategory is correctly typed or imported
     title: string;
     purpose?: 'equip_lock' | 'equip_nexus' | 'infiltrate_lock';
     onItemSelect?: (item: GameItemBase) => void;
   } | null;
   openInventoryTOD: (context: AppContextType['todInventoryContext']) => void;
   closeInventoryTOD: () => void;
+  // Expose playerInfo for shop
+  playerInfo: Player | null; // Or a subset like { level: ItemLevel }
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -127,12 +129,16 @@ const NATO_ALPHABET = [
   "X-ray", "Yankee", "Zulu"
 ];
 
-function generateFactionTeamCode(seedDate: Date, faction: Faction): string {
+function generateFactionTeamCode(seedDate: Date, faction: Faction | 'Observer'): string {
   const start = new Date(seedDate.getFullYear(), 0, 0);
   const diff = seedDate.getTime() - start.getTime();
   const oneDay = 1000 * 60 * 60 * 24;
   const dayOfYear = Math.floor(diff / oneDay);
-  const factionSeedOffset = faction === 'Cyphers' ? 1000 : faction === 'Shadows' ? 2000 : 3000;
+  
+  let factionSeedOffset = 3000; // Default for Observer
+  if (faction === 'Cyphers') factionSeedOffset = 1000;
+  else if (faction === 'Shadows') factionSeedOffset = 2000;
+
   const getRandomWord = (baseSeed: number, index: number) => {
     const combinedSeed = baseSeed + index * 100 + factionSeedOffset;
     const positiveIndex = (combinedSeed % NATO_ALPHABET.length + NATO_ALPHABET.length) % NATO_ALPHABET.length;
@@ -147,7 +153,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [_isPiBrowser, _setIsPiBrowser] = useState(false);
   const [_onboardingStep, _setOnboardingStep] = useState<OnboardingStep>('welcome');
   const [_messages, _setMessages] = useState<GameMessage[]>([]);
-  const [_dailyTeamCode, _setDailyTeamCode] = useState<Record<Faction, string>>({ Cyphers: '', Shadows: '', Observer: '' });
+  const [_dailyTeamCode, _setDailyTeamCode] = useState<Record<Faction | 'Observer', string>>({ Cyphers: '', Shadows: '', Observer: '' });
   const [_isTODWindowOpen, _setIsTODWindowOpen] = useState(false);
   const [_todWindowTitle, _setTODWindowTitle] = useState('');
   const [_todWindowContent, _setTODWindowContent] = useState<ReactNode | null>(null);
@@ -158,12 +164,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [_isShopAuthenticated, _setIsShopAuthenticated] = useState(false);
   const [_todInventoryContext, _setTodInventoryContext] = useState<AppContextType['todInventoryContext']>(null);
 
-  const { theme: currentGlobalTheme } = useTheme(); // For passing to TODWindow explicitly if needed
+  const { theme: currentGlobalTheme, themeVersion } = useTheme();
 
   useEffect(() => {
     console.log('[AppContext] Initializing...');
     initializePlayerData();
-    const inPiBrowser = navigator.userAgent.includes("PiBrowser");
+    const inPiBrowser = typeof window !== "undefined" && navigator.userAgent.includes("PiBrowser");
     _setIsPiBrowser(inPiBrowser);
     const today = new Date();
     _setDailyTeamCode({
@@ -174,123 +180,166 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const loadLastPlayer = async () => {
       _setIsLoading(true);
-      const lastPlayerId = localStorage.getItem('lastPlayerId');
+      const lastPlayerId = typeof window !== "undefined" ? localStorage.getItem('lastPlayerId') : null;
       if (lastPlayerId) {
         const player = await getPlayer(lastPlayerId);
         if (player) {
           _setCurrentPlayer(player);
-          _setOnboardingStep(player.spyName ? 'fingerprint' : 'codenameInput');
+           // If player exists and has a spyName, they are past codename input.
+           // If no spyName, they need to go to codenameInput (unless Observer).
+          if (player.faction === 'Observer') {
+            _setOnboardingStep('tod');
+          } else if (player.spyName) {
+            _setOnboardingStep('fingerprint');
+          } else {
+            _setOnboardingStep('codenameInput'); // Existing player who hasn't set a codename
+          }
         } else {
-          localStorage.removeItem('lastPlayerId');
-          _setOnboardingStep('welcome');
+          if (typeof window !== "undefined") localStorage.removeItem('lastPlayerId');
+          _setOnboardingStep('welcome'); // No player found for ID, treat as new
         }
       } else {
-        _setOnboardingStep('welcome');
+        _setOnboardingStep('welcome'); // No last player ID, definitely new
       }
       _setIsLoading(false);
     };
     loadLastPlayer();
   }, []);
-
-  useEffect(() => { console.log('[AppContext] INTERNAL _currentPlayer state changed:', _currentPlayer); }, [_currentPlayer]);
+  
+  useEffect(() => { console.log('[AppContext] INTERNAL _currentPlayer state changed:', _currentPlayer?.id, _currentPlayer?.faction, _currentPlayer?.spyName); }, [_currentPlayer]);
   useEffect(() => { console.log('[AppContext] INTERNAL _onboardingStep changed to:', _onboardingStep); }, [_onboardingStep]);
   useEffect(() => { console.log('[AppContext] INTERNAL _isLoading changed to:', _isLoading); }, [_isLoading]);
-  useEffect(() => { console.log('[AppContext] INTERNAL _isTODWindowOpen changed to:', _isTODWindowOpen);}, [_isTODWindowOpen]);
+  useEffect(() => { console.log('[AppContext] isTODWindowOpen state changed to:', _isTODWindowOpen);}, [_isTODWindowOpen]);
 
 
   const openTODWindow = useCallback((title: string, content: ReactNode, options: TODWindowOptions = {}) => {
-    console.log('[AppContext] openTODWindow called. Title:', title, "Current _isTODWindowOpen:", _isTODWindowOpen);
+    console.log('[AppContext] openTODWindow called. Title:', title);
     _setTODWindowTitle(title);
     _setTODWindowContent(content);
     const defaultShowCloseButton = options.showCloseButton === undefined ? true : options.showCloseButton;
-    _setTODWindowOptions(prevOptions => ({ ...prevOptions, ...options, showCloseButton: defaultShowCloseButton }));
-    console.log('[AppContext] Setting _isTODWindowOpen to true.');
+    _setTODWindowOptions(prevOptions => ({ ...prevOptions, ...options, showCloseButton: defaultShowCloseButton, explicitTheme: currentGlobalTheme, themeVersion: themeVersion }));
     _setIsTODWindowOpen(true);
-  }, [_setIsTODWindowOpen, _setTODWindowTitle, _setTODWindowContent, _setTODWindowOptions]); // Added _isTODWindowOpen to deps for the log
+     console.log('[AppContext] Setting _isTODWindowOpen to true. Title:', title, 'Options:', options);
+  }, [_setIsTODWindowOpen, _setTODWindowTitle, _setTODWindowContent, _setTODWindowOptions, currentGlobalTheme, themeVersion]);
 
   const closeTODWindow = useCallback(() => {
     console.log('[AppContext] closeTODWindow called.');
     _setIsTODWindowOpen(false);
-    _setTODWindowContent(null);
+    _setTODWindowContent(null); // Clear content to prevent stale display
   }, [_setIsTODWindowOpen, _setTODWindowContent]);
 
-  const setFaction = useCallback(async (newFaction: Faction) => {
+  const setFactionAppContext = useCallback(async (newFaction: Faction) => {
     console.log('[AppContext] setFaction called with:', newFaction);
     if (_currentPlayer) {
       const updatedPlayer = { ..._currentPlayer, faction: newFaction };
       const result = await updatePlayer(updatedPlayer);
-      if (result) _setCurrentPlayer(result);
+      if (result) {
+          console.log("[AppContext] Player faction updated in DB, setting current player state.");
+          _setCurrentPlayer(result);
+      } else {
+          console.error("[AppContext] Failed to update player faction in DB.");
+      }
+    } else {
+        console.warn("[AppContext] setFaction called but no current player.");
     }
-  }, [_currentPlayer]);
+  }, [_currentPlayer, _setCurrentPlayer]);
 
-  const setPlayerSpyName = useCallback(async (name: string) => {
+  const setPlayerSpyNameAppContext = useCallback(async (name: string) => {
+    console.log('[AppContext] setPlayerSpyName called with:', name);
     if (_currentPlayer) {
       const updatedPlayer = { ..._currentPlayer, spyName: name };
       const result = await updatePlayer(updatedPlayer);
-      if (result) _setCurrentPlayer(result);
+       if (result) {
+          console.log("[AppContext] Player spyName updated in DB, setting current player state.");
+          _setCurrentPlayer(result);
+      } else {
+          console.error("[AppContext] Failed to update player spyName in DB.");
+      }
+    } else {
+        console.warn("[AppContext] setPlayerSpyName called but no current player.");
     }
-  }, [_currentPlayer]);
+  }, [_currentPlayer, _setCurrentPlayer]);
 
-  const updatePlayerStats = useCallback(async (newStats: Partial<PlayerStats>) => {
+  const updatePlayerStatsAppContext = useCallback(async (newStats: Partial<PlayerStats>) => {
+     console.log('[AppContext] updatePlayerStats called with:', newStats);
     if (_currentPlayer) {
       const updatedPlayer = {
         ..._currentPlayer,
         stats: { ..._currentPlayer.stats, ...newStats },
       };
       const result = await updatePlayer(updatedPlayer);
-      if (result) _setCurrentPlayer(result);
+      if (result) {
+        console.log("[AppContext] Player stats updated in DB, setting current player state.");
+        _setCurrentPlayer(result);
+      } else {
+        console.error("[AppContext] Failed to update player stats in DB.");
+      }
+    } else {
+        console.warn("[AppContext] updatePlayerStats called but no current player.");
     }
-  }, [_currentPlayer]);
+  }, [_currentPlayer, _setCurrentPlayer]);
 
   const handleAuthentication = useCallback(async (piId: string, chosenFaction: Faction) => {
     _setIsLoading(true);
-    localStorage.setItem('lastPlayerId', piId);
+    if (typeof window !== "undefined") localStorage.setItem('lastPlayerId', piId);
+    
     let player = await getPlayer(piId);
     let nextOnboardingStep: OnboardingStep = 'welcome';
-    let playerToOpenWindowWith: Player | null = null;
 
     if (player) {
-      console.log('[AppContext] Existing player found:', player.id, "Chosen faction:", chosenFaction);
+      console.log('[AppContext] Existing player found:', player.id, "Attempting to set faction to:", chosenFaction);
+      // Only update faction if it's different and not an Observer trying to change faction.
+      // Observers always remain Observers through this flow.
       if (player.faction !== chosenFaction && chosenFaction !== 'Observer') {
         player = { ...player, faction: chosenFaction };
-        const updated = await updatePlayer(player);
-        if (updated) player = updated;
+      } else if (player.faction !== 'Observer' && chosenFaction === 'Observer') {
+        // If an existing non-Observer tries to become Observer this way, keep their old faction.
+        // True Observer path should use a distinct flow or ID if needed.
+         console.log(`[AppContext] Existing non-Observer player ${player.id} attempted to switch to Observer. Keeping faction: ${player.faction}`);
       }
-      _setCurrentPlayer(player);
-      playerToOpenWindowWith = player;
-      nextOnboardingStep = player.spyName ? 'fingerprint' : 'codenameInput';
-    } else {
-      console.log('[AppContext] New player. ID:', piId, "Chosen faction:", chosenFaction);
-      const newPlayer = await createPlayer(piId, chosenFaction, DEFAULT_PLAYER_STATS_FOR_NEW_PLAYER, null);
-      _setCurrentPlayer(newPlayer);
-      playerToOpenWindowWith = newPlayer;
-      nextOnboardingStep = 'codenameInput';
-    }
+       _setCurrentPlayer(player); // Set current player with potentially updated faction
 
-    if (chosenFaction === 'Observer') {
-      nextOnboardingStep = 'tod';
+      if (player.faction === 'Observer') {
+        nextOnboardingStep = 'tod';
+      } else if (!player.spyName) {
+        nextOnboardingStep = 'codenameInput';
+      } else {
+        nextOnboardingStep = 'fingerprint';
+      }
+    } else { // New player
+      console.log('[AppContext] New player. ID:', piId, "Chosen faction:", chosenFaction);
+      const newPlayer = await createPlayer(piId, chosenFaction, { ...DEFAULT_PLAYER_STATS_FOR_NEW_PLAYER }, null);
+      _setCurrentPlayer(newPlayer);
+      if (chosenFaction === 'Observer') {
+        nextOnboardingStep = 'tod';
+      } else {
+        nextOnboardingStep = 'codenameInput';
+      }
     }
     
-    _setIsLoading(false);
-    _setOnboardingStep(nextOnboardingStep); // Set onboarding step first
-
-    // If the next step is codenameInput, AppContext directly opens the window
-    if (nextOnboardingStep === 'codenameInput' && playerToOpenWindowWith) {
-      const factionTheme = playerToOpenWindowWith.faction === 'Cyphers' ? 'cyphers' : playerToOpenWindowWith.faction === 'Shadows' ? 'shadows' : 'terminal-green';
-      console.log(`[AppContext] Player faction is ${playerToOpenWindowWith.faction}, opening CodenameInput with theme: ${factionTheme}`);
+    // Only open codename window from here if the step is codenameInput
+    if (nextOnboardingStep === 'codenameInput' && _currentPlayer && _currentPlayer.faction !== 'Observer') {
+      const factionTheme = _currentPlayer.faction === 'Cyphers' ? 'cyphers' : _currentPlayer.faction === 'Shadows' ? 'shadows' : 'terminal-green';
+      console.log(`[AppContext] Player faction is ${_currentPlayer.faction}, opening CodenameInput from handleAuthentication with theme: ${factionTheme}`);
+      // Ensure openTODWindow uses the updated player's faction for theming
       openTODWindow(
         "Agent Codename",
         <CodenameInput explicitTheme={factionTheme} />,
-        { showCloseButton: false }
+        { showCloseButton: false, explicitTheme: factionTheme, themeVersion }
       );
     }
-  }, [openTODWindow]); // Added openTODWindow to dependencies
+
+    _setOnboardingStep(nextOnboardingStep);
+    _setIsLoading(false);
+  }, [_setCurrentPlayer, _setOnboardingStep, _setIsLoading, openTODWindow, _currentPlayer, themeVersion]);
+
 
   const logout = useCallback(() => {
     _setCurrentPlayer(null);
-    localStorage.removeItem('lastPlayerId');
+    if (typeof window !== "undefined") localStorage.removeItem('lastPlayerId');
     _setOnboardingStep('welcome');
-  }, []);
+    _setIsLoading(false); // Ensure loading is false on logout
+  }, [_setCurrentPlayer, _setOnboardingStep, _setIsLoading]);
 
   const addMessage = useCallback((message: Omit<GameMessage, 'id' | 'timestamp'>) => {
     const newMessage: GameMessage = {
@@ -301,9 +350,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     _setMessages(prev => {
       const newMessagesList = [newMessage, ...prev.filter(m => !m.isPinned)];
       const pinnedMessages = prev.filter(m => m.isPinned);
-      return [...pinnedMessages, ...newMessagesList.slice(0, 50 - pinnedMessages.length)];
+      // Limit total messages to 50
+      const combinedMessages = [...pinnedMessages, ...newMessagesList];
+      return combinedMessages.slice(0, 50);
     });
-  }, []);
+  }, [_setMessages]);
 
   const updatePlayerInventoryItemStrength = useCallback(async (itemId: string, newStrength: number) => {
     if (_currentPlayer) {
@@ -315,18 +366,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (result) _setCurrentPlayer(result);
       }
     }
-  }, [_currentPlayer]);
+  }, [_currentPlayer, _setCurrentPlayer]);
 
   const spendElint = useCallback(async (amount: number): Promise<boolean> => {
     if (_currentPlayer && _currentPlayer.stats.elintReserves >= amount) {
-      await updatePlayerStats({
+      // Directly call updatePlayerStatsAppContext which handles DB update and state
+      await updatePlayerStatsAppContext({
         elintReserves: _currentPlayer.stats.elintReserves - amount,
-        elintSpentSpyShop: _currentPlayer.stats.elintSpentSpyShop + amount, // Track spending
+        elintSpentSpyShop: (_currentPlayer.stats.elintSpentSpyShop || 0) + amount, 
       });
       return true;
     }
     return false;
-  }, [_currentPlayer, updatePlayerStats]);
+  }, [_currentPlayer, updatePlayerStatsAppContext]);
 
   const addItemToInventory = useCallback(async (
     itemId: string,
@@ -335,12 +387,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   ) => {
     if (_currentPlayer) {
       const newInventory = { ..._currentPlayer.inventory };
-      const baseItem = getItemById(itemId); // Get base item to determine maxStrength if not provided
+      const baseItem = getItemById(itemId); 
       const strengthToAdd = itemDetails?.currentStrength ?? baseItem?.maxStrength ?? undefined;
 
       if (newInventory[itemId]) {
         newInventory[itemId].quantity += quantity;
-        if (strengthToAdd !== undefined) { // Only update strength if provided or available
+        if (strengthToAdd !== undefined && newInventory[itemId].currentStrength === undefined) { 
           newInventory[itemId].currentStrength = strengthToAdd;
         }
       } else {
@@ -350,7 +402,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const result = await updatePlayer(updatedPlayer);
       if (result) _setCurrentPlayer(result);
     }
-  }, [_currentPlayer]);
+  }, [_currentPlayer, _setCurrentPlayer]);
 
   const removeItemFromInventory = useCallback(async (itemId: string, quantity: number = 1) => {
     if (_currentPlayer) {
@@ -365,7 +417,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (result) _setCurrentPlayer(result);
       }
     }
-  }, [_currentPlayer]);
+  }, [_currentPlayer, _setCurrentPlayer]);
 
   const purchaseItem = useCallback(async (itemId: string): Promise<boolean> => {
     const itemData = getItemById(itemId);
@@ -375,10 +427,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     if (await spendElint(itemData.cost)) {
       await addItemToInventory(itemId, 1, { currentStrength: itemData.maxStrength });
-      addMessage({ text: `Purchased ${itemData.name}`, type: 'notification' });
+      addMessage({ text: `Purchased ${itemData.name} L${itemData.level}`, type: 'notification' });
       return true;
     }
-    addMessage({ text: `Insufficient ELINT to purchase ${itemData.name}.`, type: 'error' });
+    addMessage({ text: `Insufficient ELINT to purchase ${itemData.name} L${itemData.level}.`, type: 'error' });
     return false;
   }, [_currentPlayer, spendElint, addItemToInventory, addMessage]);
 
@@ -387,21 +439,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     let itemBeingDeployed: GameItemBase | undefined = undefined;
     let itemBeingRemovedFromSlot: PlayerInventoryItem | null = null;
-    const newInventory = { ..._currentPlayer.inventory };
-    const newVault = [..._currentPlayer.vault];
-    const slotIndex = newVault.findIndex(slot => slot.id === slotId);
+    const newInventory = JSON.parse(JSON.stringify(_currentPlayer.inventory)); // Deep copy
+    const newVault = JSON.parse(JSON.stringify(_currentPlayer.vault)); // Deep copy
+    const slotIndex = newVault.findIndex((slot: VaultSlot) => slot.id === slotId);
+
 
     if (slotIndex === -1) {
-      console.error(`Vault slot ${slotId} not found.`);
+      console.error(`[AppContext] Vault slot ${slotId} not found.`);
       return;
     }
-
+    
     itemBeingRemovedFromSlot = newVault[slotIndex].item;
 
     if (itemIdToDeploy) {
       itemBeingDeployed = getItemById(itemIdToDeploy);
       if (!itemBeingDeployed) {
-        console.error(`Item ${itemIdToDeploy} not found for deployment.`);
+        console.error(`[AppContext] Item ${itemIdToDeploy} not found for deployment.`);
         return;
       }
       if (!newInventory[itemIdToDeploy] || newInventory[itemIdToDeploy].quantity <= 0) {
@@ -410,21 +463,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       const deployedItemInstance: PlayerInventoryItem = {
         id: itemBeingDeployed.id,
-        quantity: 1, // Always deploy one instance
-        currentStrength: itemBeingDeployed.maxStrength, // Deploy with max strength
+        quantity: 1, 
+        currentStrength: itemBeingDeployed.maxStrength, 
       };
       newVault[slotIndex].item = deployedItemInstance;
       newInventory[itemIdToDeploy].quantity -= 1;
       if (newInventory[itemIdToDeploy].quantity <= 0) {
         delete newInventory[itemIdToDeploy];
       }
-    } else {
+    } else { // Clearing the slot
       newVault[slotIndex].item = null;
     }
 
+    // If an item was removed, add it back to inventory
     if (itemBeingRemovedFromSlot) {
       if (newInventory[itemBeingRemovedFromSlot.id]) {
-        newInventory[itemBeingRemovedFromSlot.id].quantity += itemBeingRemovedFromSlot.quantity; // Add back exact quantity
+        newInventory[itemBeingRemovedFromSlot.id].quantity += itemBeingRemovedFromSlot.quantity;
       } else {
         newInventory[itemBeingRemovedFromSlot.id] = itemBeingRemovedFromSlot;
       }
@@ -450,38 +504,54 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const result = await updatePlayer(updatedPlayer);
     if (result) {
       _setCurrentPlayer(result);
-      addMessage({ text: itemIdToDeploy && itemBeingDeployed ? `Deployed ${itemBeingDeployed.name} to vault.` : `Cleared vault slot.`, type: 'system' });
+      addMessage({ text: itemIdToDeploy && itemBeingDeployed ? `Deployed ${itemBeingDeployed.name} L${itemBeingDeployed.level} to vault.` : `Cleared vault slot.`, type: 'system' });
     }
-  }, [_currentPlayer, addMessage]);
+  }, [_currentPlayer, _setCurrentPlayer, addMessage]);
 
   const addXp = useCallback(async (amount: number) => {
     if (_currentPlayer) {
-      await updatePlayerStats({ xp: _currentPlayer.stats.xp + amount });
-      // Level up logic could be added here or in updatePlayerStats
+      // Directly call updatePlayerStatsAppContext which handles DB update and state
+      await updatePlayerStatsAppContext({ xp: _currentPlayer.stats.xp + amount });
+      // Level up logic would typically go here or be triggered by an XP change observer
       addMessage({ text: `+${amount} XP`, type: 'notification' });
     }
-  }, [_currentPlayer, updatePlayerStats, addMessage]);
+  }, [_currentPlayer, updatePlayerStatsAppContext, addMessage]);
 
 
   const openInventoryTOD = useCallback((context: AppContextType['todInventoryContext']) => {
     _setTodInventoryContext(context);
-    const currentTheme = _todWindowOptions.explicitTheme || currentGlobalTheme || 'terminal-green';
-    const currentVersion = _todWindowOptions.themeVersion || 0;
+    // Theme determination should use the AppContext's current faction/theme state
+    const resolvedTheme = _currentPlayer?.faction === 'Cyphers' ? 'cyphers' 
+                        : _currentPlayer?.faction === 'Shadows' ? 'shadows' 
+                        : currentGlobalTheme || 'terminal-green';
     openTODWindow(
       context?.title || "Inventory",
-      <div>Inventory Browser for {context?.category} - {context?.title}</div>, // Placeholder, page.tsx will render actual component
+      <div>Inventory Browser for {context?.category} - {context?.title}</div>, 
       {
-        explicitTheme: currentTheme,
-        themeVersion: currentVersion, // Pass version to ensure re-render if theme changes
+        explicitTheme: resolvedTheme,
+        themeVersion: themeVersion, 
         showCloseButton: true,
       }
     );
-  }, [_setTodInventoryContext, openTODWindow, _todWindowOptions.explicitTheme, _todWindowOptions.themeVersion, currentGlobalTheme]);
+  }, [_setTodInventoryContext, openTODWindow, _currentPlayer, currentGlobalTheme, themeVersion]);
 
   const closeInventoryTOD = useCallback(() => {
     _setTodInventoryContext(null);
     closeTODWindow();
   }, [_setTodInventoryContext, closeTODWindow]);
+  
+  const playerInfoForShop = useMemo(() => {
+    if (!_currentPlayer) return null;
+    // Pass only necessary info to avoid large object in context if shop only needs level
+    return {
+      id: _currentPlayer.id,
+      spyName: _currentPlayer.spyName,
+      faction: _currentPlayer.faction,
+      stats: { level: _currentPlayer.stats.level, elintReserves: _currentPlayer.stats.elintReserves },
+      // inventory and vault are large, only pass if shop needs to directly read them
+    } as Player; // Cast if you create a subset type later
+  }, [_currentPlayer]);
+
 
   const contextValue = useMemo(() => ({
     currentPlayer: _currentPlayer,
@@ -497,12 +567,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     playerStats: _currentPlayer?.stats || DEFAULT_PLAYER_STATS_FOR_NEW_PLAYER,
     playerInventory: _currentPlayer?.inventory || {},
     playerVault: _currentPlayer?.vault || [],
-    setFaction,
-    setPlayerSpyName,
+    setFaction: setFactionAppContext, // Use the new name
+    setPlayerSpyName: setPlayerSpyNameAppContext, // Use the new name
     setOnboardingStep: _setOnboardingStep,
     setIsLoading: _setIsLoading,
     addMessage,
-    updatePlayerStats,
+    updatePlayerStats: updatePlayerStatsAppContext, // Use the new name
     addXp,
     handleAuthentication,
     logout,
@@ -530,13 +600,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     todInventoryContext: _todInventoryContext,
     openInventoryTOD,
     closeInventoryTOD,
+    playerInfo: playerInfoForShop,
   }), [
     _currentPlayer, _isLoading, _isPiBrowser, _onboardingStep, _messages, _dailyTeamCode,
-    setFaction, setPlayerSpyName, _setOnboardingStep, _setIsLoading, addMessage, updatePlayerStats, addXp, handleAuthentication, logout,
+    setFactionAppContext, setPlayerSpyNameAppContext, _setOnboardingStep, _setIsLoading, addMessage, updatePlayerStatsAppContext, addXp, handleAuthentication, logout,
     _isTODWindowOpen, _todWindowTitle, _todWindowContent, _todWindowOptions, openTODWindow, closeTODWindow,
     updatePlayerInventoryItemStrength, spendElint, purchaseItem, addItemToInventory, removeItemFromInventory, deployItemToVault,
-    _isSpyShopActive, _setIsSpyShopActive, _isSpyShopOpen, _setIsSpyShopOpen, _shopSearchTerm, _setShopSearchTerm, _isShopAuthenticated, _setIsShopAuthenticated,
-    _todInventoryContext, openInventoryTOD, closeInventoryTOD
+    _isSpyShopActive, _setIsSpyShopActive, _isSpyShopOpen, _shopSearchTerm, _setShopSearchTerm, _isShopAuthenticated, _setIsShopAuthenticated,
+    _todInventoryContext, openInventoryTOD, closeInventoryTOD, playerInfoForShop
   ]);
 
   return (
@@ -553,5 +624,3 @@ export function useAppContext() {
   }
   return context;
 }
-
-    

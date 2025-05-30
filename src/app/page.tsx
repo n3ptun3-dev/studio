@@ -4,7 +4,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { useAppContext, type Faction, type GameItemBase } from '@/contexts/AppContext';
+import { useAppContext, type Faction, type PlayerStats, type GameItemBase } from '@/contexts/AppContext'; // Added PlayerStats
 import { useTheme, type Theme } from '@/contexts/ThemeContext';
 import { WelcomeScreen } from '@/components/game/onboarding/WelcomeScreen';
 import { FactionChoiceScreen } from '@/components/game/onboarding/FactionChoiceScreen';
@@ -21,16 +21,27 @@ import { InventoryBrowserInTOD } from '@/components/game/inventory/InventoryBrow
 import { cn } from '@/lib/utils';
 import { CodenameInput } from '@/components/game/onboarding/CodenameInput';
 
+
+const DEFAULT_PLAYER_STATS_FOR_NEW_PLAYER: PlayerStats = {
+  xp: 0, level: 1, elintReserves: 500, elintTransferred: 0,
+  successfulVaultInfiltrations: 0, successfulLockInfiltrations: 0,
+  elintObtainedTotal: 0, elintObtainedCycle: 0, elintLostTotal: 0, elintLostCycle: 0,
+  elintGeneratedTotal: 0, elintGeneratedCycle: 0, elintTransferredToHQCyle: 0,
+  successfulInterferences: 0, elintSpentSpyShop: 0,
+  hasPlacedFirstLock: false,
+};
+
+
 export default function HomePage() {
   const appContext = useAppContext();
   const {
     onboardingStep,
-    faction,
+    faction, // This faction is from AppContext and should be the source of truth
     playerSpyName,
     playerStats,
     addMessage,
     setIsLoading,
-    isLoading: isAppLoading,
+    isLoading: isAppLoading, // isLoading from AppContext
     isTODWindowOpen,
     todWindowTitle,
     todWindowContent,
@@ -39,10 +50,10 @@ export default function HomePage() {
     isSpyShopActive,
     todInventoryContext,
     closeInventoryTOD,
-    openTODWindow,
+    openTODWindow, // Make sure this is used consistently
   } = appContext;
 
-  const { theme: currentTheme, themeVersion } = useTheme();
+  const { theme: currentThemeContextTheme, themeVersion } = useTheme(); // Theme from ThemeContext
 
   const todContainerRef = useRef<HTMLDivElement>(null);
   const [parallaxOffset, setParallaxOffset] = useState(0);
@@ -52,7 +63,7 @@ export default function HomePage() {
 
   console.log('HomePage rendering, isTODWindowOpen:', isTODWindowOpen);
   console.log('HomePage rendering. AppContext faction for TODWindow key:', faction);
-  console.log('HomePage rendering. Current ThemeContext theme for TODWindow key:', currentTheme);
+  console.log('HomePage rendering. Current ThemeContext theme for TODWindow key:', currentThemeContextTheme);
   console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key:', themeVersion);
 
 
@@ -72,7 +83,9 @@ export default function HomePage() {
   }, [onboardingStep, isClientMounted]);
 
   // useEffect to open CodenameInput when onboardingStep is 'codenameInput'
-  // This was moved from AppContext to HomePage
+  // This is now handled by AppContext.handleAuthentication directly.
+  // This useEffect can be removed.
+  /*
   useEffect(() => {
     if (isClientMounted && onboardingStep === 'codenameInput' && !isTODWindowOpen) {
       const factionTheme = faction === 'Cyphers' ? 'cyphers' : faction === 'Shadows' ? 'shadows' : 'terminal-green';
@@ -84,12 +97,13 @@ export default function HomePage() {
       );
     }
   }, [isClientMounted, onboardingStep, openTODWindow, isTODWindowOpen, faction]);
+  */
 
 
   useEffect(() => {
     if (onboardingStep !== 'tod' || !isClientMounted || isAppLoading || isTODWindowOpen || !playBootAnimation) return;
     
-    const isNewPlayer = !playerStats.xp && playerStats.elintReserves <= DEFAULT_PLAYER_STATS_FOR_NEW_PLAYER.elintReserves && !playerStats.level;
+    const isNewPlayer = !playerStats.xp && playerStats.elintReserves <= DEFAULT_PLAYER_STATS_FOR_NEW_PLAYER.elintReserves && playerStats.level <= 1;
 
     if (faction === 'Observer') {
       addMessage({
@@ -97,14 +111,14 @@ export default function HomePage() {
         type: 'system',
         isPinned: true,
       });
-      setIsLoading(false);
+      setIsLoading(false); // Ensure loading stops for observer
     } else if (isNewPlayer && playerSpyName) {
       addMessage({
         text: `Welcome, Agent ${playerSpyName}. HQ guidance protocol initiated. Familiarize yourself with the Tactical Overlay Device. Your first objective: explore your Agent PAD.`,
         type: 'hq',
         isPinned: true,
       });
-      setIsLoading(false);
+       setIsLoading(false); // Ensure loading stops
     } else if (playerSpyName) { // Existing, named player
       // AI Welcome Message Disabled
       addMessage({
@@ -112,9 +126,11 @@ export default function HomePage() {
         type: 'hq',
         isPinned: true,
       });
-      setIsLoading(false);
+       setIsLoading(false); // Ensure loading stops
     } else {
-      setIsLoading(false);
+       // This case might be hit if playerSpyName is null but it's not an Observer or strictly a new player
+       // e.g. if they are stuck at codename input.
+       setIsLoading(false); 
     }
   }, [onboardingStep, isClientMounted, playerSpyName, faction, playerStats, addMessage, setIsLoading, isAppLoading, isTODWindowOpen, playBootAnimation]);
 
@@ -144,7 +160,7 @@ export default function HomePage() {
         todContainerRef.current.scrollLeft = totalContentWidthForLooping + currentScrollLeft;
       }
     }
-  }, [sectionComponents.length]);
+  }, [sectionComponents.length]); // Removed parallaxOffset
 
   useEffect(() => {
     const container = todContainerRef.current;
@@ -178,33 +194,37 @@ export default function HomePage() {
         return <WelcomeScreen />;
       case 'factionChoice':
         return <FactionChoiceScreen />;
+      // 'codenameInput' is now handled via TODWindow opened by AppContext or HomePage useEffect
       case 'fingerprint':
         return <FingerprintScannerScreen />;
       default: 
-        return <div className="animate-pulse text-2xl font-orbitron holographic-text text-center">CODENAME REQUIRED</div>;
+         // If stuck in a non-TOD, non-fingerprint, non-welcome, non-factionChoice state, show loading
+        return <div className="animate-pulse text-2xl font-orbitron holographic-text text-center">LOADING SYSTEM DATA...</div>;
     }
   };
 
   if (!isClientMounted) {
     return (
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6">
-        <ParallaxBackground parallaxOffset={0} /> {/* Pass 0 or a default offset */}
+        <ParallaxBackground /> 
         <div className="text-2xl font-orbitron holographic-text text-center animate-pulse">INITIALIZING TOD...</div>
       </main>
     );
   }
 
+  // Loading state specifically for onboarding steps before TOD is active
+  // Use appContext's isLoading for this.
   if (isAppLoading && onboardingStep !== 'tod') {
     return (
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6">
-        <ParallaxBackground parallaxOffset={0} />
+        <ParallaxBackground />
         <div className="animate-pulse text-2xl font-orbitron holographic-text text-center">LOADING INTERFACE...</div>
          <TODWindow
-            key={`${faction}-${currentTheme}-${themeVersion}-loading-${isTODWindowOpen}`}
+            key={`${faction}-${currentThemeContextTheme}-${themeVersion}-loading-${isTODWindowOpen}`}
             isOpen={isTODWindowOpen && !todInventoryContext}
             onClose={closeTODWindow}
             title={todWindowTitle}
-            explicitTheme={currentTheme}
+            explicitTheme={currentThemeContextTheme} // Use theme from ThemeContext
             themeVersion={themeVersion}
             showCloseButton={todWindowOptions.showCloseButton}
           >
@@ -216,15 +236,15 @@ export default function HomePage() {
 
   if (onboardingStep !== 'tod') {
     return (
-      <main className="relative flex flex-col items-center justify-start min-h-screen bg-background text-foreground p-4 sm:p-6 overflow-y-auto">
-        <ParallaxBackground parallaxOffset={0} />
+      <main className="relative flex flex-col items-stretch justify-start min-h-screen bg-background text-foreground p-4 sm:p-6 overflow-y-auto">
+        <ParallaxBackground />
         {renderOnboarding()}
         <TODWindow
-           key={`${faction}-${currentTheme}-${themeVersion}-onboarding-${isTODWindowOpen}-${onboardingStep}`}
+           key={`${faction}-${currentThemeContextTheme}-${themeVersion}-onboarding-${isTODWindowOpen}-${onboardingStep}`}
           isOpen={isTODWindowOpen && !todInventoryContext}
           onClose={closeTODWindow}
           title={todWindowTitle}
-          explicitTheme={currentTheme}
+          explicitTheme={currentThemeContextTheme} // Use theme from ThemeContext
           themeVersion={themeVersion}
           showCloseButton={todWindowOptions.showCloseButton !== undefined ? todWindowOptions.showCloseButton : true}
         >
@@ -233,15 +253,17 @@ export default function HomePage() {
       </main>
     );
   }
-
+  
+  // This log is useful for debugging TODWindow theming when it's part of the main TOD view.
   console.log('HomePage rendering. AppContext faction for TODWindow key (TOD view):', faction);
-  console.log('HomePage rendering. Current ThemeContext theme for TODWindow key (TOD view):', currentTheme);
+  console.log('HomePage rendering. Current ThemeContext theme for TODWindow key (TOD view):', currentThemeContextTheme);
   console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key (TOD view):', themeVersion);
-  console.log('HomePage rendering. TODWindow props: explicitTheme=', currentTheme, 'key=', `${faction}-${currentTheme}-${themeVersion}-tod-${isTODWindowOpen}-${todInventoryContext ? 'inv-open' : 'inv-closed'}`);
+  console.log('HomePage rendering. TODWindow props: explicitTheme=', currentThemeContextTheme, 'key=', `${faction}-${currentThemeContextTheme}-${themeVersion}-tod-${isTODWindowOpen}-${todInventoryContext ? 'inv-open' : 'inv-closed'}`);
+
 
   return (
     <main className="relative h-screen w-screen overflow-hidden"> 
-      <ParallaxBackground parallaxOffset={parallaxOffset} />
+      <ParallaxBackground />
       
       <div 
         className="parallax-layer z-[5] opacity-30"
@@ -268,7 +290,7 @@ export default function HomePage() {
       {isSpyShopActive && (
         <div
           className="fixed inset-0 z-[9998] transition-colors duration-200 ease-in-out"
-          style={{ backgroundColor: `hsl(var(--primary-hsl) / 0.5)` }}
+          style={{ backgroundColor: `hsl(var(--primary-hsl) / 0.5)` }} // This uses global theme primary
         />
       )}
 
@@ -293,11 +315,11 @@ export default function HomePage() {
       )}
       
       <TODWindow
-        key={`${faction}-${currentTheme}-${themeVersion}-tod-${isTODWindowOpen}-${todInventoryContext ? 'inv-open' : 'inv-closed'}`}
+        key={`${faction}-${currentThemeContextTheme}-${themeVersion}-tod-${isTODWindowOpen}-${todInventoryContext ? 'inv-open' : 'inv-closed'}`}
         isOpen={isTODWindowOpen && !todInventoryContext}
         onClose={closeTODWindow}
         title={todWindowTitle}
-        explicitTheme={currentTheme}
+        explicitTheme={currentThemeContextTheme} // Use theme from ThemeContext
         themeVersion={themeVersion} 
         showCloseButton={todWindowOptions.showCloseButton !== undefined ? todWindowOptions.showCloseButton : true}
       >
@@ -306,11 +328,11 @@ export default function HomePage() {
 
       {todInventoryContext && (
         <TODWindow
-          key={`${faction}-${currentTheme}-${themeVersion}-inventory-${todInventoryContext.category}-${isTODWindowOpen}`}
+          key={`${faction}-${currentThemeContextTheme}-${themeVersion}-inventory-${todInventoryContext.category}-${isTODWindowOpen}`}
           isOpen={!!todInventoryContext}
           onClose={closeInventoryTOD}
           title={todInventoryContext.title}
-          explicitTheme={currentTheme} 
+          explicitTheme={currentThemeContextTheme} // Use theme from ThemeContext
           themeVersion={themeVersion} 
           showCloseButton={true}
         >
@@ -320,25 +342,3 @@ export default function HomePage() {
     </main>
   );
 }
-
-const DEFAULT_PLAYER_STATS_FOR_NEW_PLAYER: PlayerStats = {
-  xp: 0,
-  level: 1, 
-  elintReserves: 500, 
-  elintTransferred: 0,
-  successfulVaultInfiltrations: 0,
-  successfulLockInfiltrations: 0,
-  elintObtainedTotal: 0,
-  elintObtainedCycle: 0,
-  elintLostTotal: 0,
-  elintLostCycle: 0,
-  elintGeneratedTotal: 0,
-  elintGeneratedCycle: 0,
-  elintTransferredToHQCyle: 0,
-  successfulInterferences: 0,
-  elintSpentSpyShop: 0,
-  hasPlacedFirstLock: false,
-};
-      
-
-    
