@@ -1,3 +1,4 @@
+
 // This file defines the data structures and item lists for the Spi vs Spi game.
 // It includes interfaces for various item categories and populated arrays of example items.
 
@@ -241,7 +242,6 @@ export const VAULT_HARDWARE_ITEMS: VaultHardwareItem[] = [
     { category: 'Vault Hardware', description: 'Basic digital barrier.', resistance: { current: 10, max: 10 }, minigameEffect: "Requires X entries.", dataAiHint: "security lock", tileImageSrc: "/spyshop/tiles/StdCypherLock.png", imageSrc: "/spyshop/items/StdCypherLock_L1.png" },
     ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 100, 800), strength: {current: calculateScaledValue(l, 50, 400), max: calculateScaledValue(l, 50, 400)}, scarcity: l < 4 ? 'Common' : 'Uncommon' }))
   ),
-  // ... Add other Vault Hardware items using generateItemLevels
   ...generateItemLevels<'VaultHardware'>(
     'reinforced_deadbolt', 'Reinforced Deadbolt',
     { category: 'Vault Hardware', description: 'Physical barrier with added resilience.', resistance: { current: 20, max: 20 }, minigameEffect: "Harder to drill.", dataAiHint: "strong lock", tileImageSrc: "/spyshop/tiles/ReinforcedDeadbolt.png", imageSrc: "/spyshop/items/ReinforcedDeadbolt_L1.png" },
@@ -252,7 +252,6 @@ export const VAULT_HARDWARE_ITEMS: VaultHardwareItem[] = [
     { category: 'Vault Hardware', description: 'Non-physical tricky tech.', resistance: {current: 30, max:30}, minigameEffect: "Adds extra symbols.", dataAiHint: "quantum lock", tileImageSrc: "/spyshop/tiles/QuantumLock.png", imageSrc: "/spyshop/items/QuantumLock_L1.png"},
     ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 300, 2400), strength: {current: calculateScaledValue(l, 100, 800), max: calculateScaledValue(l, 100, 800)}, scarcity: l < 5 ? 'Uncommon' : 'Rare' }))
   ),
-  // ... more vault hardware
 ];
 
 export const LOCK_FORTIFIER_ITEMS: LockFortifierItem[] = [
@@ -261,7 +260,6 @@ export const LOCK_FORTIFIER_ITEMS: LockFortifierItem[] = [
     { category: 'Lock Fortifiers', description: 'Negates successful entries.', strength: {current: 1, max:1}, resistance: {current:0, max:0}, type: 'One-Time Use', functionDescription: 'Negates entries equal to its level.', dataAiHint: "circuit node", tileImageSrc: "/spyshop/tiles/DummyNode.png", imageSrc: "/spyshop/items/DummyNode_L1.png"},
     ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 200, 1600), scarcity: l < 6 ? 'Uncommon' : 'Rare' }))
   ),
-  // ... Add other Lock Fortifier items
 ];
 
 export const ENTRY_TOOL_ITEMS: EntryToolItem[] = [
@@ -270,7 +268,6 @@ export const ENTRY_TOOL_ITEMS: EntryToolItem[] = [
     { category: 'Entry Tools', description: 'Standard lock pick.', attackFactor: 10, type: 'Not Applicable', minigameEffect: "Reduces required entries.", levelScalingNote: "Efficiency up by Lvl*1", lockTypeEffectiveness: { idealCounterAgainst: ["Standard Cypher Lock"], poorMatchPenaltyAgainst: ["Reinforced Deadbolt"]}, strengthPerEntryClarification: "Base effectiveness", lockFortifierEffectsDefinition: "None", dataAiHint: "lock pick", tileImageSrc: "/spyshop/tiles/BasicPick.png", imageSrc: "/spyshop/items/BasicPick_L1.png"},
     ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 50, 400), attackFactor: calculateScaledValue(l, 10, 80), scarcity: l < 5 ? 'Common' : 'Uncommon' }))
   ),
-  // ... Add other Entry Tool items
 ];
 
 export const NEXUS_UPGRADE_ITEMS: NexusUpgradeItem[] = [
@@ -279,7 +276,21 @@ export const NEXUS_UPGRADE_ITEMS: NexusUpgradeItem[] = [
     { category: 'Nexus Upgrades', description: 'Alerts on infiltration attempts.', functionDescription: "Alerts on attack, provides intel.", placement: "Vault-Wide Upgrade slot", durability: "Rechargeable", cooldown: "5 mins", dataAiHint: "security camera", tileImageSrc: "/spyshop/tiles/SecurityCamera.png", imageSrc: "/spyshop/items/SecurityCamera_L1.png"},
     ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 250, 2000), rechargeCost: calculateScaledValue(l, 10, 80, 1, 8), rechargeCapacity: `${l} alerts`, scarcity: 'Uncommon' }))
   ),
-  // ... Add other Nexus Upgrade items
+  ...generateItemLevels<'NexusUpgrade'>(
+    'reinforced_foundation', 'Reinforced Foundation',
+    { category: 'Nexus Upgrades', description: 'Increases structural integrity.', functionDescription: "Increases vault structural integrity.", placement: "Vault-Wide Upgrade slot", durability: "Permanent", dataAiHint: "strong foundation", tileImageSrc: "/spyshop/tiles/ReinforcedFoundation.png", imageSrc: "/spyshop/items/ReinforcedFoundation_L1.png"},
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 500, 4000), scarcity: 'Rare' }))
+  ),
+  ...generateItemLevels<'NexusUpgrade'>(
+    'ers', 'Emergency Repair System (ERS)',
+    { category: 'Nexus Upgrades', description: 'Provides reserve strength for locks.', functionDescription: "Reserve strength for locks.", placement: "Vault-Wide Upgrade slot", durability: "Rechargeable", cooldown: "1 hour", dataAiHint: "repair system", tileImageSrc: "/spyshop/tiles/ERS.png", imageSrc: "/spyshop/items/ERS_L1.png"},
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 750, 6000), rechargeCost: calculateScaledValue(l, 50, 400), rechargeCapacity: `${l*100} strength points`, scarcity: 'Very Rare' }))
+  ),
+   ...generateItemLevels<'NexusUpgrade'>(
+    'epc', 'Emergency Power Cell (EPC)',
+    { category: 'Nexus Upgrades', description: 'Single-use defense boost.', functionDescription: "Boosts defenses, increases minigame difficulty.", placement: "Vault-Wide Upgrade slot", durability: "One-Time Use", repurchaseCost: calculateScaledValue(1, 1000, 8000), dataAiHint: "power cell", tileImageSrc: "/spyshop/tiles/EPC.png", imageSrc: "/spyshop/items/EPC_L1.png"},
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 1000, 8000), repurchaseCost: calculateScaledValue(l, 800, 6400), scarcity: 'Super Rare' }))
+  ),
 ];
 
 export const ASSAULT_TECH_ITEMS: AssaultTechItem[] = [
@@ -288,39 +299,81 @@ export const ASSAULT_TECH_ITEMS: AssaultTechItem[] = [
     { category: 'Assault Tech', description: 'Reduces lock difficulty.', functionDescription: "Reduces required entries for a lock.", placement: "Inventory (Consumable)", durability: "Single-use", dataAiHint: "system hack", tileImageSrc: "/spyshop/tiles/SystemHack.png", imageSrc: "/spyshop/items/SystemHack_L1.png"},
     ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 300, 2400), repurchaseCost: calculateScaledValue(l,200,1800), scarcity: 'Rare' }))
   ),
-  // ... Add other Assault Tech items
+   ...generateItemLevels<'AssaultTech'>(
+    'stealth_program', 'Stealth Program',
+    { category: 'Assault Tech', description: 'Reduces code digits.', functionDescription: "Reduces code digits, harder to detect.", placement: "Inventory (Consumable)", durability: "Single-use", dataAiHint: "stealth software", tileImageSrc: "/spyshop/tiles/StealthProgram.png", imageSrc: "/spyshop/items/StealthProgram_L1.png"},
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 400, 3200), repurchaseCost: calculateScaledValue(l,300,2400), scarcity: 'Very Rare' }))
+  ),
+  ...generateItemLevels<'AssaultTech'>(
+    'code_scrambler', 'Code Scrambler',
+    { category: 'Assault Tech', description: 'Randomizes defender keypad.', functionDescription: "Interferes with defender's visual interface.", placement: "Inventory (Consumable)", durability: "Single-use", dataAiHint: "code scrambler", tileImageSrc: "/spyshop/tiles/CodeScrambler.png", imageSrc: "/spyshop/items/CodeScrambler_L1.png"},
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 600, 4800), repurchaseCost: calculateScaledValue(l,450,3600), scarcity: 'Super Rare' }))
+  ),
 ];
 
 
 export const AESTHETIC_SCHEME_ITEMS: AestheticSchemeItem[] = [
-  { id: 'aesthetic_scheme_a', name: 'Team Blue', title: 'Team Blue', description: 'Default Cyphers operative theme.', level: 1, cost: 0, scarcity: 'Common', category: 'Aesthetic Schemes', themeKey: 'cyphers', colorVar: 5, imageSrc: '/spyshop/items/Theme_Cyphers.png', tileImageSrc: '/spyshop/tiles/Theme_Cyphers.png', dataAiHint: "blue abstract" },
-  { id: 'aesthetic_scheme_b', name: 'Team Red', title: 'Team Red', description: 'Standard Shadows operative theme.', level: 1, cost: 0, scarcity: 'Common', category: 'Aesthetic Schemes', themeKey: 'shadows', colorVar: 1, imageSrc: '/spyshop/items/Theme_Shadows.png', tileImageSrc: '/spyshop/tiles/Theme_Shadows.png', dataAiHint: "red abstract" },
-  { id: 'aesthetic_scheme_c', name: 'Terminal Green', title: 'Terminal Green', description: 'Classic green terminal theme.', level: 1, cost: 100, scarcity: 'Common', category: 'Aesthetic Schemes', themeKey: 'terminal-green', colorVar: 4, imageSrc: '/spyshop/items/Theme_TerminalGreen.png', tileImageSrc: '/spyshop/tiles/Theme_TerminalGreen.png', dataAiHint: "green abstract" },
+  { id: 'aesthetic_scheme_cyphers', name: 'Team Blue', title: 'Team Blue', description: 'Default Cyphers operative theme.', level: 1, cost: 0, scarcity: 'Common', category: 'Aesthetic Schemes', themeKey: 'cyphers', colorVar: 5, imageSrc: '/spyshop/items/Theme_Cyphers.png', tileImageSrc: '/spyshop/tiles/Theme_Cyphers.png', dataAiHint: "blue abstract" },
+  { id: 'aesthetic_scheme_shadows', name: 'Team Red', title: 'Team Red', description: 'Standard Shadows operative theme.', level: 1, cost: 0, scarcity: 'Common', category: 'Aesthetic Schemes', themeKey: 'shadows', colorVar: 1, imageSrc: '/spyshop/items/Theme_Shadows.png', tileImageSrc: '/spyshop/tiles/Theme_Shadows.png', dataAiHint: "red abstract" },
+  { id: 'aesthetic_scheme_terminal_green', name: 'Terminal Green', title: 'Terminal Green', description: 'Classic green terminal theme.', level: 1, cost: 100, scarcity: 'Common', category: 'Aesthetic Schemes', themeKey: 'terminal-green', colorVar: 4, imageSrc: '/spyshop/items/Theme_TerminalGreen.png', tileImageSrc: '/spyshop/tiles/Theme_TerminalGreen.png', dataAiHint: "green abstract" },
 ];
 
-// Helper function to create an ItemTile from a base item name and its category
-function createItemTile(category: ItemCategory, baseItemName: string): ItemTile | null {
-  // Find the L1 version of this item to get its tileImageSrc and other base details
-  const l1Item = ALL_ITEMS_BY_CATEGORY[category]?.find(item => item.name === baseItemName && item.level === 1);
-  if (!l1Item) {
-    console.warn(`L1 item not found for ${baseItemName} in category ${category} for ItemTile creation.`);
-    return null;
+// IMPORTANT: Define ALL_ITEMS_BY_CATEGORY *before* functions/constants that use it.
+export const ALL_ITEMS_BY_CATEGORY: Record<ItemCategory, GameItemBase[]> = {
+  'Vault Hardware': VAULT_HARDWARE_ITEMS,
+  'Lock Fortifiers': LOCK_FORTIFIER_ITEMS,
+  'Entry Tools': ENTRY_TOOL_ITEMS,
+  'Infiltration Gear': [], 
+  'Nexus Upgrades': NEXUS_UPGRADE_ITEMS,
+  'Assault Tech': ASSAULT_TECH_ITEMS,
+  'Aesthetic Schemes': AESTHETIC_SCHEME_ITEMS,
+};
+
+// Function to get item by ID
+export function getItemById(id: string): GameItemBase | undefined {
+  for (const categoryKey in ALL_ITEMS_BY_CATEGORY) {
+    const itemsInCategory = ALL_ITEMS_BY_CATEGORY[categoryKey as ItemCategory];
+    const item = itemsInCategory.find(i => i.id === id);
+    if (item) return item;
+  }
+  return undefined;
+}
+
+// Helper function to get the L1 version of an item by its base name and category
+export function getL1ItemByBaseName(category: ItemCategory, baseName: string): GameItemBase | undefined {
+  const itemsInCategory = ALL_ITEMS_BY_CATEGORY[category];
+  if (!itemsInCategory) return undefined;
+  return itemsInCategory.find(item => item.name === baseName && item.level === 1);
+}
+
+// Helper function to create an ItemTile
+// MODIFIED: Accepts l1TileImageSrc, does NOT reference ALL_ITEMS_BY_CATEGORY for this.
+function createItemTile(
+  category: ItemCategory, 
+  baseItemName: string,
+  l1TileImageSrc: string | undefined // New parameter
+): ItemTile | null {
+  // The logic to find L1 item for tileImageSrc is now done *before* calling this function.
+  if (!l1TileImageSrc) {
+    // console.warn(`No L1 tile image source provided for ${baseItemName} in category ${category} for ItemTile creation.`);
+    // Fallback placeholder if needed, or handle error
+    l1TileImageSrc = `https://placehold.co/80x80/333/ccc&text=${baseItemName.substring(0,3)}?`;
   }
 
   return {
-    id: `${baseItemName.toLowerCase().replace(/\s+/g, '_').replace(/[()]/g, '')}_tile`, // Unique ID for the base item tile
+    id: `${baseItemName.toLowerCase().replace(/\s+/g, '_').replace(/[()]/g, '')}_tile`,
     name: baseItemName,
-    tileImageSrc: l1Item.tileImageSrc || l1Item.imageSrc, // Use specific tile image or fallback to main L1 image
+    tileImageSrc: l1TileImageSrc,
     category: category,
     getItemLevelData: (level: ItemLevel) => {
+      // This function is called at runtime, so ALL_ITEMS_BY_CATEGORY will be initialized.
       const itemsInThisCategory = ALL_ITEMS_BY_CATEGORY[category];
       return itemsInThisCategory.find(item => item.name === baseItemName && item.level === level);
     }
   };
 }
 
-
-// SHOP_CATEGORIES definition using createItemTile
+// SHOP_CATEGORIES definition using the modified createItemTile
 export const SHOP_CATEGORIES: ProductCategory[] = [
   {
     id: 'vaultHardware',
@@ -330,11 +383,11 @@ export const SHOP_CATEGORIES: ProductCategory[] = [
       {
         name: 'All Vault Hardware',
         items: [
-          createItemTile('Vault Hardware', 'Standard Cypher Lock'),
-          createItemTile('Vault Hardware', 'Reinforced Deadbolt'),
-          createItemTile('Vault Hardware', 'Quantum Entanglement Lock'),
-          // ... other vault hardware base names
-        ].filter(Boolean) as ItemTile[] // Filter out nulls if L1 item not found
+          'Standard Cypher Lock', 'Reinforced Deadbolt', 'Quantum Entanglement Lock',
+        ].map(baseName => {
+          const l1Item = getL1ItemByBaseName('Vault Hardware', baseName);
+          return createItemTile('Vault Hardware', baseName, l1Item?.tileImageSrc || l1Item?.imageSrc);
+        }).filter(Boolean) as ItemTile[]
       }
     ]
   },
@@ -346,9 +399,11 @@ export const SHOP_CATEGORIES: ProductCategory[] = [
       {
         name: 'All Lock Fortifiers',
         items: [
-          createItemTile('Lock Fortifiers', 'Dummy Node'),
-          // ... other lock fortifier base names
-        ].filter(Boolean) as ItemTile[]
+          'Dummy Node',
+        ].map(baseName => {
+          const l1Item = getL1ItemByBaseName('Lock Fortifiers', baseName);
+          return createItemTile('Lock Fortifiers', baseName, l1Item?.tileImageSrc || l1Item?.imageSrc);
+        }).filter(Boolean) as ItemTile[]
       }
     ]
   },
@@ -360,13 +415,15 @@ export const SHOP_CATEGORIES: ProductCategory[] = [
       {
         name: 'All Entry Tools',
         items: [
-          createItemTile('Entry Tools', 'Basic Pick'),
-          // ... other entry tool base names
-        ].filter(Boolean) as ItemTile[]
+          'Basic Pick',
+        ].map(baseName => {
+          const l1Item = getL1ItemByBaseName('Entry Tools', baseName);
+          return createItemTile('Entry Tools', baseName, l1Item?.tileImageSrc || l1Item?.imageSrc);
+        }).filter(Boolean) as ItemTile[]
       }
     ]
   },
-    {
+  {
     id: 'nexusUpgrades',
     name: 'Nexus Upgrades',
     iconImageSrc: '/spyshop/icons/cat_nexus_upgrades.png',
@@ -374,11 +431,11 @@ export const SHOP_CATEGORIES: ProductCategory[] = [
       {
         name: 'All Nexus Upgrades',
         items: [
-          createItemTile('Nexus Upgrades', 'Security Camera'),
-          createItemTile('Nexus Upgrades', 'Reinforced Foundation'),
-          createItemTile('Nexus Upgrades', 'Emergency Repair System (ERS)'),
-          createItemTile('Nexus Upgrades', 'Emergency Power Cell (EPC)'),
-        ].filter(Boolean) as ItemTile[]
+          'Security Camera', 'Reinforced Foundation', 'Emergency Repair System (ERS)', 'Emergency Power Cell (EPC)',
+        ].map(baseName => {
+          const l1Item = getL1ItemByBaseName('Nexus Upgrades', baseName);
+          return createItemTile('Nexus Upgrades', baseName, l1Item?.tileImageSrc || l1Item?.imageSrc);
+        }).filter(Boolean) as ItemTile[]
       }
     ]
   },
@@ -390,10 +447,11 @@ export const SHOP_CATEGORIES: ProductCategory[] = [
       {
         name: 'All Assault Tech',
         items: [
-          createItemTile('Assault Tech', 'System Hack'),
-          createItemTile('Assault Tech', 'Stealth Program'),
-          createItemTile('Assault Tech', 'Code Scrambler'),
-        ].filter(Boolean) as ItemTile[]
+          'System Hack', 'Stealth Program', 'Code Scrambler',
+        ].map(baseName => {
+          const l1Item = getL1ItemByBaseName('Assault Tech', baseName);
+          return createItemTile('Assault Tech', baseName, l1Item?.tileImageSrc || l1Item?.imageSrc);
+        }).filter(Boolean) as ItemTile[]
       }
     ]
   },
@@ -409,12 +467,11 @@ export const SHOP_CATEGORIES: ProductCategory[] = [
           name: item.name,
           tileImageSrc: item.tileImageSrc || item.imageSrc,
           category: 'Aesthetic Schemes',
-          getItemLevelData: (level: ItemLevel) => level === item.level ? item : undefined // Schemes are usually single-level
+          getItemLevelData: (level: ItemLevel) => level === item.level ? item : undefined
         }))
       }
     ]
   },
-  // Infiltration Gear remains empty for now as per prompt
   {
     id: 'infiltrationGear',
     name: 'Infiltration Gear',
@@ -423,33 +480,16 @@ export const SHOP_CATEGORIES: ProductCategory[] = [
   },
 ];
 
-
-export const ALL_ITEMS_BY_CATEGORY: Record<ItemCategory, GameItemBase[]> = {
-  'Vault Hardware': VAULT_HARDWARE_ITEMS,
-  'Lock Fortifiers': LOCK_FORTIFIER_ITEMS,
-  'Entry Tools': ENTRY_TOOL_ITEMS,
-  'Infiltration Gear': [], 
-  'Nexus Upgrades': NEXUS_UPGRADE_ITEMS,
-  'Assault Tech': ASSAULT_TECH_ITEMS,
-  'Aesthetic Schemes': AESTHETIC_SCHEME_ITEMS,
-};
-
-// Function to get item by ID (example)
-// This function needs to search across all item arrays for all levels.
-export function getItemById(id: string): GameItemBase | undefined {
-  for (const categoryKey in ALL_ITEMS_BY_CATEGORY) {
-    const itemsInCategory = ALL_ITEMS_BY_CATEGORY[categoryKey as ItemCategory];
-    const item = itemsInCategory.find(i => i.id === id);
-    if (item) return item;
-  }
-  // console.warn(`[game-items] Item with id "${id}" not found.`);
-  return undefined;
+// PlayerInventoryItem and VaultSlot interfaces (can also be in AppContext.tsx if preferred for centralization)
+export interface PlayerInventoryItem {
+  id: string; // Corresponds to GameItemBase id (e.g., 'basic_pick_l1')
+  quantity: number;
+  currentStrength?: number; // For items like locks
+  // Any other instance-specific data for an item in inventory
 }
 
-
-// Helper function to get the L1 version of an item by its base name and category
-export function getL1ItemByBaseName(category: ItemCategory, baseName: string): GameItemBase | undefined {
-  const itemsInCategory = ALL_ITEMS_BY_CATEGORY[category];
-  if (!itemsInCategory) return undefined;
-  return itemsInCategory.find(item => item.name === baseName && item.level === 1);
+export interface VaultSlot {
+  id: string; // e.g., 'lock_slot_0', 'upgrade_slot_1'
+  type: 'lock' | 'upgrade';
+  item: PlayerInventoryItem | null; // The actual item instance deployed here
 }
