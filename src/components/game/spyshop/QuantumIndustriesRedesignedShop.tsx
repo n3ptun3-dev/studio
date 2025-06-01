@@ -94,11 +94,13 @@ export function QuantumIndustriesRedesignedShop() {
   const handleSelectProductCategory = (category: ProductCategory | null) => {
     if (category && selectedProductCategory?.id === category.id) {
       setSelectedProductCategory(null); // Deselect if same category is clicked again
+      setSelectedItemBaseName(null); 
+      setCurrentViewItemData(null);
     } else {
       setSelectedProductCategory(category);
+      setSelectedItemBaseName(null); 
+      setCurrentViewItemData(null); 
     }
-    setSelectedItemBaseName(null); // Clear selected item when category changes
-    setCurrentViewItemData(null); // Clear item data
   };
 
   const handleSelectItemTile = (itemBaseName: string) => {
@@ -132,16 +134,16 @@ export function QuantumIndustriesRedesignedShop() {
     ? selectedProductCategory.itemSubCategories
         .flatMap(sc => sc.items)
         .find(it => it.name === selectedItemBaseName)
-        ?.getItemLevelData(ITEM_LEVELS[0]) // Check if L1 data exists to determine if item is leveled
-      ? ITEM_LEVELS // If L1 data exists, assume all levels are potentially available based on item definition
-      : [] // If no L1 data (e.g. aesthetic schemes), no levels to select
+        ?.getItemLevelData(ITEM_LEVELS[0]) 
+      ? ITEM_LEVELS 
+      : [] 
     : [];
 
   const itemsToDisplayInGrid = selectedProductCategory
     ? selectedProductCategory.itemSubCategories.flatMap(subCat => subCat.items)
     : [];
 
-  const renderProductsPage = () => {
+  const renderProductsPage = () => { 
     return (
       <AnimatePresence mode="wait">
         {currentViewItemData ? (
@@ -443,94 +445,106 @@ const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({
   if (!itemData) return <p className="text-center text-slate-400 p-8">Item details not found.</p>;
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col"> {/* Root of SpecificItemDetailView */}
+      {!isImageModalOpen && ( /* Only show LevelSelectorBar if not viewing full image */
         <LevelSelectorBar
-            selectedLevel={selectedLevel}
-            onSelectLevel={onSelectLevel}
-            playerLevel={playerLevel}
-            levelsAvailable={levelsAvailableForItem}
+          selectedLevel={selectedLevel}
+          onSelectLevel={onSelectLevel}
+          playerLevel={playerLevel}
+          levelsAvailable={levelsAvailableForItem}
         />
-      <div className="flex-grow overflow-y-auto p-4 md:p-6 scrollbar-hide">
-        <button onClick={onBack} className="absolute top-4 left-4 md:top-6 md:left-6 z-20 flex items-center text-sm text-cyan-300 hover:text-cyan-100 bg-slate-800/50 hover:bg-slate-700/70 px-3 py-1.5 rounded-md transition-colors">
-          <ArrowLeft className="w-4 h-4 mr-1.5" /> Back
-        </button>
+      )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-4xl mx-auto pt-8 md:pt-0">
-          <div className="flex flex-col items-center">
-            <h2 className="text-2xl md:text-3xl font-orbitron text-cyan-300 mb-3 text-center md:mt-8">{itemData.title} <span className="text-orange-400 text-xl">L{itemData.level}</span></h2>
-            <motion.div
-              className="relative w-full max-w-xs md:max-w-sm aspect-square bg-slate-800/50 border border-slate-700 rounded-lg shadow-xl overflow-hidden cursor-pointer mb-4"
-              onClick={() => setIsImageModalOpen(true)}
-              whileHover={{ scale: 1.03 }}
+      <div className="flex-grow overflow-y-auto p-4 md:p-6 scrollbar-hide"> {/* Main scrollable content area */}
+        {isImageModalOpen ? (
+          // Full Image View - now part of the scrollable content
+          <motion.div 
+            key="full-image-view"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="relative w-full h-full flex flex-col items-center justify-center min-h-[300px] md:min-h-[400px]" // Ensure it has some height
+          >
+            <button
+              onClick={() => setIsImageModalOpen(false)}
+              className="absolute top-1 right-1 md:top-2 md:right-2 bg-slate-800/80 text-white rounded-full p-1.5 shadow-lg hover:bg-red-600 transition-colors z-20"
+              aria-label="Close full image view"
             >
-              <Image src={itemData.imageSrc || '/spyshop/items/placeholder_large.png'} alt={itemData.title} layout="fill" objectFit="contain" data-ai-hint="item large"/>
-              <div className="absolute inset-0 bg-black/20 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <Search className="w-12 h-12 text-white/70"/>
-              </div>
-            </motion.div>
-            
-            <div className="text-center w-full max-w-xs md:max-w-sm">
-              <p className="text-3xl font-semibold text-orange-400 mb-1">{itemData.cost} <span className="text-xl text-slate-400">ELINT</span></p>
-              <button 
-                  onClick={() => onPurchase(itemData.id)}
-                  className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold py-2.5 px-4 rounded-md transition-colors duration-200 flex items-center justify-center text-lg shadow-md hover:shadow-lg"
-              >
-                  <ShoppingCart className="w-5 h-5 mr-2" /> Purchase
-              </button>
-              <p className="text-xs text-slate-500 mt-1">Scarcity: <span className="font-medium text-slate-400">{itemData.scarcity}</span></p>
+              <X className="w-5 h-5" />
+            </button>
+            <div className="relative w-full h-full flex-grow overflow-auto scrollbar-hide rounded-md border border-slate-700/50 bg-slate-900/30">
+                <Image
+                    src={itemData.imageSrc || '/spyshop/items/placeholder_large.png'}
+                    alt={itemData.title}
+                    layout="fill"
+                    objectFit="contain" 
+                    className="p-2" // Add some padding around the contained image
+                    data-ai-hint="item closeup"
+                />
             </div>
-          </div>
+          </motion.div>
+        ) : (
+          // Original Item Details View
+          <>
+            <button onClick={onBack} className="absolute top-4 left-4 md:top-6 md:left-6 z-20 flex items-center text-sm text-cyan-300 hover:text-cyan-100 bg-slate-800/50 hover:bg-slate-700/70 px-3 py-1.5 rounded-md transition-colors">
+              <ArrowLeft className="w-4 h-4 mr-1.5" /> Back
+            </button>
 
-          <div className="md:pt-10">
-              <div className="bg-slate-800/60 border border-slate-700/80 rounded-lg p-4 shadow-lg">
-                  <h3 className="text-xl font-orbitron text-sky-300 mb-2">Description</h3>
-                  <p className="text-sm text-slate-300 mb-4 leading-relaxed">{itemData.description}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-4xl mx-auto pt-8 md:pt-0">
+              <div className="flex flex-col items-center">
+                <h2 className="text-2xl md:text-3xl font-orbitron text-cyan-300 mb-3 text-center md:mt-8">{itemData.title} <span className="text-orange-400 text-xl">L{itemData.level}</span></h2>
+                <motion.div
+                  className="relative w-full max-w-xs md:max-w-sm aspect-square bg-slate-800/50 border border-slate-700 rounded-lg shadow-xl overflow-hidden cursor-pointer mb-4"
+                  onClick={() => setIsImageModalOpen(true)}
+                  whileHover={{ scale: 1.03 }}
+                >
+                  <Image src={itemData.imageSrc || '/spyshop/items/placeholder_large.png'} alt={itemData.title} layout="fill" objectFit="contain" data-ai-hint="item large"/>
+                  <div className="absolute inset-0 bg-black/20 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <Search className="w-12 h-12 text-white/70"/>
+                  </div>
+                </motion.div>
+                
+                <div className="text-center w-full max-w-xs md:max-w-sm">
+                  <p className="text-3xl font-semibold text-orange-400 mb-1">{itemData.cost} <span className="text-xl text-slate-400">ELINT</span></p>
+                  <button 
+                      onClick={() => onPurchase(itemData.id)}
+                      className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold py-2.5 px-4 rounded-md transition-colors duration-200 flex items-center justify-center text-lg shadow-md hover:shadow-lg"
+                  >
+                      <ShoppingCart className="w-5 h-5 mr-2" /> Purchase
+                  </button>
+                  <p className="text-xs text-slate-500 mt-1">Scarcity: <span className="font-medium text-slate-400">{itemData.scarcity}</span></p>
+                </div>
+              </div>
 
-                  <h3 className="text-xl font-orbitron text-sky-300 mb-3">Details</h3>
-                  {itemData.strength && <ProgressBar label="Strength" value={itemData.strength.current} max={itemData.strength.max} colorClass="bg-red-500" />}
-                  {itemData.resistance && <ProgressBar label="Resistance" value={itemData.resistance.current} max={itemData.resistance.max} colorClass="bg-blue-500" />}
-                  {itemData.attackFactor && <ProgressBar label="Attack Factor" value={itemData.attackFactor} max={100} colorClass="bg-yellow-500"/>}
+              <div className="md:pt-10">
+                  <div className="bg-slate-800/60 border border-slate-700/80 rounded-lg p-4 shadow-lg">
+                      <h3 className="text-xl font-orbitron text-sky-300 mb-2">Description</h3>
+                      <p className="text-sm text-slate-300 mb-4 leading-relaxed">{itemData.description}</p>
+
+                      <h3 className="text-xl font-orbitron text-sky-300 mb-3">Details</h3>
+                      {itemData.strength && <ProgressBar label="Strength" value={itemData.strength.current} max={itemData.strength.max} colorClass="bg-red-500" />}
+                      {itemData.resistance && <ProgressBar label="Resistance" value={itemData.resistance.current} max={itemData.resistance.max} colorClass="bg-blue-500" />}
+                      {itemData.attackFactor && <ProgressBar label="Attack Factor" value={itemData.attackFactor} max={100} colorClass="bg-yellow-500"/>}
 
 
-                  <div className="text-sm space-y-1.5 text-slate-300 mt-3">
-                      <p><strong className="text-slate-400">Category:</strong> {itemData.category}</p>
-                      {itemData.itemTypeDetail && <p><strong className="text-slate-400">Type:</strong> {itemData.itemTypeDetail}</p>}
-                      {itemData.perUseCost && <p><strong className="text-slate-400">Per-Use Cost:</strong> {itemData.perUseCost} ELINT</p>}
-                      {itemData.functionText && <p><strong className="text-slate-400">Function:</strong> {itemData.functionText}</p>}
-                      {itemData.keyCrackerInfluence && <p><strong className="text-slate-400">Key Cracker Influence:</strong> {itemData.keyCrackerInfluence}</p>}
-                      {itemData.minigameEffect && <p><strong className="text-slate-400">Minigame Effect:</strong> {itemData.minigameEffect}</p>}
-                      {itemData.levelScalingNote && <p><strong className="text-slate-400">Level Scaling:</strong> {itemData.levelScalingNote}</p>}
+                      <div className="text-sm space-y-1.5 text-slate-300 mt-3">
+                          <p><strong className="text-slate-400">Category:</strong> {itemData.category}</p>
+                          {itemData.itemTypeDetail && <p><strong className="text-slate-400">Type:</strong> {itemData.itemTypeDetail}</p>}
+                          {itemData.perUseCost && <p><strong className="text-slate-400">Per-Use Cost:</strong> {itemData.perUseCost} ELINT</p>}
+                          {itemData.functionText && <p><strong className="text-slate-400">Function:</strong> {itemData.functionText}</p>}
+                          {itemData.keyCrackerInfluence && <p><strong className="text-slate-400">Key Cracker Influence:</strong> {itemData.keyCrackerInfluence}</p>}
+                          {itemData.minigameEffect && <p><strong className="text-slate-400">Minigame Effect:</strong> {itemData.minigameEffect}</p>}
+                          {itemData.levelScalingNote && <p><strong className="text-slate-400">Level Scaling:</strong> {itemData.levelScalingNote}</p>}
+                      </div>
                   </div>
               </div>
-          </div>
-        </div>
-
-          <AnimatePresence>
-          {isImageModalOpen && (
-              <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-[10000] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
-                  onClick={() => setIsImageModalOpen(false)}
-              >
-                <motion.div
-                    initial={{ scale: 0.8 }}
-                    animate={{ scale: 1 }}
-                    exit={{ scale: 0.8 }}
-                    className="relative max-w-3xl max-h-[80vh] w-full h-full overflow-auto scrollbar-hide" 
-                    onClick={(e) => e.stopPropagation()} 
-                >
-                    <Image src={itemData.imageSrc || '/spyshop/items/placeholder_large.png'} alt={itemData.title} layout="fill" objectFit="contain" className="rounded-lg shadow-2xl" data-ai-hint="item closeup"/>
-                </motion.div>
-                <button onClick={() => setIsImageModalOpen(false)} className="absolute top-4 right-4 bg-slate-800 text-white rounded-full p-1.5 shadow-lg hover:bg-red-500 transition-colors z-[10001]">
-                    <X className="w-6 h-6"/>
-                </button>
-              </motion.div>
-          )}
-          </AnimatePresence>
-      </div>
-    </div>
+            </div>
+          </>
+        )}
+      </div> {/* End of main scrollable content area */}
+    </div> /* End of SpecificItemDetailView root */
   );
 };
 
+    
