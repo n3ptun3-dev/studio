@@ -51,7 +51,7 @@ export function QuantumIndustriesRedesignedShop() {
   const { closeSpyShop, playerInfo } = useAppContext();
   const [activePage, setActivePage] = useState<'products' | 'aboutUs'>('products');
   const contentScrollContainerRef = useRef<HTMLDivElement>(null);
-  const aboutUsPageRef = useRef<HTMLDivElement>(null); // Ref for the About Us page background div
+  const aboutUsPageRef = useRef<HTMLDivElement>(null);
 
   const [selectedProductCategory, setSelectedProductCategory] = useState<ProductCategory | null>(null);
   const [selectedItemBaseName, setSelectedItemBaseName] = useState<string | null>(null);
@@ -99,9 +99,11 @@ export function QuantumIndustriesRedesignedShop() {
     if (activePage === 'aboutUs' && scroller && bgElement) {
       bgElement.style.backgroundImage = `url('/spyshop/bg_about_page.jpg')`;
       bgElement.style.backgroundRepeat = 'no-repeat';
-      bgElement.style.backgroundSize = 'auto 100%'; // Fill vertically, width auto
-      bgElement.style.backgroundPosition = '0% 50%'; // Start left, vertically centered
-      bgElement.style.transition = 'background-position 0.1s linear'; // Smooth transition
+      bgElement.style.backgroundSize = 'cover'; // Use cover
+      bgElement.style.backgroundAttachment = 'local'; // Use local attachment
+      bgElement.style.backgroundPositionX = '0%';    // Initial X
+      bgElement.style.backgroundPositionY = '50%';   // Initial Y (center)
+      // bgElement.style.transition = 'background-position-x 0.05s linear'; // Optional: transition for X only
 
       const handleScroll = () => {
         const scrollHeight = scroller.scrollHeight - scroller.clientHeight;
@@ -109,8 +111,9 @@ export function QuantumIndustriesRedesignedShop() {
           const scrollTop = scroller.scrollTop;
           const scrollFraction = Math.min(1, Math.max(0, scrollTop / scrollHeight));
           bgElement.style.backgroundPositionX = `${scrollFraction * 100}%`;
+          // bgElement.style.backgroundPositionY = '50%'; // Y is fixed by initial setting and 'local' attachment
         } else {
-          bgElement.style.backgroundPositionX = '0%'; // No scroll, stick to left
+          bgElement.style.backgroundPositionX = '0%';
         }
       };
 
@@ -119,18 +122,25 @@ export function QuantumIndustriesRedesignedShop() {
 
       return () => {
         scroller.removeEventListener('scroll', handleScroll);
-        // Optional: Reset background if needed when navigating away
-        // bgElement.style.backgroundImage = '';
-        // bgElement.style.backgroundPositionX = '0%';
+        if (bgElement) {
+          bgElement.style.backgroundImage = '';
+          bgElement.style.backgroundPositionX = '';
+          bgElement.style.backgroundPositionY = '';
+          bgElement.style.backgroundSize = '';
+          bgElement.style.backgroundAttachment = '';
+          // bgElement.style.transition = '';
+        }
       };
     } else if (bgElement) {
       // Clear background if not on About Us page
       bgElement.style.backgroundImage = '';
-      bgElement.style.backgroundPosition = '';
+      bgElement.style.backgroundPositionX = '';
+      bgElement.style.backgroundPositionY = '';
       bgElement.style.backgroundSize = '';
-      bgElement.style.transition = '';
+      bgElement.style.backgroundAttachment = '';
+      // bgElement.style.transition = '';
     }
-  }, [activePage]); // Rerun when activePage changes
+  }, [activePage]);
 
   const handleSelectProductCategory = (category: ProductCategory | null) => {
     if (category && selectedProductCategory?.id === category.id) {
@@ -244,10 +254,8 @@ export function QuantumIndustriesRedesignedShop() {
 
   const renderAboutUsPage = () => {
     return (
-      <div ref={aboutUsPageRef} className="relative text-slate-300 min-h-full"> {/* Assign ref, ensure it can expand */}
-        {/* Overlay for text legibility */}
+      <div ref={aboutUsPageRef} className="relative text-slate-300 min-h-full">
         <div className="absolute inset-0 bg-black/70 z-[5]"></div>
-        {/* Actual content, needs padding */}
         <div className="relative z-10 max-w-3xl mx-auto p-6 md:p-10">
           <h2 className="text-4xl font-orbitron text-cyan-300 mb-8 text-center">About Quantum Industries</h2>
           <p className="text-lg mb-6 leading-relaxed">
@@ -276,24 +284,35 @@ export function QuantumIndustriesRedesignedShop() {
         exit={{ scale: 0.9, opacity: 0 }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
         className="w-full h-full max-w-2xl md:max-w-4xl lg:max-w-6xl md:h-[90vh] md:max-h-[800px] bg-slate-950 text-slate-100 flex flex-col shadow-2xl shadow-cyan-500/30 border border-cyan-700/50 relative"
-        style={{
-          backgroundImage: activePage === 'products' ? "url('/spyshop/bg_quantum_pattern.png')" : "none", // Conditional pattern background
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-        }}
       >
-        {activePage === 'products' && ( // Hexagons only for products page
-          <div
-            className="absolute inset-0 z-0 animate-pulse-grid"
-            style={{
-              backgroundImage: "url('/spyshop/hexagons.png')",
-              backgroundSize: 'cover',
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'center',
-            }}
-          ></div>
+         {activePage === 'products' && (
+          <>
+            <div
+              className="absolute inset-0 z-0" // Pattern background for products
+              style={{
+                backgroundImage: "url('/spyshop/bg_quantum_pattern.png')",
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+              }}
+            ></div>
+            <div
+              className="absolute inset-0 z-[1] animate-pulse-grid" // Hexagons for products
+              style={{
+                backgroundImage: "url('/spyshop/hexagons.png')",
+                backgroundSize: 'cover',
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'center',
+              }}
+            ></div>
+             {/* Floating decorative blurs (only for products page or adjust as needed) */}
+            <div className="absolute inset-0 pointer-events-none z-[2] overflow-hidden">
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-700/5 rounded-full blur-3xl animate-float-one opacity-30"></div>
+                <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-700/5 rounded-full blur-3xl animate-float-two opacity-30"></div>
+            </div>
+          </>
         )}
+
 
         <NewStickyHeader
           activePage={activePage}
@@ -302,22 +321,12 @@ export function QuantumIndustriesRedesignedShop() {
           isSmallHeader={isSmallHeader}
         />
 
-        {/* Main content area. This is the one that scrolls. */}
-        <div ref={contentScrollContainerRef} className="flex-grow overflow-y-auto scrollbar-hide relative z-10">
+        <div ref={contentScrollContainerRef} className="flex-grow overflow-y-auto scrollbar-hide relative z-[10]"> {/* Content on top of pattern/hex */}
           {activePage === 'products' ? renderProductsPage() : renderAboutUsPage()}
         </div>
 
-        {/* ProductNav (Bottom Bar) is now part of the main flex column, appearing after the scrollable content */}
         {activePage === 'products' && (
           <ProductNav selectedCategory={selectedProductCategory} onSelectCategory={handleSelectProductCategory} />
-        )}
-
-        {/* Floating decorative blurs (only for products page or adjust as needed) */}
-        {activePage === 'products' && (
-          <div className="absolute inset-0 pointer-events-none z-[2] overflow-hidden">
-            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-700/5 rounded-full blur-3xl animate-float-one opacity-30"></div>
-            <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-700/5 rounded-full blur-3xl animate-float-two opacity-30"></div>
-          </div>
         )}
       </motion.div>
     </div>
@@ -333,9 +342,8 @@ const NewStickyHeader: React.FC<NewStickyHeaderProps> = ({ activePage, setActive
   return (
     <div className={cn(headerBaseClasses, "md:rounded-t-lg")}>
       {isSmallHeader ? (
-        // Small Header Layout
         <div className="flex justify-between items-center w-full max-w-6xl mx-auto px-4 py-2">
-          <div className="relative w-10 h-10 sm:w-12 sm:h-12"> {/* Increased size */}
+          <div className="relative w-10 h-10 sm:w-12 sm:h-12">
             <Image src="/spyshop/Quantum Industries Icon.png" alt="QI Icon" layout="fill" objectFit="contain" data-ai-hint="logo quantum small"/>
           </div>
           <div className="flex items-center space-x-2 sm:space-x-4">
@@ -361,12 +369,11 @@ const NewStickyHeader: React.FC<NewStickyHeaderProps> = ({ activePage, setActive
           </div>
         </div>
       ) : (
-        // Large Header Layout
         <div className="flex flex-col items-center w-full max-w-6xl mx-auto px-6">
-           <div className="relative w-full h-16 md:h-20 my-2"> {/* Logo takes full width row */}
+           <div className="relative w-full h-16 md:h-20 my-2">
             <Image src="/spyshop/Quantum Industries Logo.png" alt="Quantum Industries Full Logo" layout="fill" objectFit="contain" data-ai-hint="logo quantum full"/>
           </div>
-          <div className="flex justify-center items-center space-x-4 w-full pb-2"> {/* Tabs and Close button on second row */}
+          <div className="flex justify-center items-center space-x-4 w-full pb-2">
             <button
               onClick={() => setActivePage('products')}
               className={`px-4 py-2 text-base font-semibold rounded-md transition-colors duration-200 ${activePage === 'products' ? 'bg-cyan-500 text-slate-900 shadow-md' : 'text-cyan-300 hover:bg-cyan-700/50 hover:text-cyan-100'}`}
@@ -397,7 +404,7 @@ const NewStickyHeader: React.FC<NewStickyHeaderProps> = ({ activePage, setActive
 const ProductNav: React.FC<ProductNavProps> = ({ selectedCategory, onSelectCategory }) => {
   return (
     <div className="flex-shrink-0 bg-slate-900/90 backdrop-blur-sm border-t border-cyan-700/50 p-2 shadow-[0_-4px_10px_-1px_rgba(0,0,0,0.1),0_-2px_6px_-2px_rgba(0,0,0,0.1)] z-10 overflow-x-auto scrollbar-hide md:rounded-b-lg">
-      <div className="flex space-x-2 justify-start md:justify-center items-center max-w-full mx-auto px-1"> {/* Changed to justify-start md:justify-center */}
+      <div className="flex space-x-2 justify-start md:justify-center items-center max-w-full mx-auto px-1">
         {SHOP_CATEGORIES.map((cat) => (
           <button
             key={cat.id}
@@ -494,7 +501,7 @@ const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({
 
   return (
     <div className="h-full flex flex-col">
-      {!isImageModalOpen && (
+      {!isImageModalOpen && ( // Conditionally render LevelSelectorBar
         <LevelSelectorBar
           selectedLevel={selectedLevel}
           onSelectLevel={onSelectLevel}
@@ -511,7 +518,7 @@ const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.2 }}
-            className="relative w-full h-full flex flex-col items-center justify-center min-h-[300px] md:min-h-[400px]"
+            className="relative w-full h-full flex flex-col items-center justify-center min-h-[300px] md:min-h-[400px]" // This is the full image container
           >
             <button
               onClick={() => setIsImageModalOpen(false)}
@@ -525,8 +532,8 @@ const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({
                 src={itemData.imageSrc || '/spyshop/items/placeholder_large.png'}
                 alt={itemData.title}
                 layout="fill"
-                objectFit="contain"
-                className="p-2"
+                objectFit="contain" // Ensures the whole image is visible, might add padding
+                className="p-2" // Add some padding around the image if needed
                 data-ai-hint="item closeup"
               />
             </div>
@@ -592,3 +599,4 @@ const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({
     </div>
   );
 };
+
