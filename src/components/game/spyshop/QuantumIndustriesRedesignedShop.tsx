@@ -1,3 +1,4 @@
+
 // src/components/game/spyshop/QuantumIndustriesRedesignedShop.tsx
 "use client";
 
@@ -6,20 +7,19 @@ import Image from 'next/image';
 import { X, ChevronDown, ChevronUp, ArrowLeft, ShoppingCart, Search } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { AnimatePresence, motion } from 'framer-motion';
-import { SHOP_CATEGORIES, ITEM_LEVELS, type ProductCategory, type ItemTile, type SpecificItemData, type ItemLevel } from '@/lib/game-items'; // ItemSubCategory no longer needed here
+import { SHOP_CATEGORIES, ITEM_LEVELS, type ProductCategory, type ItemTile, type SpecificItemData, type ItemLevel } from '@/lib/game-items'; 
 
-// Helper components (to be defined below or in separate files)
+// Helper components
 interface NewStickyHeaderProps {
   activePage: 'products' | 'aboutUs';
   setActivePage: (page: 'products' | 'aboutUs') => void;
   onClose: () => void;
-  isScrolled: boolean; // May not be needed if header doesn't change much with scroll
-  isSmallHeader: boolean; // Determines which logo/icon to show
+  isSmallHeader: boolean; 
 }
 
 interface ProductNavProps {
   selectedCategory: ProductCategory | null;
-  onSelectCategory: (category: ProductCategory | null) => void; // Allow null for deselection
+  onSelectCategory: (category: ProductCategory | null) => void; 
 }
 
 interface LevelSelectorBarProps {
@@ -38,8 +38,8 @@ interface SpecificItemDetailViewProps {
   itemData: SpecificItemData;
   onBack: () => void;
   onPurchase: (itemId: string) => void;
-  selectedLevel: ItemLevel; // Pass current level
-  onSelectLevel: (level: ItemLevel) => void; // Pass level selector handler
+  selectedLevel: ItemLevel; 
+  onSelectLevel: (level: ItemLevel) => void; 
   playerLevel: ItemLevel;
   levelsAvailableForItem: ItemLevel[];
 }
@@ -49,43 +49,23 @@ interface SpecificItemDetailViewProps {
 export function QuantumIndustriesRedesignedShop() {
   const { closeSpyShop, playerInfo } = useAppContext(); 
   const [activePage, setActivePage] = useState<'products' | 'aboutUs'>('products');
-  const [isScrolled, setIsScrolled] = useState(false); // Potentially remove if not used
   const contentScrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Product Page State
   const [selectedProductCategory, setSelectedProductCategory] = useState<ProductCategory | null>(null);
-  // selectedItemSubCategory is removed
   const [selectedItemBaseName, setSelectedItemBaseName] = useState<string | null>(null); 
   const [selectedLevel, setSelectedLevel] = useState<ItemLevel>(playerInfo?.stats.level as ItemLevel || ITEM_LEVELS[0]); 
-  
   const [currentViewItemData, setCurrentViewItemData] = useState<SpecificItemData | null>(null);
   
-  // Calculate isSmallHeader - this logic might simplify if large header is always used or based on a fixed breakpoint
-  const isSmallHeader = selectedItemBaseName !== null || activePage === 'aboutUs';
+  const isSmallHeader = selectedItemBaseName !== null || activePage === 'aboutUs' || !!selectedProductCategory;
 
 
-  useEffect(() => {
-    const mainScrollArea = contentScrollContainerRef.current;
-    if (!mainScrollArea) return;
-
-    const handleScroll = () => {
-      setIsScrolled(mainScrollArea.scrollTop > 10); // Minimal scroll to trigger
-    };
-    mainScrollArea.addEventListener('scroll', handleScroll);
-    return () => mainScrollArea.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // Reset selections when category changes (or is deselected)
   useEffect(() => {
     setSelectedItemBaseName(null);
     setCurrentViewItemData(null);
-    // No sub-category to auto-select
   }, [selectedProductCategory]);
   
-  // Fetch and set item data when base name or level changes
   useEffect(() => {
     if (selectedItemBaseName && selectedProductCategory) {
-      // Find the item tile across all subcategories of the selectedProductCategory
       let parentItemTile: ItemTile | undefined;
       for (const subCat of selectedProductCategory.itemSubCategories) {
         parentItemTile = subCat.items.find(it => it.name === selectedItemBaseName);
@@ -105,7 +85,7 @@ export function QuantumIndustriesRedesignedShop() {
 
   const handleSelectProductCategory = (category: ProductCategory | null) => {
     if (category && selectedProductCategory?.id === category.id) {
-      setSelectedProductCategory(null); // Deselect if already selected
+      setSelectedProductCategory(null); 
     } else {
       setSelectedProductCategory(category);
     }
@@ -113,7 +93,7 @@ export function QuantumIndustriesRedesignedShop() {
 
   const handleSelectItemTile = (itemBaseName: string) => {
     setSelectedItemBaseName(itemBaseName);
-    setSelectedLevel(playerInfo?.stats.level as ItemLevel || ITEM_LEVELS[0]); // Reset level on new item selection
+    setSelectedLevel(playerInfo?.stats.level as ItemLevel || ITEM_LEVELS[0]); 
   };
   
   const handleSelectLevel = (level: ItemLevel) => {
@@ -134,7 +114,7 @@ export function QuantumIndustriesRedesignedShop() {
     ? selectedProductCategory.itemSubCategories
         .flatMap(sc => sc.items)
         .find(it => it.name === selectedItemBaseName)
-        ?.getItemLevelData(ITEM_LEVELS[0]) // Check if L1 exists to imply other levels might
+        ?.getItemLevelData(ITEM_LEVELS[0]) 
       ? ITEM_LEVELS 
       : []
     : [];
@@ -153,7 +133,7 @@ export function QuantumIndustriesRedesignedShop() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -50 }}
                 transition={{ duration: 0.3 }}
-                className="h-full" // Ensure it can scroll if content is tall
+                className="h-full" 
               >
                 <SpecificItemDetailView
                     itemData={currentViewItemData}
@@ -165,7 +145,7 @@ export function QuantumIndustriesRedesignedShop() {
                     levelsAvailableForItem={levelsAvailableForItem}
                 />
             </motion.div>
-        ) : selectedProductCategory ? ( // Show grid if a category is selected
+        ) : selectedProductCategory ? ( 
             <motion.div
                 key="item-grid-view"
                 initial={{ opacity: 0 }}
@@ -178,7 +158,7 @@ export function QuantumIndustriesRedesignedShop() {
                     onSelectItem={handleSelectItemTile}
                 />
             </motion.div>
-        ) : ( // Welcome view
+        ) : ( 
             <motion.div
                 key="welcome-view"
                 initial={{ opacity: 0 }}
@@ -235,48 +215,39 @@ export function QuantumIndustriesRedesignedShop() {
             exit={{ scale: 0.9, opacity: 0 }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
             className="w-full h-full max-w-2xl md:max-w-4xl lg:max-w-6xl md:h-[90vh] md:max-h-[800px] bg-slate-950 text-slate-100 flex flex-col shadow-2xl shadow-cyan-500/30 md:rounded-lg overflow-hidden border border-cyan-700/50 relative"
-            // Base opaque background for the shop container
             style={{
                 backgroundImage: "url('/spyshop/bg_quantum_pattern.png')", 
-                backgroundSize: 'cover', // Ensure this base background covers the area
+                backgroundSize: 'cover', 
                 backgroundPosition: 'center',
                 backgroundRepeat: 'no-repeat',
             }}
         >
-            {/* Hexagonal Pattern Overlay - positioned above the base background */}
             <div 
-                className="absolute inset-0 z-0 animate-pulse-grid" // z-0 keeps it behind content but above the base bg, added animate-pulse-grid
+                className="absolute inset-0 z-0 animate-pulse-grid" 
                 style={{ 
                     backgroundImage: "url('/spyshop/hexagons.png')", 
-                    backgroundSize: 'cover', // Make the hexagons cover the available space
-                    backgroundRepeat: 'no-repeat', // Prevent repetition
+                    backgroundSize: 'cover', 
+                    backgroundRepeat: 'no-repeat',
                     backgroundPosition: 'center',
                 }}
             ></div>
             
-            {/* The main content (header, product pages, etc.) will have a higher z-index by default or explicit z-index */}
             <NewStickyHeader
               activePage={activePage}
               setActivePage={setActivePage}
               onClose={closeSpyShop}
-              isScrolled={isScrolled} 
-              isSmallHeader={activePage === 'aboutUs' || !!selectedProductCategory || !!currentViewItemData} // Simplified logic for small header
+              isSmallHeader={isSmallHeader}
             />
             
-            {/* Main scrollable content area */}
-            <div ref={contentScrollContainerRef} className="flex-grow overflow-y-auto scrollbar-hide relative z-10"> {/* z-10 to ensure content is above backgrounds */}
+            <div ref={contentScrollContainerRef} className="flex-grow overflow-y-auto scrollbar-hide relative z-10">
              {activePage === 'products' ? renderProductsPage() : renderAboutUsPage()}
             </div>
 
-            {/* Product Navigation Bar (Bottom) - Only for products page */}
             {activePage === 'products' && (
               <ProductNav selectedCategory={selectedProductCategory} onSelectCategory={handleSelectProductCategory} />
             )}
 
-            {/* Background decorative elements (other effects) - these are above the background layers */}
-            <div className="absolute inset-0 pointer-events-none z-[2] overflow-hidden"> {/* Adjusted z-index for effects */}
-                {/* The grid effect is now applied to the hexagonal background, so this div is removed */}
-                {/* The blurred circles remain as part of "other effects" */}
+            <div className="absolute inset-0 pointer-events-none z-[2] overflow-hidden">
                 <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-700/5 rounded-full blur-3xl animate-float-one opacity-30"></div>
                 <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-700/5 rounded-full blur-3xl animate-float-two opacity-30"></div>
             </div>
@@ -286,7 +257,7 @@ export function QuantumIndustriesRedesignedShop() {
 }
 
 
-// --- Sub-Components (Ideally in separate files for larger apps) ---
+// --- Sub-Components ---
 
 const NewStickyHeader: React.FC<NewStickyHeaderProps> = ({ activePage, setActivePage, onClose, isSmallHeader }) => {
   return (
@@ -295,7 +266,7 @@ const NewStickyHeader: React.FC<NewStickyHeaderProps> = ({ activePage, setActive
         // Small Header Layout
         <div className="flex justify-between items-center w-full max-w-6xl mx-auto px-4 py-2">
           <div className="flex items-center space-x-2">
-            <div className="relative w-8 h-8 sm:w-9 sm:h-9"> {/* Icon size */}
+            <div className="relative w-8 h-8 sm:w-9 sm:h-9"> 
               <Image src="/spyshop/Quantum Industries Icon.png" alt="QI Icon" layout="fill" objectFit="contain" data-ai-hint="logo quantum small"/>
             </div>
           </div>
@@ -323,9 +294,9 @@ const NewStickyHeader: React.FC<NewStickyHeaderProps> = ({ activePage, setActive
         </div>
       ) : (
         // Large Header Layout
-        <div className="flex flex-col items-center w-full max-w-6xl mx-auto px-6 pt-4 pb-3">
-          <div className="relative w-full h-16 md:h-20 mb-3"> {/* Container for full logo */}
-            <Image src="/spyshop/Quantum Industries Icon Logo.png" alt="Quantum Industries Logo" layout="fill" objectFit="contain" data-ai-hint="logo quantum large"/>
+        <div className="flex flex-col items-center w-full max-w-6xl mx-auto px-6 pt-3 pb-2">
+          <div className="relative w-full h-16 md:h-20 mb-2"> 
+            <Image src="/spyshop/Quantum Industries Logo.png" alt="Quantum Industries Full Logo" layout="fill" objectFit="contain" data-ai-hint="logo quantum full"/>
           </div>
           <div className="flex justify-center items-center space-x-4 w-full">
             <button
@@ -357,8 +328,8 @@ const NewStickyHeader: React.FC<NewStickyHeaderProps> = ({ activePage, setActive
 
 const ProductNav: React.FC<ProductNavProps> = ({ selectedCategory, onSelectCategory }) => {
   return (
-    <div className="flex-shrink-0 bg-slate-900/90 backdrop-blur-sm border-t border-cyan-700/50 p-2 shadow-[0_-4px_10px_-1px_rgba(0,0,0,0.1),0_-2px_6px_-2px_rgba(0,0,0,0.1)] z-10">
-      <div className="flex space-x-2 overflow-x-auto scrollbar-hide justify-center items-center max-w-full mx-auto px-1">
+    <div className="flex-shrink-0 bg-slate-900/90 backdrop-blur-sm border-t border-cyan-700/50 p-2 shadow-[0_-4px_10px_-1px_rgba(0,0,0,0.1),0_-2px_6px_-2px_rgba(0,0,0,0.1)] z-10 overflow-x-auto scrollbar-hide">
+      <div className="flex space-x-2 justify-start items-center max-w-full mx-auto px-1">
         {SHOP_CATEGORIES.map((cat) => (
           <button
             key={cat.id}
@@ -366,7 +337,7 @@ const ProductNav: React.FC<ProductNavProps> = ({ selectedCategory, onSelectCateg
             className={`flex flex-col items-center p-2 rounded-md transition-all duration-200 w-24 h-[70px] justify-center flex-shrink-0
                         ${selectedCategory?.id === cat.id ? 'bg-cyan-600/40 scale-105 ring-1 ring-cyan-400' : 'hover:bg-slate-700/50'}`}
           >
-            <div className="relative w-6 h-6 mb-0.5"> {/* Adjusted icon size */}
+            <div className="relative w-6 h-6 mb-0.5"> 
               <Image src={cat.iconImageSrc} alt={cat.name} layout="fill" objectFit="contain" className="opacity-80 group-hover:opacity-100" data-ai-hint="icon category"/>
             </div>
             <span className={`text-[10px] leading-tight text-center ${selectedCategory?.id === cat.id ? 'text-cyan-300 font-semibold' : 'text-slate-300'}`}>
@@ -433,7 +404,6 @@ const ItemDisplayGrid: React.FC<ItemDisplayGridProps> = ({ items, onSelectItem }
   );
 };
 
-// ProgressBar Component
 const ProgressBar: React.FC<{ label: string; value: number; max: number; colorClass?: string }> = ({ label, value, max, colorClass = "bg-green-500" }) => (
     <div className="mb-2">
         <div className="flex justify-between text-xs text-slate-400 mb-0.5">
@@ -468,7 +438,6 @@ const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({
         </button>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-4xl mx-auto pt-8 md:pt-0">
-          {/* Left Column: Image & Primary Info */}
           <div className="flex flex-col items-center">
             <h2 className="text-2xl md:text-3xl font-orbitron text-cyan-300 mb-3 text-center md:mt-8">{itemData.title} <span className="text-orange-400 text-xl">L{itemData.level}</span></h2>
             <motion.div
@@ -494,7 +463,6 @@ const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({
             </div>
           </div>
 
-          {/* Right Column: Details & Description */}
           <div className="md:pt-10">
               <div className="bg-slate-800/60 border border-slate-700/80 rounded-lg p-4 shadow-lg">
                   <h3 className="text-xl font-orbitron text-sky-300 mb-2">Description</h3>
@@ -519,28 +487,27 @@ const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({
           </div>
         </div>
 
-          {/* Image Modal */}
           <AnimatePresence>
           {isImageModalOpen && (
               <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+                  className="fixed inset-0 z-[10000] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
                   onClick={() => setIsImageModalOpen(false)}
               >
-              <motion.div
-                  initial={{ scale: 0.8 }}
-                  animate={{ scale: 1 }}
-                  exit={{ scale: 0.8 }}
-                  className="relative max-w-3xl max-h-[80vh]"
-                  onClick={(e) => e.stopPropagation()} // Prevents modal close on image click
-              >
-                  <Image src={itemData.imageSrc || '/spyshop/items/placeholder_large.png'} alt={itemData.title} width={800} height={800} objectFit="contain" className="rounded-lg shadow-2xl" data-ai-hint="item closeup"/>
-                  <button onClick={() => setIsImageModalOpen(false)} className="absolute -top-3 -right-3 bg-slate-800 text-white rounded-full p-1.5 shadow-lg hover:bg-red-500 transition-colors">
-                      <X className="w-5 h-5"/>
-                  </button>
-              </motion.div>
+                <motion.div
+                    initial={{ scale: 0.8 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0.8 }}
+                    className="relative max-w-3xl max-h-[80vh] w-full h-full overflow-auto scrollbar-hide" 
+                    onClick={(e) => e.stopPropagation()} 
+                >
+                    <Image src={itemData.imageSrc || '/spyshop/items/placeholder_large.png'} alt={itemData.title} layout="fill" objectFit="contain" className="rounded-lg shadow-2xl" data-ai-hint="item closeup"/>
+                </motion.div>
+                <button onClick={() => setIsImageModalOpen(false)} className="absolute top-4 right-4 bg-slate-800 text-white rounded-full p-1.5 shadow-lg hover:bg-red-500 transition-colors z-[10001]">
+                    <X className="w-6 h-6"/>
+                </button>
               </motion.div>
           )}
           </AnimatePresence>
@@ -549,7 +516,3 @@ const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({
   );
 };
 
-// Dummy Player Info for Shop context if needed
-const DUMMY_PLAYER_INFO = {
-    level: ITEM_LEVELS[2] // Example: Player is Level 3
-};

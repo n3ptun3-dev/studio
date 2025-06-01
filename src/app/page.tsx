@@ -61,10 +61,10 @@ export default function HomePage() {
   const initialScrollSetRef = useRef(false);
   const [playBootAnimation, setPlayBootAnimation] = useState(false);
 
-  console.log('HomePage rendering, isTODWindowOpen:', isTODWindowOpen);
-  console.log('HomePage rendering. AppContext faction for TODWindow key:', faction);
-  console.log('HomePage rendering. Current ThemeContext theme for TODWindow key:', currentThemeContextTheme);
-  console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key:', themeVersion);
+  // console.log('HomePage rendering, isTODWindowOpen:', isTODWindowOpen);
+  // console.log('HomePage rendering. AppContext faction for TODWindow key:', faction);
+  // console.log('HomePage rendering. Current ThemeContext theme for TODWindow key:', currentThemeContextTheme);
+  // console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key:', themeVersion);
 
 
   useEffect(() => {
@@ -81,23 +81,6 @@ export default function HomePage() {
       setPlayBootAnimation(false);
     }
   }, [onboardingStep, isClientMounted]);
-
-  // useEffect to open CodenameInput when onboardingStep is 'codenameInput'
-  // This is now handled by AppContext.handleAuthentication directly.
-  // This useEffect can be removed.
-  /*
-  useEffect(() => {
-    if (isClientMounted && onboardingStep === 'codenameInput' && !isTODWindowOpen) {
-      const factionTheme = faction === 'Cyphers' ? 'cyphers' : faction === 'Shadows' ? 'shadows' : 'terminal-green';
-      console.log(`[HomePage] onboardingStep is codenameInput, opening TODWindow. Faction for theme: ${faction}`);
-      openTODWindow(
-        "Agent Codename",
-        <CodenameInput explicitTheme={factionTheme} />,
-        { showCloseButton: false }
-      );
-    }
-  }, [isClientMounted, onboardingStep, openTODWindow, isTODWindowOpen, faction]);
-  */
 
 
   useEffect(() => {
@@ -173,7 +156,7 @@ export default function HomePage() {
           todContainerRef.current.scrollLeft = initialScrollPosition;
           setParallaxOffset(initialScrollPosition); 
           initialScrollSetRef.current = true;
-          console.log(`[HomePage] Initial scroll set to: ${initialScrollPosition} for section index ${targetSectionIndex}. Container width: ${sectionWidth}`);
+          // console.log(`[HomePage] Initial scroll set to: ${initialScrollPosition} for section index ${targetSectionIndex}. Container width: ${sectionWidth}`);
         }
       };
       
@@ -194,7 +177,7 @@ export default function HomePage() {
         return <WelcomeScreen />;
       case 'factionChoice':
         return <FactionChoiceScreen />;
-      // 'codenameInput' is now handled via TODWindow opened by AppContext or HomePage useEffect
+      // 'codenameInput' is now handled via TODWindow opened by AppContext.
       case 'fingerprint':
         return <FingerprintScannerScreen />;
       default: 
@@ -212,8 +195,6 @@ export default function HomePage() {
     );
   }
 
-  // Loading state specifically for onboarding steps before TOD is active
-  // Use appContext's isLoading for this.
   if (isAppLoading && onboardingStep !== 'tod') {
     return (
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4 sm:p-6">
@@ -236,7 +217,7 @@ export default function HomePage() {
 
   if (onboardingStep !== 'tod') {
     return (
-      <main className="relative flex flex-col items-stretch justify-start min-h-screen bg-background text-foreground p-4 sm:p-6 overflow-y-auto">
+      <main className="relative flex flex-col items-center justify-start min-h-screen bg-background text-foreground p-4 sm:p-6 overflow-y-auto">
         <ParallaxBackground />
         {renderOnboarding()}
         <TODWindow
@@ -244,8 +225,8 @@ export default function HomePage() {
           isOpen={isTODWindowOpen && !todInventoryContext}
           onClose={closeTODWindow}
           title={todWindowTitle}
-          explicitTheme={currentThemeContextTheme} // Use theme from ThemeContext
-          themeVersion={themeVersion}
+          explicitTheme={todWindowOptions.explicitTheme || currentThemeContextTheme} 
+          themeVersion={todWindowOptions.themeVersion || themeVersion}
           showCloseButton={todWindowOptions.showCloseButton !== undefined ? todWindowOptions.showCloseButton : true}
         >
           {todWindowContent}
@@ -254,11 +235,10 @@ export default function HomePage() {
     );
   }
   
-  // This log is useful for debugging TODWindow theming when it's part of the main TOD view.
-  console.log('HomePage rendering. AppContext faction for TODWindow key (TOD view):', faction);
-  console.log('HomePage rendering. Current ThemeContext theme for TODWindow key (TOD view):', currentThemeContextTheme);
-  console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key (TOD view):', themeVersion);
-  console.log('HomePage rendering. TODWindow props: explicitTheme=', currentThemeContextTheme, 'key=', `${faction}-${currentThemeContextTheme}-${themeVersion}-tod-${isTODWindowOpen}-${todInventoryContext ? 'inv-open' : 'inv-closed'}`);
+  // console.log('HomePage rendering. AppContext faction for TODWindow key (TOD view):', faction);
+  // console.log('HomePage rendering. Current ThemeContext theme for TODWindow key (TOD view):', currentThemeContextTheme);
+  // console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key (TOD view):', themeVersion);
+  // console.log('HomePage rendering. TODWindow props: explicitTheme=', todWindowOptions.explicitTheme || currentThemeContextTheme, 'key=', `${faction}-${todWindowOptions.explicitTheme || currentThemeContextTheme}-${todWindowOptions.themeVersion || themeVersion}-tod-${isTODWindowOpen}-${todInventoryContext ? 'inv-open' : 'inv-closed'}`);
 
 
   return (
@@ -290,7 +270,7 @@ export default function HomePage() {
       {isSpyShopActive && (
         <div
           className="fixed inset-0 z-[9998] transition-colors duration-200 ease-in-out"
-          style={{ backgroundColor: `hsl(var(--primary-hsl) / 0.5)` }} // This uses global theme primary
+          style={{ backgroundColor: `hsl(var(--primary-hsl) / 0.5)` }} 
         />
       )}
 
@@ -315,12 +295,12 @@ export default function HomePage() {
       )}
       
       <TODWindow
-        key={`${faction}-${currentThemeContextTheme}-${themeVersion}-tod-${isTODWindowOpen}-${todInventoryContext ? 'inv-open' : 'inv-closed'}`}
+        key={`${faction}-${todWindowOptions.explicitTheme || currentThemeContextTheme}-${todWindowOptions.themeVersion || themeVersion}-tod-${isTODWindowOpen}-${todInventoryContext ? 'inv-open' : 'inv-closed'}`}
         isOpen={isTODWindowOpen && !todInventoryContext}
         onClose={closeTODWindow}
         title={todWindowTitle}
-        explicitTheme={currentThemeContextTheme} // Use theme from ThemeContext
-        themeVersion={themeVersion} 
+        explicitTheme={todWindowOptions.explicitTheme || currentThemeContextTheme} 
+        themeVersion={todWindowOptions.themeVersion || themeVersion} 
         showCloseButton={todWindowOptions.showCloseButton !== undefined ? todWindowOptions.showCloseButton : true}
       >
         {todWindowContent}
@@ -328,12 +308,12 @@ export default function HomePage() {
 
       {todInventoryContext && (
         <TODWindow
-          key={`${faction}-${currentThemeContextTheme}-${themeVersion}-inventory-${todInventoryContext.category}-${isTODWindowOpen}`}
+          key={`${faction}-${todWindowOptions.explicitTheme || currentThemeContextTheme}-${todWindowOptions.themeVersion || themeVersion}-inventory-${todInventoryContext.category}-${isTODWindowOpen}`}
           isOpen={!!todInventoryContext}
           onClose={closeInventoryTOD}
           title={todInventoryContext.title}
-          explicitTheme={currentThemeContextTheme} // Use theme from ThemeContext
-          themeVersion={themeVersion} 
+          explicitTheme={todWindowOptions.explicitTheme || currentThemeContextTheme} 
+          themeVersion={todWindowOptions.themeVersion || themeVersion} 
           showCloseButton={true}
         >
           <InventoryBrowserInTOD context={todInventoryContext} />
@@ -342,3 +322,4 @@ export default function HomePage() {
     </main>
   );
 }
+
