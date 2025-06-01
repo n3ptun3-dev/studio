@@ -62,7 +62,11 @@ export function QuantumIndustriesRedesignedShop() {
   useEffect(() => {
     setSelectedItemBaseName(null);
     setCurrentViewItemData(null);
-  }, [selectedProductCategory]);
+    // Reset scroll position of content area when category changes
+    if (contentScrollContainerRef.current) {
+      contentScrollContainerRef.current.scrollTop = 0;
+    }
+  }, [selectedProductCategory, activePage]);
   
   useEffect(() => {
     if (selectedItemBaseName && selectedProductCategory) {
@@ -81,19 +85,33 @@ export function QuantumIndustriesRedesignedShop() {
     } else {
       setCurrentViewItemData(null);
     }
+    // Reset scroll position when item detail or level changes
+    if (contentScrollContainerRef.current) {
+        contentScrollContainerRef.current.scrollTop = 0;
+    }
   }, [selectedItemBaseName, selectedLevel, selectedProductCategory]);
 
   const handleSelectProductCategory = (category: ProductCategory | null) => {
     if (category && selectedProductCategory?.id === category.id) {
-      setSelectedProductCategory(null); 
+      setSelectedProductCategory(null); // Deselect if same category is clicked again
     } else {
       setSelectedProductCategory(category);
     }
+    setSelectedItemBaseName(null); // Clear selected item when category changes
+    setCurrentViewItemData(null); // Clear item data
   };
 
   const handleSelectItemTile = (itemBaseName: string) => {
     setSelectedItemBaseName(itemBaseName);
-    setSelectedLevel(playerInfo?.stats.level as ItemLevel || ITEM_LEVELS[0]); 
+    // Ensure selectedLevel defaults correctly when a new item is selected
+    const l1Data = selectedProductCategory?.itemSubCategories.flatMap(sc => sc.items)
+                      .find(it => it.name === itemBaseName)
+                      ?.getItemLevelData(1);
+    if (l1Data) {
+      setSelectedLevel(l1Data.level); // Set to item's L1 if available
+    } else {
+      setSelectedLevel(playerInfo?.stats.level as ItemLevel || ITEM_LEVELS[0]);
+    }
   };
   
   const handleSelectLevel = (level: ItemLevel) => {
@@ -114,9 +132,9 @@ export function QuantumIndustriesRedesignedShop() {
     ? selectedProductCategory.itemSubCategories
         .flatMap(sc => sc.items)
         .find(it => it.name === selectedItemBaseName)
-        ?.getItemLevelData(ITEM_LEVELS[0]) 
-      ? ITEM_LEVELS 
-      : []
+        ?.getItemLevelData(ITEM_LEVELS[0]) // Check if L1 data exists to determine if item is leveled
+      ? ITEM_LEVELS // If L1 data exists, assume all levels are potentially available based on item definition
+      : [] // If no L1 data (e.g. aesthetic schemes), no levels to select
     : [];
 
   const itemsToDisplayInGrid = selectedProductCategory
@@ -214,7 +232,7 @@ export function QuantumIndustriesRedesignedShop() {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="w-full h-full max-w-2xl md:max-w-4xl lg:max-w-6xl md:h-[90vh] md:max-h-[800px] bg-slate-950 text-slate-100 flex flex-col shadow-2xl shadow-cyan-500/30 md:rounded-lg overflow-hidden border border-cyan-700/50 relative"
+            className="w-full h-full max-w-2xl md:max-w-4xl lg:max-w-6xl md:h-[90vh] md:max-h-[800px] bg-slate-950 text-slate-100 flex flex-col shadow-2xl shadow-cyan-500/30 border border-cyan-700/50 relative"
             style={{
                 backgroundImage: "url('/spyshop/bg_quantum_pattern.png')", 
                 backgroundSize: 'cover', 
@@ -261,7 +279,7 @@ export function QuantumIndustriesRedesignedShop() {
 
 const NewStickyHeader: React.FC<NewStickyHeaderProps> = ({ activePage, setActivePage, onClose, isSmallHeader }) => {
   return (
-    <div className={`sticky top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out bg-slate-900/80 backdrop-blur-md border-b border-cyan-700/50 shadow-lg`}>
+    <div className={`sticky top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out bg-slate-900/80 backdrop-blur-md border-b border-cyan-700/50 shadow-lg md:rounded-t-lg`}>
       {isSmallHeader ? (
         // Small Header Layout
         <div className="flex justify-between items-center w-full max-w-6xl mx-auto px-4 py-2">
@@ -328,8 +346,8 @@ const NewStickyHeader: React.FC<NewStickyHeaderProps> = ({ activePage, setActive
 
 const ProductNav: React.FC<ProductNavProps> = ({ selectedCategory, onSelectCategory }) => {
   return (
-    <div className="flex-shrink-0 bg-slate-900/90 backdrop-blur-sm border-t border-cyan-700/50 p-2 shadow-[0_-4px_10px_-1px_rgba(0,0,0,0.1),0_-2px_6px_-2px_rgba(0,0,0,0.1)] z-10 overflow-x-auto scrollbar-hide">
-      <div className="flex space-x-2 justify-start items-center max-w-full mx-auto px-1">
+    <div className="flex-shrink-0 bg-slate-900/90 backdrop-blur-sm border-t border-cyan-700/50 p-2 shadow-[0_-4px_10px_-1px_rgba(0,0,0,0.1),0_-2px_6px_-2px_rgba(0,0,0,0.1)] z-10 overflow-x-auto scrollbar-hide md:rounded-b-lg">
+      <div className="flex space-x-2 justify-start md:justify-center items-center max-w-full mx-auto px-1">
         {SHOP_CATEGORIES.map((cat) => (
           <button
             key={cat.id}
