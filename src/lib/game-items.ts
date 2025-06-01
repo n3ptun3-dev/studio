@@ -21,9 +21,9 @@ export type ItemLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 export const ITEM_LEVELS: ItemLevel[] = [1, 2, 3, 4, 5, 6, 7, 8];
 
 export interface GameItemBase {
-  id: string; // Unique per level, e.g. "std_cypher_lock_l1"
-  name: string; // Base name, e.g., "Standard Cypher Lock" - level will be appended in display
-  title?: string; // Fully formatted title for display, e.g., "Standard Cypher Lock L1"
+  id: string; // Unique per level, e.g. "cypher_lock_l1"
+  name: string; // Base name, e.g., "Cypher Lock" - level will be appended in display
+  title?: string; // Fully formatted title for display, e.g., "Cypher Lock L1"
   description: string;
   level: ItemLevel;
   cost: number; // ELINT cost
@@ -168,8 +168,8 @@ export interface AestheticSchemeItem extends GameItemBase {
 // --- Types for Shop Categories and Item Display ---
 
 export interface ItemTile {
-  id: string; // Unique ID for the tile, e.g., 'std_cypher_lock_tile' (base item, not specific level)
-  name: string; // Base name of the item, e.g., 'Standard Cypher Lock'
+  id: string; // Unique ID for the tile, e.g., 'cypher_lock_tile' (base item, not specific level)
+  name: string; // Base name of the item, e.g., 'Cypher Lock'
   tileImageSrc?: string; // Image for the grid tile
   category: ItemCategory; 
   // A function to get the specific item data for a given level
@@ -245,44 +245,49 @@ function generateItemLevels<T extends Omit<GameItemBase, 'level' | 'id' | 'cost'
 
 export const HARDWARE_ITEMS: HardwareItem[] = [
   ...generateItemLevels<'Hardware'>(
-    'std_cypher_lock', 'Standard Cypher Lock',
-    { category: 'Hardware', description: 'Basic digital barrier.', strength: { current: 100, max: 100 }, resistance: { current: 10, max: 10 }, minigameEffect: "Requires successful code entries equal to its remaining strength divided by the attacker's tool's strength per entry.", dataAiHint: "security lock", tileImageSrc: "/spyshop/tiles/StdCypherLock.png", imageSrc: "/spyshop/items/StdCypherLock_L1.png" },
-    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 100, 800), strength: {current: calculateScaledValue(l, 100, 800), max: calculateScaledValue(l, 100, 800)}, scarcity: 'Common' })) // [cite: 7]
+    'cypher_lock', 'Cypher Lock',
+    { category: 'Hardware', description: 'Basic digital barrier.', strength: { current: 100, max: 100 }, resistance: { current: 10, max: 10 }, minigameEffect: "Requires successful code entries equal to its remaining strength divided by the attacker's tool's strength per entry.", dataAiHint: "security lock", 
+    tileImageSrc: "/spyshop/tiles/cypher_lock_250x250.jpg" },
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 100, 800), strength: {current: calculateScaledValue(l, 100, 800), max: calculateScaledValue(l, 100, 800)}, scarcity: 'Common', 
+    imageSrc: `/spyshop/items/cypher_lock_l${l}.jpg` }))
   ),
   ...generateItemLevels<'Hardware'>(
     'reinforced_deadbolt', 'Reinforced Deadbolt',
-    { category: 'Hardware', description: 'A physical barrier with added resilience.', strength: { current: 100, max: 100 }, resistance: { current: 20, max: 20 }, minigameEffect: "Higher strength. Drills remove fewer strength points per use compared to picks of the same level. Picks remove 50% less strength per use against Reinforced Deadbolts. Drills remove 75% less strength points per use compared to picks of the same level. Drills and Picks have different Strength per entry values against this lock, affecting how much each correct entry reduces the lock's strength and progresses the attacker towards bypassing the lock.", dataAiHint: "strong lock", tileImageSrc: "/spyshop/tiles/ReinforcedDeadbolt.png", imageSrc: "/spyshop/items/ReinforcedDeadbolt_L1.png" },
-    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 200, 1600), strength: {current: calculateScaledValue(l, 100, 800), max: calculateScaledValue(l, 100, 800)}, scarcity: 'Common' })) // [cite: 9, 10, 11, 12, 13]
+    { category: 'Hardware', description: 'A physical barrier with added resilience.', strength: { current: 100, max: 100 }, resistance: { current: 20, max: 20 }, minigameEffect: "Higher strength. Drills remove fewer strength points per use compared to picks of the same level. Picks remove 50% less strength per use against Reinforced Deadbolts. Drills remove 75% less strength points per use compared to picks of the same level. Drills and Picks have different Strength per entry values against this lock, affecting how much each correct entry reduces the lock's strength and progresses the attacker towards bypassing the lock.", dataAiHint: "strong lock", 
+    tileImageSrc: "/spyshop/tiles/reinforced_deadbolt_250x250.jpg" },
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 200, 1600), strength: {current: calculateScaledValue(l, 100, 800), max: calculateScaledValue(l, 100, 800)}, scarcity: 'Common', 
+    imageSrc: `/spyshop/items/reinforced_deadbolt_l${l}.jpg` }))
   ),
     ...generateItemLevels<'Hardware'>(
     'quantum_entanglement_lock', 'Quantum Entanglement Lock',
-    { category: 'Hardware', description: 'Non-physical tricky tech that shrugs off some standard hits.', strength: {current: 100, max:100}, resistance: {current: 30, max:30}, minigameEffect: "Adds an extra symbol to the displayed sequence. An L8 lock injects this extra symbol every 3rd round, L7 every 4th round, L6 every 5th round, L5 every 6th round, L4 every 7th round, L3 every 8th round, L2 every 9th round, and L1 every 10th round. Code Injectors have reduced effectiveness. Sonic Pulsers have reduced effectiveness (Time Allowed Per Sequence increased by 25% less).", dataAiHint: "quantum lock", tileImageSrc: "/spyshop/tiles/QuantumLock.png", imageSrc: "/spyshop/items/QuantumLock_L1.png"},
-    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 300, 2400), strength: {current: calculateScaledValue(l, 100, 800), max: calculateScaledValue(l, 100, 800)}, scarcity: l < 6 ? 'Common' : 'Scarce' })) // [cite: 14, 15, 16, 17, 18]
+    { category: 'Hardware', description: 'Non-physical tricky tech that shrugs off some standard hits.', strength: {current: 100, max:100}, resistance: {current: 30, max:30}, minigameEffect: "Adds an extra symbol to the displayed sequence. An L8 lock injects this extra symbol every 3rd round, L7 every 4th round, L6 every 5th round, L5 every 6th round, L4 every 7th round, L3 every 8th round, L2 every 9th round, and L1 every 10th round. Code Injectors have reduced effectiveness. Sonic Pulsers have reduced effectiveness (Time Allowed Per Sequence increased by 25% less).", dataAiHint: "quantum lock", 
+    tileImageSrc: "/spyshop/tiles/quantum_entanglement_lock_250x250.jpg"},
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 300, 2400), strength: {current: calculateScaledValue(l, 100, 800), max: calculateScaledValue(l, 100, 800)}, scarcity: l < 6 ? 'Common' : 'Scarce',
+    imageSrc: `/spyshop/items/quantum_entanglement_lock_l${l}.jpg` }))
   ),
-  // New Hardware Items
-  ...generateItemLevels<'Hardware'>(
+    ...generateItemLevels<'Hardware'>(
     'sonic_pulse_lock', 'Sonic Pulse Lock',
-    { category: 'Hardware', description: 'Needs specific frequencies, standard hits less effective.', strength: {current: 100, max:100}, resistance: {current: 40, max:40}, minigameEffect: "The time allowed for each entry is significantly reduced, scaling with the lock's level. The base time allowed per sequence is 20 seconds minus the lock level (e.g., L1 equals 19 seconds, L8 equals 12 seconds).", dataAiHint: "sound lock" }, // [cite: 19, 20, 21, 22]
-    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 400, 3200), strength: {current: calculateScaledValue(l, 100, 800), max: calculateScaledValue(l, 100, 800)}, scarcity: 'Uncommon' })) // [cite: 19]
+    { category: 'Hardware', description: 'Needs specific frequencies, standard hits less effective.', strength: {current: 100, max:100}, resistance: {current: 40, max:40}, minigameEffect: "The time allowed for each entry is significantly reduced, scaling with the lock's level. The base time allowed per sequence is 20 seconds minus the lock level (e.g., L1 equals 19 seconds, L8 equals 12 seconds).", dataAiHint: "sound lock",  tileImageSrc: "/spyshop/tiles/sonic_pulse_lock_250x250.jpg", imageSrc: "/spyshop/items/StdCypherLock_L1.png" },
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 400, 3200), strength: {current: calculateScaledValue(l, 100, 800), max: calculateScaledValue(l, 100, 800)}, scarcity: 'Uncommon' }))
   ),
   ...generateItemLevels<'Hardware'>(
     'plasma_conduit_lock', 'Plasma Conduit Lock',
-    { category: 'Hardware', description: 'Energy flow defense, cuts standard damage in half.', strength: {current: 100, max:100}, resistance: {current: 50, max:50}, minigameEffect: "Successful entries slightly decrease the time allowed for subsequent entries. The time reduction for subsequent entries is equal to the lock's level in seconds (L1: 1s, L2: 2s, ..., L8: 8s). Code Injectors have reduced effectiveness against this lock, and the tool's Strength per entry is halved.", dataAiHint: "energy lock" }, // [cite: 23, 24, 25, 26]
+    { category: 'Hardware', description: 'Energy flow defense, cuts standard damage in half.', strength: {current: 100, max:100}, resistance: {current: 50, max:50}, minigameEffect: "Successful entries slightly decrease the time allowed for subsequent entries. The time reduction for subsequent entries is equal to the lock's level in seconds (L1: 1s, L2: 2s, ..., L8: 8s). Code Injectors have reduced effectiveness against this lock, and the tool's Strength per entry is halved.", dataAiHint: "energy lock", tileImageSrc: "/spyshop/tiles/plasma_conduit_lock_250x250.jpg", imageSrc: "/spyshop/items/StdCypherLock_L1.png" },
     ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 500, 4000), strength: {current: calculateScaledValue(l, 100, 800), max: calculateScaledValue(l, 100, 800)}, scarcity: 'Uncommon' })) // [cite: 23]
   ),
   ...generateItemLevels<'Hardware'>(
     'biometric_seal', 'Biometric Seal',
-    { category: 'Hardware', description: 'Biological key required, very resistant to non-specific attacks.', strength: {current: 100, max:100}, resistance: {current: 60, max:60}, minigameEffect: "Very high strength. Introduces occasional micro-stutters or pauses in the symbol display. The symbols flash and hide while being displayed. The frequency at which the symbols disappear increases with the lock's level: L1 and L2 every 4s, L3 and L4 every 3s, L5 and L6 every 2s, and L7 and L8 every 1s. The duration for which the symbols disappear also increases with the lock's level: L1 for 0.1s, up to L8 for 0.8s. Picks are less effective; they remove half the normal strength per use. Code Injectors have reduced effectiveness (50% less reduction of 'Symbols Displayed').", dataAiHint: "bio lock" }, // [cite: 26, 27, 28]
+    { category: 'Hardware', description: 'Biological key required, very resistant to non-specific attacks.', strength: {current: 100, max:100}, resistance: {current: 60, max:60}, minigameEffect: "Very high strength. Introduces occasional micro-stutters or pauses in the symbol display. The symbols flash and hide while being displayed. The frequency at which the symbols disappear increases with the lock's level: L1 and L2 every 4s, L3 and L4 every 3s, L5 and L6 every 2s, and L7 and L8 every 1s. The duration for which the symbols disappear also increases with the lock's level: L1 for 0.1s, up to L8 for 0.8s. Picks are less effective; they remove half the normal strength per use. Code Injectors have reduced effectiveness (50% less reduction of 'Symbols Displayed').", dataAiHint: "bio lock", tileImageSrc: "/spyshop/tiles/biometric_seal_250x250.jpg", imageSrc: "/spyshop/items/StdCypherLock_L1.png" },
     ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 600, 4800), strength: {current: calculateScaledValue(l, 100, 800), max: calculateScaledValue(l, 100, 800)}, scarcity: 'Rare' })) // [cite: 26]
   ),
   ...generateItemLevels<'Hardware'>(
     'neural_network_lock', 'Neural Network Lock',
-    { category: 'Hardware', description: 'Non-physical lock that adapts and evolves, learning to resist intrusions.', strength: {current: 100, max:100}, resistance: {current: 70, max:70}, minigameEffect: "Very high strength. The number of symbols displayed in each sequence gradually increases. The base number of symbols increases with the lock's level (L1 starts with 6, L2 with 7, up to L8 starting with 13). For every two successful entries, the number of displayed symbols increases by one. Drills are ineffective; they do not reduce the lock's strength.", dataAiHint: "AI lock" }, // [cite: 29, 30, 31, 32, 33]
+    { category: 'Hardware', description: 'Non-physical lock that adapts and evolves, learning to resist intrusions.', strength: {current: 100, max:100}, resistance: {current: 70, max:70}, minigameEffect: "Very high strength. The number of symbols displayed in each sequence gradually increases. The base number of symbols increases with the lock's level (L1 starts with 6, L2 with 7, up to L8 starting with 13). For every two successful entries, the number of displayed symbols increases by one. Drills are ineffective; they do not reduce the lock's strength.", dataAiHint: "AI lock", tileImageSrc: "/spyshop/tiles/neural_network_lock_250x250.jpg", imageSrc: "/spyshop/items/StdCypherLock_L1.png" },
     ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 700, 5600), strength: {current: calculateScaledValue(l, 100, 800), max: calculateScaledValue(l, 100, 800)}, scarcity: 'Rare' })) // [cite: 29]
   ),
   ...generateItemLevels<'Hardware'>(
     'temporal_flux_lock', 'Temporal Flux Lock',
-    { category: 'Hardware', description: 'Non-physical lock that warps time around the secured data.', strength: {current: 100, max:100}, resistance: {current: 80, max:80}, minigameEffect: "Its strength, and therefore the number of 'Required Successful Entries', increases over time, scaling with its level (e.g., L1 increases by 5 strength per second, up to L8 increasing by 40 strength per second). Code Injectors are ineffective against this lock. Sonic Pulsers have reduced effectiveness (Time Allowed Per Sequence increased by 25% less).", dataAiHint: "time warp lock" }, // [cite: 33, 34, 35]
+    { category: 'Hardware', description: 'Non-physical lock that warps time around the secured data.', strength: {current: 100, max:100}, resistance: {current: 80, max:80}, minigameEffect: "Its strength, and therefore the number of 'Required Successful Entries', increases over time, scaling with its level (e.g., L1 increases by 5 strength per second, up to L8 increasing by 40 strength per second). Code Injectors are ineffective against this lock. Sonic Pulsers have reduced effectiveness (Time Allowed Per Sequence increased by 25% less).", dataAiHint: "time warp lock", tileImageSrc: "/spyshop/tiles/temporal_flux_lock_250x250.jpg", imageSrc: "/spyshop/items/StdCypherLock_L1.png" },
     ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 800, 6400), strength: {current: calculateScaledValue(l, 100, 800), max: calculateScaledValue(l, 100, 800)}, scarcity: 'Very Rare' })) // [cite: 33]
   ),
 ];
@@ -334,7 +339,7 @@ export const LOCK_FORTIFIER_ITEMS: LockFortifierItem[] = [
 export const ENTRY_TOOL_ITEMS: EntryToolItem[] = [
   ...generateItemLevels<'EntryTool'>(
     'basic_pick', 'Basic Pick',
-    { category: 'Entry Tools', description: 'Your standard tool. Effective against basic locks, struggles against advanced defenses.', attackFactor: 12.5, type: 'Not Applicable', minigameEffect: "Reduces the 'Correct Entries Required'.", levelScalingNote: "Reduces the number of 'Correct Entries Required' by 1 per level.", lockTypeEffectiveness: { idealCounterAgainst: ["Standard Cypher Lock"], poorMatchPenaltyAgainst: ["Reinforced Deadbolt"]}, strengthPerEntryClarification: "The Basic Pick's Attack Factor functions as its 'strength per entry.' Each level of the pick has a corresponding Attack Factor, scaling from 12.5 at Level 1 to 100 at Level 8. This Attack Factor is used in the formula to determine how much the lock's strength is reduced per successful entry.", lockFortifierEffectsDefinition: "Not applicable to this tool.", dataAiHint: "lock pick", tileImageSrc: "/spyshop/tiles/BasicPick.png", imageSrc: "/spyshop/items/BasicPick_L1.png"},
+    { category: 'Entry Tools', description: 'Your standard tool. Effective against basic locks, struggles against advanced defenses.', attackFactor: 12.5, type: 'Not Applicable', minigameEffect: "Reduces the 'Correct Entries Required'.", levelScalingNote: "Reduces the number of 'Correct Entries Required' by 1 per level.", lockTypeEffectiveness: { idealCounterAgainst: ["Cypher Lock"], poorMatchPenaltyAgainst: ["Reinforced Deadbolt"]}, strengthPerEntryClarification: "The Basic Pick's Attack Factor functions as its 'strength per entry.' Each level of the pick has a corresponding Attack Factor, scaling from 12.5 at Level 1 to 100 at Level 8. This Attack Factor is used in the formula to determine how much the lock's strength is reduced per successful entry.", lockFortifierEffectsDefinition: "Not applicable to this tool.", dataAiHint: "lock pick", tileImageSrc: "/spyshop/tiles/BasicPick.png", imageSrc: "/spyshop/items/BasicPick_L1.png"},
     ITEM_LEVELS.map(l => ({ cost: l === 1 ? 0 : calculateScaledValue(l, 200, 800, 2, 8), attackFactor: calculateScaledValue(l, 12.5, 100), scarcity: 'Common' })) // [cite: 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126]
   ),
   // New Infiltration Gear Items
@@ -345,7 +350,7 @@ export const ENTRY_TOOL_ITEMS: EntryToolItem[] = [
   ),
   ...generateItemLevels<'EntryTool'>(
     'code_injector', 'Code Injector',
-    { category: 'Entry Tools', description: 'A precision tool. Best against logic-based defenses, weak against others. Injects code to reduce symbols.', attackFactor: 12.5, type: 'Rechargeable', minigameEffect: "Reduces the number of 'Symbols Displayed' by 1 per level of the injector. This reduction is halved (rounded down) when used against Quantum Entanglement Locks and Plasma Conduit Locks. The tool's Strength per entry is halved against Plasma Conduit Locks.", levelScalingNote: "Reduces the number of 'Symbols Displayed' by 1 per level of the injector (halved against Quantum Entanglement Locks).", lockTypeEffectiveness: { idealCounterAgainst: ["Standard Cypher Lock", "Neural Network Lock"], idealMatchBonus: "Damage dealt to these targets is multiplied by 1.5.", poorMatchPenaltyAgainst: ["Biometric Seal", "Reactive Armor", "Feedback Loop"]}, strengthPerEntryClarification: "The Code Injector's Attack Factor functions as its 'strength per entry.'", lockFortifierEffectsDefinition: "Not applicable to this tool.", specialEffectsDefinition: "Not applicable to this tool.", dataAiHint: "code tool" }, // [cite: 133, 134, 135, 136, 137, 138, 139, 140, 141]
+    { category: 'Entry Tools', description: 'A precision tool. Best against logic-based defenses, weak against others. Injects code to reduce symbols.', attackFactor: 12.5, type: 'Rechargeable', minigameEffect: "Reduces the number of 'Symbols Displayed' by 1 per level of the injector. This reduction is halved (rounded down) when used against Quantum Entanglement Locks and Plasma Conduit Locks. The tool's Strength per entry is halved against Plasma Conduit Locks.", levelScalingNote: "Reduces the number of 'Symbols Displayed' by 1 per level of the injector (halved against Quantum Entanglement Locks).", lockTypeEffectiveness: { idealCounterAgainst: ["Cypher Lock", "Neural Network Lock"], idealMatchBonus: "Damage dealt to these targets is multiplied by 1.5.", poorMatchPenaltyAgainst: ["Biometric Seal", "Reactive Armor", "Feedback Loop"]}, strengthPerEntryClarification: "The Code Injector's Attack Factor functions as its 'strength per entry.'", lockFortifierEffectsDefinition: "Not applicable to this tool.", specialEffectsDefinition: "Not applicable to this tool.", dataAiHint: "code tool" }, // [cite: 133, 134, 135, 136, 137, 138, 139, 140, 141]
     ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 400, 1100), attackFactor: calculateScaledValue(l, 12.5, 100), perUseCost: calculateScaledValue(l, 20, 90), scarcity: 'Scarce' })) // [cite: 133]
   ),
   ...generateItemLevels<'EntryTool'>(
@@ -355,7 +360,7 @@ export const ENTRY_TOOL_ITEMS: EntryToolItem[] = [
   ),
   ...generateItemLevels<'EntryTool'>(
     'bio_scanner_override', 'Bio-Scanner Override',
-    { category: 'Entry Tools', description: 'Bypasses biological security measures.', attackFactor: 12.5, type: 'Consumable', minigameEffect: "Reduces the number of 'Correct Entries Required' against Biometric Seals.", levelScalingNote: "Reduces the 'Correct Entries Required' by 2 per level of the override.", lockTypeEffectiveness: { idealCounterAgainst: ["Biometric Seal"], poorMatchPenaltyAgainst: ["Other lock types"]}, strengthPerEntryClarification: "The Bio-Scanner Override's Attack Factor functions as its 'strength per entry.'", lockFortifierEffectsDefinition: "Not applicable to this tool.", dataAiHint: "bio scanner" }, // [cite: 148, 149, 150, 151, 152, 153]
+    { category: 'Entry Tools', description: 'Bypasses biological security measures.', attackFactor: 12.5, type: 'Consumable', minigameEffect: "Reduces the number of 'Correct Entries Required' against Biometric Seals.", levelScalingNote: "Reduces the 'Correct Entries Required' by 2 per level of the override.", lockTypeEffectiveness: { idealCounterAgainst: ["Biometric Seal"], poorMatchPenaltyAgainst: ["Other lock types"]}, strengthPerEntryClarification: "The Bio-Scanner Override's Attack Factor functions as its 'strength per entry.'", lockFortifierEffectsDefinition: "Not applicable to this tool.", dataAiHint: "bio scanner" },
     ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 600, 1300), attackFactor: calculateScaledValue(l, 12.5, 100), scarcity: 'Rare' })) // [cite: 148]
   ),
   ...generateItemLevels<'EntryTool'>(
@@ -494,7 +499,7 @@ export const SHOP_CATEGORIES: ProductCategory[] = [
       {
         name: 'All Hardware',
         items: [
-          'Standard Cypher Lock', 'Reinforced Deadbolt', 'Quantum Entanglement Lock',
+          'Cypher Lock', 'Reinforced Deadbolt', 'Quantum Entanglement Lock',
           'Sonic Pulse Lock', 'Plasma Conduit Lock', 'Biometric Seal',
           'Neural Network Lock', 'Temporal Flux Lock',
         ].map(baseName => {

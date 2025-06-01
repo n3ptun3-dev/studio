@@ -21,7 +21,7 @@ export function QuantumIndustriesShop() {
         <h3 className="text-3xl font-bold text-sky-300 mb-4 flex items-center"><Lock className="w-8 h-8 mr-2" /> Hardware</h3>
         <p className="text-gray-300 mb-4">Fortify your vault with our cutting-edge barriers. Strength, resistance, and cost vary by level and type, ensuring robust protection for your ELINT.</p>
         <ul className="space-y-3 text-lg">
-          <li><span className="font-semibold text-sky-200">Standard Cypher Lock:</span> Your basic digital barrier. Requires successful code entries based on strength.</li>
+          <li><span className="font-semibold text-sky-200">Cypher Lock:</span> Your basic digital barrier. Requires successful code entries based on strength.</li>
           <li><span className="font-semibold text-sky-200">Reinforced Deadbolt:</span> A physical barrier with added resilience. Drills are less effective against it.</li>
           <li><span className="font-semibold text-sky-200">Quantum Entanglement Lock:</span> Non-physical tricky tech that adds extra symbols to sequences.</li>
           <li><span className="font-semibold text-sky-200">Sonic Pulse Lock:</span> Needs specific frequencies. Time allowed for entries is significantly reduced.</li>
