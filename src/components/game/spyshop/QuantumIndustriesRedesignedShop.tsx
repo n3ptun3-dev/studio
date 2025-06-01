@@ -93,40 +93,46 @@ export function QuantumIndustriesRedesignedShop() {
   }, [selectedItemBaseName, selectedLevel, selectedProductCategory]);
 
   // Parallax scroll effect for About Us page background
-  useEffect(() => {
+   useEffect(() => {
     const scroller = contentScrollContainerRef.current;
-    const bgElement = aboutUsBackgroundElementRef.current;
+    const bgElement = aboutUsBackgroundElementRef.current; // This is the dedicated background div
 
     if (activePage === 'aboutUs' && scroller && bgElement) {
-      // Initial style setup for bgElement
-      bgElement.style.backgroundImage = `url('/spyshop/bg_about_page.jpg')`;
-      bgElement.style.backgroundRepeat = 'no-repeat';
-      bgElement.style.backgroundSize = 'auto 100%'; // Image fills height of bgElement (which is contentScrollContainerRef)
-      bgElement.style.backgroundPositionX = '0%';    // Start at left
-      bgElement.style.backgroundPositionY = '50%';   // Vertically center
-      // bgElement.style.transition = 'background-position-x 0.05s linear'; // Optional smooth transition
+        // Setup background styles for bgElement
+        bgElement.style.backgroundImage = `url('/spyshop/bg_about_page.jpg')`;
+        bgElement.style.backgroundRepeat = 'no-repeat';
+        // The background image's height will match bgElement's height (which is 100% of scroller's viewport height).
+        // Its width will adjust to maintain aspect ratio.
+        bgElement.style.backgroundSize = 'auto 100%'; 
+        bgElement.style.backgroundPositionX = '0%';    // Start at left
+        bgElement.style.backgroundPositionY = '50%';   // Vertically center image within bgElement
 
-      const handleScroll = () => {
-        const scrollHeight = scroller.scrollHeight - scroller.clientHeight;
-        if (scrollHeight > 0) {
-          const scrollTop = scroller.scrollTop;
-          const scrollFraction = Math.min(1, Math.max(0, scrollTop / scrollHeight));
-          // Only change X position
-          bgElement.style.backgroundPosition = `${scrollFraction * 100}% 50%`;
-        } else {
-          bgElement.style.backgroundPosition = '0% 50%';
-        }
-      };
+        const handleScroll = () => {
+            const scrollHeight = scroller.scrollHeight - scroller.clientHeight;
+            if (scrollHeight > 0) {
+                const scrollTop = scroller.scrollTop;
+                const scrollFraction = Math.min(1, Math.max(0, scrollTop / scrollHeight));
+                // Only change the X position of the background image within bgElement
+                bgElement.style.backgroundPositionX = `${scrollFraction * 100}%`;
+            } else {
+                bgElement.style.backgroundPositionX = '0%';
+            }
+        };
 
-      scroller.addEventListener('scroll', handleScroll, { passive: true });
-      handleScroll(); // Initial call
+        scroller.addEventListener('scroll', handleScroll, { passive: true });
+        handleScroll(); // Initial call
 
-      return () => {
-        scroller.removeEventListener('scroll', handleScroll);
-      };
+        return () => {
+            scroller.removeEventListener('scroll', handleScroll);
+            // Optional: Clear styles if bgElement might be reused or if styles leak
+            // bgElement.style.backgroundImage = '';
+            // bgElement.style.backgroundPositionX = '';
+        };
+    } else if (bgElement) {
+        // Clear background if not on About Us page to prevent it from showing
+        bgElement.style.backgroundImage = '';
     }
-    // No need to clear styles on bgElement if it's conditionally rendered and unmounted
-  }, [activePage]);
+}, [activePage]); // Dependency: activePage
 
 
   const handleSelectProductCategory = (category: ProductCategory | null) => {
@@ -222,9 +228,8 @@ export function QuantumIndustriesRedesignedShop() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="flex flex-col items-center justify-center h-full p-8 text-center" // Removed relative, z-0, opacity-10 from inner Image div
+            className="flex flex-col items-center justify-center h-full p-8 text-center"
           >
-            {/* Welcome text is on top due to default stacking order */}
             <h2 className="text-3xl font-orbitron text-cyan-300 mb-4">Welcome, Agent.</h2>
             <p className="text-slate-300 text-lg max-w-md mx-auto">
               Quantum Industries provides elite tools for the discerning operative. Please select a product category below to explore our arsenal.
@@ -236,8 +241,9 @@ export function QuantumIndustriesRedesignedShop() {
   };
 
   const renderAboutUsPage = () => {
-    // This function now just returns the text content, to be placed inside a scrollable container
-    // The background and overlay are handled outside this function, as direct children of contentScrollContainerRef
+    // This function now just returns the text content.
+    // The background and overlay are handled as siblings within contentScrollContainerRef,
+    // conditionally rendered based on activePage === 'aboutUs'.
     return (
       <div className="max-w-3xl mx-auto p-6 md:p-10 text-slate-300">
         <h2 className="text-4xl font-orbitron text-cyan-300 mb-8 text-center">About Quantum Industries</h2>
@@ -271,13 +277,13 @@ export function QuantumIndustriesRedesignedShop() {
 
 
   return (
-    <div className="fixed inset-0 z-[99] flex items-center justify-center bg-black/80 backdrop-blur-md">
+    <div className="fixed inset-0 z-[99] flex items-center justify-center">
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
-        className="w-full h-full max-w-2xl md:max-w-4xl lg:max-w-6xl md:h-[90vh] md:max-h-[800px] bg-slate-950 text-slate-100 flex flex-col shadow-2xl shadow-cyan-500/30 border border-cyan-700/50 relative" // Added relative for positioning children
+        className="w-full h-full max-w-2xl md:max-w-4xl lg:max-w-6xl md:h-[90vh] md:max-h-[800px] bg-slate-950 text-slate-100 flex flex-col shadow-2xl shadow-cyan-500/30 border border-cyan-700/50 relative"
       >
         <NewStickyHeader
           activePage={activePage}
@@ -286,13 +292,13 @@ export function QuantumIndustriesRedesignedShop() {
           isSmallHeader={isSmallHeader}
         />
 
-        <div ref={contentScrollContainerRef} className="flex-grow overflow-y-auto scrollbar-hide relative z-[10]"> {/* Main scroll container, relative for z-indexed children */}
+        <div ref={contentScrollContainerRef} className="flex-grow overflow-y-auto scrollbar-hide relative z-[10]">
           
-          {/* Background pattern for Products Page */}
+          {/* Background pattern for Products Page (conditional) */}
           {activePage === 'products' && (
             <>
               <div
-                className="absolute inset-0 z-[1] pointer-events-none" // Sits below content
+                className="absolute inset-0 z-[1] pointer-events-none" 
                 style={{
                   backgroundImage: "url('/spyshop/bg_quantum_pattern.png')",
                   backgroundSize: 'cover',
@@ -301,7 +307,7 @@ export function QuantumIndustriesRedesignedShop() {
                 }}
               />
               <div
-                className="absolute inset-0 z-[2] animate-pulse-grid pointer-events-none" // Sits below content
+                className="absolute inset-0 z-[2] animate-pulse-grid pointer-events-none" 
                 style={{
                   backgroundImage: "url('/spyshop/hexagons.png')",
                   backgroundSize: 'cover',
@@ -319,17 +325,19 @@ export function QuantumIndustriesRedesignedShop() {
           {/* Background elements for About Us Page - direct children of contentScrollContainerRef */}
           {activePage === 'aboutUs' && (
             <>
+              {/* This div is for the background image. It sticks to the top of contentScrollContainerRef */}
               <div
                 ref={aboutUsBackgroundElementRef}
-                className="absolute inset-0 z-[1] pointer-events-none" 
-                // Background image, size, repeat, position set in useEffect
+                className="sticky top-0 left-0 w-full h-full z-[1] pointer-events-none"
+                // Background image, size, repeat, position set in useEffect for parallax
               />
-              <div className="absolute inset-0 bg-black/70 z-[2] pointer-events-none" />
+              {/* This div is the overlay. It also sticks to the top, on top of the background. */}
+              <div className="sticky top-0 left-0 w-full h-full bg-black/70 z-[2] pointer-events-none" />
             </>
           )}
 
-          {/* Content area - this div's content will determine scroll height */}
-          {/* It needs to be above the absolutely positioned backgrounds */}
+          {/* Content area - this div's content will determine scroll height for contentScrollContainerRef */}
+          {/* It needs to be above the sticky backgrounds/overlay */}
           <div className="relative z-[4]"> {/* Ensures content is above background/overlay */}
             {activePage === 'products' ? renderProductsPage() : renderAboutUsPage()}
           </div>
@@ -347,12 +355,11 @@ export function QuantumIndustriesRedesignedShop() {
 // --- Sub-Components ---
 
 const NewStickyHeader: React.FC<NewStickyHeaderProps> = ({ activePage, setActivePage, onClose, isSmallHeader }) => {
-  // Ensure this component's root div has rounded corners if it's the top-most visible element of the shop
   return (
     <div className={cn("sticky top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out bg-slate-900/80 backdrop-blur-md border-b border-cyan-700/50 shadow-lg md:rounded-t-lg")}>
       {isSmallHeader ? (
         <div className="flex justify-between items-center w-full max-w-6xl mx-auto px-4 py-2">
-          <div className="relative w-10 h-10 sm:w-12 sm:h-12"> {/* Container for the icon */}
+          <div className="relative w-10 h-10 sm:w-12 sm:h-12"> 
             <Image src="/spyshop/Quantum Industries Icon.png" alt="QI Icon" layout="fill" objectFit="contain" data-ai-hint="logo quantum small"/>
           </div>
           <div className="flex items-center space-x-2 sm:space-x-4">
@@ -379,12 +386,12 @@ const NewStickyHeader: React.FC<NewStickyHeaderProps> = ({ activePage, setActive
         </div>
       ) : (
         <div className="flex flex-col items-center w-full max-w-6xl mx-auto px-6">
-           <div className="flex justify-between items-center w-full"> {/* Row for the full logo */}
+           <div className="flex justify-between items-center w-full"> 
             <div className="relative w-full h-16 md:h-20 my-2 flex-grow"> 
               <Image src="/spyshop/Quantum Industries Logo.png" alt="Quantum Industries Full Logo" layout="fill" objectFit="contain" data-ai-hint="logo quantum full"/>
             </div>
           </div>
-          <div className="flex justify-center items-center space-x-4 w-full pb-2"> {/* Row for tabs and close button */}
+          <div className="flex justify-center items-center space-x-4 w-full pb-2"> 
             <button
               onClick={() => setActivePage('products')}
               className={`px-4 py-2 text-base font-semibold rounded-md transition-colors duration-200 ${activePage === 'products' ? 'bg-cyan-500 text-slate-900 shadow-md' : 'text-cyan-300 hover:bg-cyan-700/50 hover:text-cyan-100'}`}
@@ -531,7 +538,7 @@ const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.2 }}
-            className="relative w-full h-full flex flex-col items-center justify-center min-h-[calc(100%-2rem)]"
+            className="relative w-full h-full flex flex-col items-center justify-center min-h-[calc(100%-2rem)]" 
           >
             <button
               onClick={() => setIsImageModalOpen(false)}
