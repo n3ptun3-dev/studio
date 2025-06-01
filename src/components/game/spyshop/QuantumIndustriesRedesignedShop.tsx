@@ -52,8 +52,6 @@ export function QuantumIndustriesRedesignedShop() {
   const [activePage, setActivePage] = useState<'products' | 'aboutUs'>('products');
   const contentScrollContainerRef = useRef<HTMLDivElement>(null);
   
-  // Refs for "About Us" parallax effect
-  const aboutUsPageContainerRef = useRef<HTMLDivElement>(null); 
   const aboutUsBackgroundElementRef = useRef<HTMLDivElement>(null); 
 
   const [selectedProductCategory, setSelectedProductCategory] = useState<ProductCategory | null>(null);
@@ -94,16 +92,16 @@ export function QuantumIndustriesRedesignedShop() {
     }
   }, [selectedItemBaseName, selectedLevel, selectedProductCategory]);
 
-  // Parallax scroll effect for About Us page
+  // Parallax scroll effect for About Us page background
   useEffect(() => {
-    const scroller = contentScrollContainerRef.current; // The main content scroll container
-    const bgElement = aboutUsBackgroundElementRef.current; // The dedicated background image div
+    const scroller = contentScrollContainerRef.current;
+    const bgElement = aboutUsBackgroundElementRef.current;
 
     if (activePage === 'aboutUs' && scroller && bgElement) {
       // Initial style setup for bgElement
       bgElement.style.backgroundImage = `url('/spyshop/bg_about_page.jpg')`;
       bgElement.style.backgroundRepeat = 'no-repeat';
-      bgElement.style.backgroundSize = 'auto 100%'; // Image fills height of bgElement
+      bgElement.style.backgroundSize = 'auto 100%'; // Image fills height of bgElement (which is contentScrollContainerRef)
       bgElement.style.backgroundPositionX = '0%';    // Start at left
       bgElement.style.backgroundPositionY = '50%';   // Vertically center
       // bgElement.style.transition = 'background-position-x 0.05s linear'; // Optional smooth transition
@@ -113,9 +111,10 @@ export function QuantumIndustriesRedesignedShop() {
         if (scrollHeight > 0) {
           const scrollTop = scroller.scrollTop;
           const scrollFraction = Math.min(1, Math.max(0, scrollTop / scrollHeight));
-          bgElement.style.backgroundPositionX = `${scrollFraction * 100}%`;
+          // Only change X position
+          bgElement.style.backgroundPosition = `${scrollFraction * 100}% 50%`;
         } else {
-          bgElement.style.backgroundPositionX = '0%';
+          bgElement.style.backgroundPosition = '0% 50%';
         }
       };
 
@@ -124,22 +123,11 @@ export function QuantumIndustriesRedesignedShop() {
 
       return () => {
         scroller.removeEventListener('scroll', handleScroll);
-        if (bgElement) { // Clear styles from the inner background element when effect is removed
-          bgElement.style.backgroundImage = '';
-          bgElement.style.backgroundPositionX = '';
-          bgElement.style.backgroundPositionY = '';
-          bgElement.style.backgroundSize = '';
-          // bgElement.style.transition = '';
-        }
       };
-    } else if (bgElement) { // Ensure background is cleared if not on About Us page
-      bgElement.style.backgroundImage = '';
-      bgElement.style.backgroundPositionX = '';
-      bgElement.style.backgroundPositionY = '';
-      bgElement.style.backgroundSize = '';
-      // bgElement.style.transition = '';
     }
+    // No need to clear styles on bgElement if it's conditionally rendered and unmounted
   }, [activePage]);
+
 
   const handleSelectProductCategory = (category: ProductCategory | null) => {
     if (category && selectedProductCategory?.id === category.id) {
@@ -202,7 +190,7 @@ export function QuantumIndustriesRedesignedShop() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -50 }}
             transition={{ duration: 0.3 }}
-            className="h-full" // Ensure this div takes full height for SpecificItemDetailView layout
+            className="h-full"
           >
             <SpecificItemDetailView
               itemData={currentViewItemData}
@@ -234,17 +222,13 @@ export function QuantumIndustriesRedesignedShop() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="flex flex-col items-center justify-center h-full p-8 text-center relative"
+            className="flex flex-col items-center justify-center h-full p-8 text-center" // Removed relative, z-0, opacity-10 from inner Image div
           >
-            <div className="absolute inset-0 z-0 opacity-10">
-              <Image src="/spyshop/Quantum Industries Icon.png" alt="Quantum Industries Icon" layout="fill" objectFit="contain" data-ai-hint="logo abstract"/>
-            </div>
-            <div className="relative z-10">
-              <h2 className="text-3xl font-orbitron text-cyan-300 mb-4">Welcome, Agent.</h2>
-              <p className="text-slate-300 text-lg max-w-md mx-auto">
-                Quantum Industries provides elite tools for the discerning operative. Please select a product category below to explore our arsenal.
-              </p>
-            </div>
+            {/* Welcome text is on top due to default stacking order */}
+            <h2 className="text-3xl font-orbitron text-cyan-300 mb-4">Welcome, Agent.</h2>
+            <p className="text-slate-300 text-lg max-w-md mx-auto">
+              Quantum Industries provides elite tools for the discerning operative. Please select a product category below to explore our arsenal.
+            </p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -252,40 +236,35 @@ export function QuantumIndustriesRedesignedShop() {
   };
 
   const renderAboutUsPage = () => {
+    // This function now just returns the text content, to be placed inside a scrollable container
+    // The background and overlay are handled outside this function, as direct children of contentScrollContainerRef
     return (
-      // This outer div's height will be determined by its content, allowing contentScrollContainerRef to scroll.
-      // It remains 'relative' for positioning its absolute children (background, overlay).
-      <div ref={aboutUsPageContainerRef} className="relative"> 
-        {/* Inner div for the actual background image - absolute positioned to fill its parent */}
-        <div
-          ref={aboutUsBackgroundElementRef}
-          className="absolute inset-0 z-[1]" 
-          // Styles for this div (like background-image, size, position) are set in useEffect
-        />
-        {/* Overlay - absolute positioned */}
-        <div className="absolute inset-0 bg-black/70 z-[2]" />
-        {/* Text Content - relative, so it's part of the flow and determines parent's height */}
-        <div className="relative z-[3] max-w-3xl mx-auto p-6 md:p-10 text-slate-300">
-          <h2 className="text-4xl font-orbitron text-cyan-300 mb-8 text-center">About Quantum Industries</h2>
-          <p className="text-lg mb-6 leading-relaxed">
-            At Quantum Industries, we don't just engineer security solutions; we redefine the very fabric of digital defense and offense. Born from a vision of a hyper-connected, yet fiercely protected, future, we are the pioneers of ELINT security, pushing the boundaries of what's possible in a world where information is the ultimate currency.
-          </p>
-          <p className="text-lg mb-6 leading-relaxed">
-            Our dedicated team of quantum physicists, cybernetic engineers, and tactical strategists aim to develop state-of-the-art Vault Hardware, impenetrable Lock Fortifiers, and revolutionary Nexus Gadgets. From the subtle hum of a Biometric Seal to the mind-bending complexity of a Temporal Flux Lock, our defensive technologies are crafted to withstand the most sophisticated infiltration attempts, ensuring your ELINT remains inviolable.
-          </p>
-          <p className="text-lg mb-6 leading-relaxed">
-            But security isn't just about defense. It's also about strategic advantage. Our Offensive Tools and Assault Tech are designed for those who dare to breach the seemingly unbreachable. Whether you're wielding a precision Code Injector, a heavy-duty Hydraulic Drill, or deploying a game-changing Seismic Charge, Quantum Industries empowers you to navigate the digital battlefield with unparalleled prowess.
-          </p>
-           <p className="text-lg mb-6 leading-relaxed">
-            Our commitment to excellence extends beyond product development. We foster a culture of continuous innovation, ethical conduct, and unwavering support for our operatives. We understand the stakes are high, the shadows deep, and the data invaluable. That's why Quantum Industries is more than a supplier; we are your trusted partner in the clandestine world of ELINT Heist.
-          </p>
-          <p className="text-lg mb-6 leading-relaxed">
-            Explore our catalog, equip yourself with the finest gear, and remember: in the quantum realm, the best defense is a brilliant offense, and the most valuable asset is information meticulously secured or audaciously acquired.
-          </p>
-          <p className="text-xl text-cyan-400 font-semibold mt-10 text-center font-orbitron">
-            "Innovation in Security. Excellence in Espionage."
-          </p>
-        </div>
+      <div className="max-w-3xl mx-auto p-6 md:p-10 text-slate-300">
+        <h2 className="text-4xl font-orbitron text-cyan-300 mb-8 text-center">About Quantum Industries</h2>
+        <p className="text-lg mb-6 leading-relaxed">
+          At Quantum Industries, we don't just engineer security solutions; we redefine the very fabric of digital defense and offense. Born from a vision of a hyper-connected, yet fiercely protected, future, we are the pioneers of ELINT security, pushing the boundaries of what's possible in a world where information is the ultimate currency.
+        </p>
+        <p className="text-lg mb-6 leading-relaxed">
+          Our dedicated team of quantum physicists, cybernetic engineers, and tactical strategists aim to develop state-of-the-art Vault Hardware, impenetrable Lock Fortifiers, and revolutionary Nexus Gadgets. From the subtle hum of a Biometric Seal to the mind-bending complexity of a Temporal Flux Lock, our defensive technologies are crafted to withstand the most sophisticated infiltration attempts, ensuring your ELINT remains inviolable.
+        </p>
+        <p className="text-lg mb-6 leading-relaxed">
+          But security isn't just about defense. It's also about strategic advantage. Our Offensive Tools and Assault Tech are designed for those who dare to breach the seemingly unbreachable. Whether you're wielding a precision Code Injector, a heavy-duty Hydraulic Drill, or deploying a game-changing Seismic Charge, Quantum Industries empowers you to navigate the digital battlefield with unparalleled prowess.
+        </p>
+        <p className="text-lg mb-6 leading-relaxed">
+          Our commitment to excellence extends beyond product development. We foster a culture of continuous innovation, ethical conduct, and unwavering support for our operatives. We understand the stakes are high, the shadows deep, and the data invaluable. That's why Quantum Industries is more than a supplier; we are your trusted partner in the clandestine world of ELINT Heist.
+        </p>
+        <p className="text-lg mb-6 leading-relaxed">
+          Explore our catalog, equip yourself with the finest gear, and remember: in the quantum realm, the best defense is a brilliant offense, and the most valuable asset is information meticulously secured or audaciously acquired.
+        </p>
+         <p className="text-lg mb-6 leading-relaxed">
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+        </p>
+        <p className="text-lg mb-6 leading-relaxed">
+            Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.
+        </p>
+        <p className="text-xl text-cyan-400 font-semibold mt-10 text-center font-orbitron">
+          "Innovation in Security. Excellence in Espionage."
+        </p>
       </div>
     );
   };
@@ -298,37 +277,8 @@ export function QuantumIndustriesRedesignedShop() {
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
-        className="w-full h-full max-w-2xl md:max-w-4xl lg:max-w-6xl md:h-[90vh] md:max-h-[800px] bg-slate-950 text-slate-100 flex flex-col shadow-2xl shadow-cyan-500/30 border border-cyan-700/50"
+        className="w-full h-full max-w-2xl md:max-w-4xl lg:max-w-6xl md:h-[90vh] md:max-h-[800px] bg-slate-950 text-slate-100 flex flex-col shadow-2xl shadow-cyan-500/30 border border-cyan-700/50 relative" // Added relative for positioning children
       >
-        {/* Conditional Backgrounds for Product Page */}
-        {activePage === 'products' && (
-          <>
-            <div
-              className="absolute inset-0 z-0"
-              style={{
-                backgroundImage: "url('/spyshop/bg_quantum_pattern.png')",
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-              }}
-            />
-            <div
-              className="absolute inset-0 z-[1] animate-pulse-grid"
-              style={{
-                backgroundImage: "url('/spyshop/hexagons.png')",
-                backgroundSize: 'cover',
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'center',
-              }}
-            />
-            <div className="absolute inset-0 pointer-events-none z-[2] overflow-hidden">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-700/5 rounded-full blur-3xl animate-float-one opacity-30"></div>
-                <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-700/5 rounded-full blur-3xl animate-float-two opacity-30"></div>
-            </div>
-          </>
-        )}
-
-
         <NewStickyHeader
           activePage={activePage}
           setActivePage={setActivePage}
@@ -336,8 +286,53 @@ export function QuantumIndustriesRedesignedShop() {
           isSmallHeader={isSmallHeader}
         />
 
-        <div ref={contentScrollContainerRef} className="flex-grow overflow-y-auto scrollbar-hide relative z-[10]"> {/* Content on top of pattern/hex */}
-          {activePage === 'products' ? renderProductsPage() : renderAboutUsPage()}
+        <div ref={contentScrollContainerRef} className="flex-grow overflow-y-auto scrollbar-hide relative z-[10]"> {/* Main scroll container, relative for z-indexed children */}
+          
+          {/* Background pattern for Products Page */}
+          {activePage === 'products' && (
+            <>
+              <div
+                className="absolute inset-0 z-[1] pointer-events-none" // Sits below content
+                style={{
+                  backgroundImage: "url('/spyshop/bg_quantum_pattern.png')",
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat',
+                }}
+              />
+              <div
+                className="absolute inset-0 z-[2] animate-pulse-grid pointer-events-none" // Sits below content
+                style={{
+                  backgroundImage: "url('/spyshop/hexagons.png')",
+                  backgroundSize: 'cover',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'center',
+                }}
+              />
+              <div className="absolute inset-0 pointer-events-none z-[3] overflow-hidden">
+                  <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-700/5 rounded-full blur-3xl animate-float-one opacity-30"></div>
+                  <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-700/5 rounded-full blur-3xl animate-float-two opacity-30"></div>
+              </div>
+            </>
+          )}
+
+          {/* Background elements for About Us Page - direct children of contentScrollContainerRef */}
+          {activePage === 'aboutUs' && (
+            <>
+              <div
+                ref={aboutUsBackgroundElementRef}
+                className="absolute inset-0 z-[1] pointer-events-none" 
+                // Background image, size, repeat, position set in useEffect
+              />
+              <div className="absolute inset-0 bg-black/70 z-[2] pointer-events-none" />
+            </>
+          )}
+
+          {/* Content area - this div's content will determine scroll height */}
+          {/* It needs to be above the absolutely positioned backgrounds */}
+          <div className="relative z-[4]"> {/* Ensures content is above background/overlay */}
+            {activePage === 'products' ? renderProductsPage() : renderAboutUsPage()}
+          </div>
         </div>
 
         {activePage === 'products' && (
@@ -352,14 +347,12 @@ export function QuantumIndustriesRedesignedShop() {
 // --- Sub-Components ---
 
 const NewStickyHeader: React.FC<NewStickyHeaderProps> = ({ activePage, setActivePage, onClose, isSmallHeader }) => {
-  const headerBaseClasses = "sticky top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out bg-slate-900/80 backdrop-blur-md border-b border-cyan-700/50 shadow-lg md:rounded-t-lg";
-  
+  // Ensure this component's root div has rounded corners if it's the top-most visible element of the shop
   return (
-    <div className={cn(headerBaseClasses)}>
+    <div className={cn("sticky top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out bg-slate-900/80 backdrop-blur-md border-b border-cyan-700/50 shadow-lg md:rounded-t-lg")}>
       {isSmallHeader ? (
-        // Small Header Layout
         <div className="flex justify-between items-center w-full max-w-6xl mx-auto px-4 py-2">
-          <div className="relative w-10 h-10 sm:w-12 sm:h-12">
+          <div className="relative w-10 h-10 sm:w-12 sm:h-12"> {/* Container for the icon */}
             <Image src="/spyshop/Quantum Industries Icon.png" alt="QI Icon" layout="fill" objectFit="contain" data-ai-hint="logo quantum small"/>
           </div>
           <div className="flex items-center space-x-2 sm:space-x-4">
@@ -385,14 +378,13 @@ const NewStickyHeader: React.FC<NewStickyHeaderProps> = ({ activePage, setActive
           </div>
         </div>
       ) : (
-        // Large Header Layout
         <div className="flex flex-col items-center w-full max-w-6xl mx-auto px-6">
-           <div className="flex justify-between items-center w-full">
+           <div className="flex justify-between items-center w-full"> {/* Row for the full logo */}
             <div className="relative w-full h-16 md:h-20 my-2 flex-grow"> 
               <Image src="/spyshop/Quantum Industries Logo.png" alt="Quantum Industries Full Logo" layout="fill" objectFit="contain" data-ai-hint="logo quantum full"/>
             </div>
           </div>
-          <div className="flex justify-center items-center space-x-4 w-full pb-2">
+          <div className="flex justify-center items-center space-x-4 w-full pb-2"> {/* Row for tabs and close button */}
             <button
               onClick={() => setActivePage('products')}
               className={`px-4 py-2 text-base font-semibold rounded-md transition-colors duration-200 ${activePage === 'products' ? 'bg-cyan-500 text-slate-900 shadow-md' : 'text-cyan-300 hover:bg-cyan-700/50 hover:text-cyan-100'}`}
@@ -518,9 +510,8 @@ const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({
 
   if (!itemData) return <p className="text-center text-slate-400 p-8">Item details not found.</p>;
 
-  // Main container for the item detail view
   return (
-    <div className="h-full flex flex-col"> {/* Ensures this div takes full height from parent */}
+    <div className="h-full flex flex-col">
       {/* Conditionally render LevelSelectorBar only if image is NOT full screen */}
       {!isImageModalOpen && (
         <LevelSelectorBar
@@ -534,14 +525,13 @@ const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({
       {/* Scrollable content area for item details OR full image */}
       <div className="flex-grow overflow-y-auto p-4 md:p-6 scrollbar-hide relative">
         {isImageModalOpen ? (
-          // Full Image View (within the scrollable area)
           <motion.div
             key="full-image-view-internal"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.2 }}
-            className="relative w-full h-full flex flex-col items-center justify-center min-h-[calc(100%-2rem)]" // Adjust min-height if needed
+            className="relative w-full h-full flex flex-col items-center justify-center min-h-[calc(100%-2rem)]"
           >
             <button
               onClick={() => setIsImageModalOpen(false)}
@@ -562,7 +552,6 @@ const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({
             </div>
           </motion.div>
         ) : (
-          // Normal Item Details View
           <>
             <button onClick={onBack} className="absolute top-4 left-4 md:top-6 md:left-6 z-20 flex items-center text-sm text-cyan-300 hover:text-cyan-100 bg-slate-800/50 hover:bg-slate-700/70 px-3 py-1.5 rounded-md transition-colors">
               <ArrowLeft className="w-4 h-4 mr-1.5" /> Back
