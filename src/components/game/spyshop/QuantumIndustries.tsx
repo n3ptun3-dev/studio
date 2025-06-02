@@ -1,4 +1,3 @@
-
 // src/components/game/spyshop/QuantumIndustries.tsx
 "use client";
 
@@ -329,7 +328,8 @@ export function QuantumIndustries() {
                 // Background image, size, repeat, position set in useEffect for parallax
               />
               {/* This div is the overlay. It also sticks to the top, on top of the background. */}
-              <div className="sticky top-0 left-0 w-full h-full bg-black/70 z-[2] pointer-events-none" />
+              {/* Removed bg-black/70 from here */}
+              <div className="sticky top-0 left-0 w-full h-full z-[2] pointer-events-none" />
             </>
           )}
 
@@ -616,5 +616,3 @@ const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({
     </div>
   );
 };
-
-    
