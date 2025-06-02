@@ -498,11 +498,27 @@
     position: absolute;
     inset: 0;
     background-image:
-      repeating-linear-gradient(0deg, hsl(var(--foreground-hsl)) 0px 1px, transparent 1px 20px), /* Horizontal lines */
-      repeating-linear-gradient(90deg, hsl(var(--foreground-hsl)) 0px 1px, transparent 1px 20px); /* Vertical lines */
-    background-size: 20px 20px, 20px 20px; /* Cell size for lines */
-    background-position: 0 0, 10px 10px; /* Offset for dot effect */
-    z-index: 3; /* Ensure it's above the panel's own background and gloss */
+      /* Horizontal lines */
+      repeating-linear-gradient(
+        to right, /* Explicit direction */
+        hsl(var(--foreground-hsl)) 0px,
+        hsl(var(--foreground-hsl)) 1px,
+        hsla(0, 0%, 0%, 0) 1px, /* Explicit transparent */
+        hsla(0, 0%, 0%, 0) 20px  /* Explicit transparent */
+      ),
+      /* Vertical lines */
+      repeating-linear-gradient(
+        to bottom, /* Explicit direction */
+        hsl(var(--foreground-hsl)) 0px,
+        hsl(var(--foreground-hsl)) 1px,
+        hsla(0, 0%, 0%, 0) 1px,  /* Explicit transparent */
+        hsla(0, 0%, 0%, 0) 20px  /* Explicit transparent */
+      );
+    /* Size of each repeating cell for both layers */
+    background-size: 20px 20px; 
+    /* Position of the horizontal lines layer, then the vertical lines layer */
+    background-position: 0px 0px, 10px 10px; /* Vertical lines offset by half cell size */
+    z-index: 3; 
     pointer-events: none;
     border-radius: inherit; /* Respect parent's border-radius */
   }
