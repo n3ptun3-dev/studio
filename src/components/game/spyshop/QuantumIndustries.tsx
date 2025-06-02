@@ -3,7 +3,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import Image from 'next/image';
+import NextImage from 'next/image'; // Use NextImage
 import { X, ChevronDown, ChevronUp, ArrowLeft, ShoppingCart, Search } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -53,7 +53,7 @@ export function QuantumIndustries() {
   const contentScrollContainerRef = useRef<HTMLDivElement>(null);
   
   const aboutUsBackgroundElementRef = useRef<HTMLDivElement>(null);
-  const aboutUsContentScrollerRef = useRef<HTMLDivElement>(null);
+  const aboutUsPageContainerRef = useRef<HTMLDivElement>(null); // Added this ref
 
   const [selectedProductCategory, setSelectedProductCategory] = useState<ProductCategory | null>(null);
   const [selectedItemBaseName, setSelectedItemBaseName] = useState<string | null>(null);
@@ -70,11 +70,6 @@ export function QuantumIndustries() {
     if (contentScrollContainerRef.current) {
       requestAnimationFrame(() => {
         contentScrollContainerRef.current!.scrollTop = 0;
-      });
-    }
-    if (activePage === 'aboutUs' && aboutUsContentScrollerRef.current) {
-      requestAnimationFrame(() => {
-        aboutUsContentScrollerRef.current!.scrollTop = 0;
       });
     }
   }, [selectedProductCategory, activePage]);
@@ -100,40 +95,48 @@ export function QuantumIndustries() {
   }, [selectedItemBaseName, selectedLevel, selectedProductCategory]);
 
    useEffect(() => {
-    const scroller = aboutUsContentScrollerRef.current; // Use the dedicated scroller for "About Us"
+    const scrollableContent = contentScrollContainerRef.current;
     const bgElement = aboutUsBackgroundElementRef.current;
 
-    if (activePage === 'aboutUs' && scroller && bgElement) {
-        bgElement.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('/spyshop/about_page_panodark.jpg')`;
+    if (activePage === 'aboutUs' && scrollableContent && bgElement) {
+        // Set initial styles for the background element
+        bgElement.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('/spyshop/bg_about_page.jpg')`;
         bgElement.style.backgroundRepeat = 'no-repeat, no-repeat';
-        bgElement.style.backgroundSize = 'cover, auto 100%'; // cover for gradient, auto 100% for image
-        bgElement.style.backgroundPosition = '0% 50%, 0% 50%'; // Initial for gradient, Initial for image
+        bgElement.style.backgroundSize = 'cover, auto 100%'; // Overlay covers, image fills height
+        bgElement.style.backgroundPosition = `0% 50%, 0% 50%`; // Initial for gradient, Initial for image
         bgElement.style.transition = 'background-position 0.05s linear';
 
-
         const handleScroll = () => {
-            const scrollHeight = scroller.scrollHeight - scroller.clientHeight;
+            const scrollHeight = scrollableContent.scrollHeight - scrollableContent.clientHeight;
             if (scrollHeight > 0) {
-                const scrollTop = scroller.scrollTop;
+                const scrollTop = scrollableContent.scrollTop;
                 const scrollFraction = Math.min(1, Math.max(0, scrollTop / scrollHeight));
                 // Only change X position of the second background (the image)
                 bgElement.style.backgroundPosition = `0% 50%, ${scrollFraction * 100}% 50%`;
             } else {
-                bgElement.style.backgroundPosition = `0% 50%, 0% 50%`;
+                bgElement.style.backgroundPosition = `0% 50%, 0% 50%`; // Reset if no scroll
             }
         };
+        
+        requestAnimationFrame(() => {
+            scrollableContent.scrollTop = 0; // Reset scroll on tab switch
+            handleScroll(); // Initial position calculation
+        });
 
-        scroller.addEventListener('scroll', handleScroll, { passive: true });
-        handleScroll();
-
+        scrollableContent.addEventListener('scroll', handleScroll, { passive: true });
+        
         return () => {
-            scroller.removeEventListener('scroll', handleScroll);
+            scrollableContent.removeEventListener('scroll', handleScroll);
+            // Optionally clear background styles if bgElement might be reused/visible otherwise
+            // bgElement.style.backgroundImage = '';
+            // bgElement.style.backgroundPosition = '';
         };
     } else if (bgElement) {
+        // Clear styles if not on "About Us" page or refs are null
         bgElement.style.backgroundImage = '';
         bgElement.style.backgroundPosition = '';
     }
-}, [activePage, aboutUsContentScrollerRef, aboutUsBackgroundElementRef]);
+}, [activePage, contentScrollContainerRef, aboutUsBackgroundElementRef]);
 
 
   const handleSelectProductCategory = (category: ProductCategory | null) => {
@@ -244,8 +247,11 @@ export function QuantumIndustries() {
   };
 
   const renderAboutUsPage = () => {
+    // This function now just returns the text content.
+    // The background and overlay are handled as siblings within contentScrollContainerRef,
+    // with the background being sticky.
     return (
-      <div className="max-w-3xl mx-auto p-6 md:p-10 text-slate-300">
+      <div ref={aboutUsPageContainerRef} className="max-w-3xl mx-auto p-6 md:p-10 text-slate-300">
         <h2 className="text-4xl font-orbitron text-cyan-300 mb-8 text-center" style={{ textShadow: '0 0 8px rgba(0,255,255,0.7), 0 0 15px rgba(0,255,255,0.3)' }}>About Quantum Industries</h2>
         <p className="text-lg mb-6 leading-relaxed" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
           At Quantum Industries, we don't just engineer security solutions; we redefine the very fabric of digital defense and offense. Born from a vision of a hyper-connected, yet fiercely protected, future, we are the pioneers of ELINT security, pushing the boundaries of what's possible in a world where information is the ultimate currency.
@@ -259,10 +265,10 @@ export function QuantumIndustries() {
         <p className="text-lg mb-6 leading-relaxed" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
           Our commitment to excellence extends beyond product development. We foster a culture of continuous innovation, ethical conduct, and unwavering support for our operatives. We understand the stakes are high, the shadows deep, and the data invaluable. That's why Quantum Industries is more than a supplier; we are your trusted partner in the clandestine world of ELINT Heist.
         </p>
-        <p className="text-lg mb-6 leading-relaxed" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
+         <p className="text-lg mb-6 leading-relaxed" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
           Explore our catalog, equip yourself with the finest gear, and remember: in the quantum realm, the best defense is a brilliant offense, and the most valuable asset is information meticulously secured or audaciously acquired.
         </p>
-         <p className="text-lg mb-6 leading-relaxed" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
+        <p className="text-lg mb-6 leading-relaxed" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
           Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
         </p>
          <p className="text-lg mb-6 leading-relaxed" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
@@ -285,6 +291,7 @@ export function QuantumIndustries() {
         transition={{ duration: 0.3, ease: "easeInOut" }}
         className="w-full h-full max-w-2xl md:max-w-4xl lg:max-w-6xl md:h-[90vh] md:max-h-[800px] bg-slate-950 text-slate-100 flex flex-col shadow-2xl shadow-cyan-500/30 border border-cyan-700/50 relative md:rounded-lg"
       >
+        {/* Background patterns for products page */}
         {activePage === 'products' && (
           <>
             <div
@@ -320,22 +327,19 @@ export function QuantumIndustries() {
         />
         
         <div ref={contentScrollContainerRef} className="flex-grow overflow-y-auto scrollbar-hide relative z-[10]">
+          {/* Conditional background elements for "About Us" page, direct children of scroll container */}
           {activePage === 'aboutUs' && (
             <div
-              ref={aboutUsBackgroundElementRef}
-              className="sticky top-0 left-0 w-full h-full z-[1] pointer-events-none"
+                ref={aboutUsBackgroundElementRef}
+                className="sticky top-0 left-0 w-full h-full z-[1] pointer-events-none" 
+                // Background image styles are set in useEffect
             />
           )}
           
-          <div
-             className={cn("relative z-[4]", activePage === 'aboutUs' && "absolute inset-0")}
-          >
-            <div
-              ref={activePage === 'aboutUs' ? aboutUsContentScrollerRef : null}
-              className={cn(activePage === 'aboutUs' && "h-full overflow-y-auto scrollbar-hide")}
-            >
-              {activePage === 'products' ? renderProductsPage() : renderAboutUsPage()}
-            </div>
+          {/* Content area - relative, scrolls OVER the sticky background */}
+          <div className={cn("relative", activePage === 'aboutUs' ? "z-[4]" : "z-[3]")}>
+            {/* The component returned by render functions will define its own padding and max-width */}
+            {activePage === 'products' ? renderProductsPage() : renderAboutUsPage()}
           </div>
         </div>
 
@@ -356,7 +360,7 @@ const NewStickyHeader: React.FC<NewStickyHeaderProps> = ({ activePage, setActive
       {isSmallHeader ? (
         <div className="flex justify-between items-center w-full max-w-6xl mx-auto px-4 py-2">
           <div className="relative w-10 h-10 sm:w-12 sm:h-12"> 
-            <Image src="/spyshop/Quantum Industries Icon.png" alt="QI Icon" layout="fill" objectFit="contain" data-ai-hint="logo quantum small"/>
+            <NextImage src="/spyshop/Quantum Industries Icon.png" alt="QI Icon" layout="fill" objectFit="contain" data-ai-hint="logo quantum small"/>
           </div>
           <div className="flex items-center space-x-2 sm:space-x-4">
             <button
@@ -384,7 +388,7 @@ const NewStickyHeader: React.FC<NewStickyHeaderProps> = ({ activePage, setActive
         <div className="flex flex-col items-center w-full max-w-6xl mx-auto px-6">
            <div className="flex justify-between items-center w-full"> 
             <div className="relative w-full h-16 md:h-20 my-2 flex-grow"> 
-              <Image src="/spyshop/Quantum Industries Logo.png" alt="Quantum Industries Full Logo" layout="fill" objectFit="contain" data-ai-hint="logo quantum full"/>
+              <NextImage src="/spyshop/Quantum Industries Logo.png" alt="Quantum Industries Full Logo" layout="fill" objectFit="contain" data-ai-hint="logo quantum full"/>
             </div>
           </div>
           <div className="flex justify-center items-center space-x-4 w-full pb-2"> 
@@ -427,7 +431,7 @@ const ProductNav: React.FC<ProductNavProps> = ({ selectedCategory, onSelectCateg
                         ${selectedCategory?.id === cat.id ? 'bg-cyan-600/40 scale-105 ring-1 ring-cyan-400' : 'hover:bg-slate-700/50'}`}
           >
             <div className="relative w-6 h-6 mb-0.5">
-              <Image src={cat.iconImageSrc} alt={cat.name} layout="fill" objectFit="contain" className="opacity-80 group-hover:opacity-100" data-ai-hint="icon category"/>
+              <NextImage src={cat.iconImageSrc} alt={cat.name} layout="fill" objectFit="contain" className="opacity-80 group-hover:opacity-100" data-ai-hint="icon category"/>
             </div>
             <span className={`text-[10px] leading-tight text-center ${selectedCategory?.id === cat.id ? 'text-cyan-300 font-semibold' : 'text-slate-300'}`}>
               {cat.name}
@@ -484,7 +488,7 @@ const ItemDisplayGrid: React.FC<ItemDisplayGridProps> = ({ items, onSelectItem }
           transition={{ duration: 0.2, delay: Math.random() * 0.1 }}
         >
           <div className="w-full h-2/3 relative mb-2">
-            <Image src={item.tileImageSrc || '/spyshop/tiles/placeholder.png'} alt={item.name} layout="fill" objectFit="contain" className="rounded-sm" data-ai-hint="item icon"/>
+            <NextImage src={item.tileImageSrc || '/spyshop/tiles/placeholder.png'} alt={item.name} layout="fill" objectFit="contain" className="rounded-sm" data-ai-hint="item icon"/>
           </div>
           <span className="text-xs sm:text-sm font-rajdhani font-semibold text-cyan-200 leading-tight">{item.name}</span>
         </motion.button>
@@ -514,7 +518,7 @@ const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({
   if (!itemData) return <p className="text-center text-slate-400 p-8">Item details not found.</p>;
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col relative"> {/* Added position: relative */}
       {!isImageModalOpen && (
         <LevelSelectorBar
           selectedLevel={selectedLevel}
@@ -524,93 +528,93 @@ const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({
         />
       )}
 
-      <div className="flex-grow overflow-y-auto p-1 sm:p-2 md:p-4 scrollbar-hide relative bg-transparent"> {/* TEMPORARY: bg-red-900/50 to see bounds */}
-        {isImageModalOpen ? (
-          <motion.div
-            key="full-image-modal"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="absolute inset-0 bg-lime-500/80 flex flex-col items-center justify-center z-50" // TEMPORARY: lime background
-          >
-            <button
-              onClick={() => setIsImageModalOpen(false)}
-              className="absolute top-1 right-1 sm:top-2 sm:right-2 bg-slate-700 text-white rounded-full p-1.5 shadow-lg hover:bg-red-500 transition-colors z-[51]"
-              aria-label="Close full image view"
-            >
-              <X className="w-4 h-4 sm:w-5 sm:h-5" />
-            </button>
-            {/* Image Container - this is relative for Next/Image */}
-            <div className="relative w-[calc(100%-1rem)] h-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] sm:h-[calc(100%-2rem)] bg-purple-500/50"> {/* TEMPORARY: purple background */}
-              <Image
-                src={itemData.imageSrc || 'https://placehold.co/800x600.png'} // Using public placeholder
-                alt={itemData.title}
-                layout="fill"
-                objectFit="contain"
-                data-ai-hint="item closeup"
-                unoptimized // Good for debugging local images, especially with placeholders
-              />
-            </div>
-          </motion.div>
-        ) : (
-          <>
-            <button onClick={onBack} className="absolute top-4 left-4 md:top-6 md:left-6 z-20 flex items-center text-sm text-cyan-300 hover:text-cyan-100 bg-slate-800/50 hover:bg-slate-700/70 px-3 py-1.5 rounded-md transition-colors">
-              <ArrowLeft className="w-4 h-4 mr-1.5" /> Back
-            </button>
+      {!isImageModalOpen && (
+        <div className="flex-grow overflow-y-auto p-1 sm:p-2 md:p-4 scrollbar-hide">
+          <button onClick={onBack} className="absolute top-4 left-4 md:top-6 md:left-6 z-20 flex items-center text-sm text-cyan-300 hover:text-cyan-100 bg-slate-800/50 hover:bg-slate-700/70 px-3 py-1.5 rounded-md transition-colors">
+            <ArrowLeft className="w-4 h-4 mr-1.5" /> Back
+          </button>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-4xl mx-auto pt-8 md:pt-0">
-              <div className="flex flex-col items-center">
-                <h2 className="text-2xl md:text-3xl font-orbitron text-cyan-300 mb-3 text-center md:mt-8">{itemData.title} <span className="text-orange-400 text-xl">L{itemData.level}</span></h2>
-                <motion.div
-                  className="relative w-full max-w-xs md:max-w-sm aspect-square bg-slate-800/50 border border-slate-700 rounded-lg shadow-xl overflow-hidden cursor-pointer mb-4"
-                  onClick={() => setIsImageModalOpen(true)}
-                  whileHover={{ scale: 1.03 }}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-4xl mx-auto pt-8 md:pt-0">
+            <div className="flex flex-col items-center">
+              <h2 className="text-2xl md:text-3xl font-orbitron text-cyan-300 mb-3 text-center md:mt-8">{itemData.title} <span className="text-orange-400 text-xl">L{itemData.level}</span></h2>
+              <motion.div
+                className="relative w-full max-w-xs md:max-w-sm aspect-square bg-slate-800/50 border border-slate-700 rounded-lg shadow-xl overflow-hidden cursor-pointer mb-4"
+                onClick={() => setIsImageModalOpen(true)}
+                whileHover={{ scale: 1.03 }}
+              >
+                <NextImage src={itemData.imageSrc || '/spyshop/items/placeholder_large.png'} alt={itemData.title} layout="fill" objectFit="contain" data-ai-hint="item large"/>
+                <div className="absolute inset-0 bg-black/20 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Search className="w-12 h-12 text-white/70" />
+                </div>
+              </motion.div>
+
+              <div className="text-center w-full max-w-xs md:max-w-sm">
+                <p className="text-3xl font-semibold text-orange-400 mb-1">{itemData.cost} <span className="text-xl text-slate-400">ELINT</span></p>
+                <button
+                  onClick={() => onPurchase(itemData.id)}
+                  className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold py-2.5 px-4 rounded-md transition-colors duration-200 flex items-center justify-center text-lg shadow-md hover:shadow-lg"
                 >
-                  <Image src={itemData.imageSrc || '/spyshop/items/placeholder_large.png'} alt={itemData.title} layout="fill" objectFit="contain" data-ai-hint="item large"/>
-                  <div className="absolute inset-0 bg-black/20 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Search className="w-12 h-12 text-white/70" />
-                  </div>
-                </motion.div>
-
-                <div className="text-center w-full max-w-xs md:max-w-sm">
-                  <p className="text-3xl font-semibold text-orange-400 mb-1">{itemData.cost} <span className="text-xl text-slate-400">ELINT</span></p>
-                  <button
-                    onClick={() => onPurchase(itemData.id)}
-                    className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold py-2.5 px-4 rounded-md transition-colors duration-200 flex items-center justify-center text-lg shadow-md hover:shadow-lg"
-                  >
-                    <ShoppingCart className="w-5 h-5 mr-2" /> Purchase
-                  </button>
-                  <p className="text-xs text-slate-500 mt-1">Scarcity: <span className="font-medium text-slate-400">{itemData.scarcity}</span></p>
-                </div>
+                  <ShoppingCart className="w-5 h-5 mr-2" /> Purchase
+                </button>
+                <p className="text-xs text-slate-500 mt-1">Scarcity: <span className="font-medium text-slate-400">{itemData.scarcity}</span></p>
               </div>
+            </div>
 
-              <div className="md:pt-10">
-                <div className="bg-slate-800/60 border border-slate-700/80 rounded-lg p-4 shadow-lg">
-                  <h3 className="text-xl font-orbitron text-sky-300 mb-2">Description</h3>
-                  <p className="text-sm text-slate-300 mb-4 leading-relaxed">{itemData.description}</p>
+            <div className="md:pt-10">
+              <div className="bg-slate-800/60 border border-slate-700/80 rounded-lg p-4 shadow-lg">
+                <h3 className="text-xl font-orbitron text-sky-300 mb-2">Description</h3>
+                <p className="text-sm text-slate-300 mb-4 leading-relaxed">{itemData.description}</p>
 
-                  <h3 className="text-xl font-orbitron text-sky-300 mb-3">Details</h3>
-                  {itemData.strength && <ProgressBar label="Strength" value={itemData.strength.current} max={itemData.strength.max} colorClass="bg-red-500" />}
-                  {itemData.resistance && <ProgressBar label="Resistance" value={itemData.resistance.current} max={itemData.resistance.max} colorClass="bg-blue-500" />}
-                  {itemData.attackFactor && <ProgressBar label="Attack Factor" value={itemData.attackFactor} max={100} colorClass="bg-yellow-500" />}
+                <h3 className="text-xl font-orbitron text-sky-300 mb-3">Details</h3>
+                {itemData.strength && <ProgressBar label="Strength" value={itemData.strength.current} max={itemData.strength.max} colorClass="bg-red-500" />}
+                {itemData.resistance && <ProgressBar label="Resistance" value={itemData.resistance.current} max={itemData.resistance.max} colorClass="bg-blue-500" />}
+                {itemData.attackFactor && <ProgressBar label="Attack Factor" value={itemData.attackFactor} max={100} colorClass="bg-yellow-500" />}
 
 
-                  <div className="text-sm space-y-1.5 text-slate-300 mt-3">
-                    <p><strong className="text-slate-400">Category:</strong> {itemData.category}</p>
-                    {itemData.itemTypeDetail && <p><strong className="text-slate-400">Type:</strong> {itemData.itemTypeDetail}</p>}
-                    {itemData.perUseCost && <p><strong className="text-slate-400">Per-Use Cost:</strong> {itemData.perUseCost} ELINT</p>}
-                    {itemData.functionText && <p><strong className="text-slate-400">Function:</strong> {itemData.functionText}</p>}
-                    {itemData.keyCrackerInfluence && <p><strong className="text-slate-400">Key Cracker Influence:</strong> {itemData.keyCrackerInfluence}</p>}
-                    {itemData.minigameEffect && <p><strong className="text-slate-400">Minigame Effect:</strong> {itemData.minigameEffect}</p>}
-                    {itemData.levelScalingNote && <p><strong className="text-slate-400">Level Scaling:</strong> {itemData.levelScalingNote}</p>}
-                  </div>
+                <div className="text-sm space-y-1.5 text-slate-300 mt-3">
+                  <p><strong className="text-slate-400">Category:</strong> {itemData.category}</p>
+                  {itemData.itemTypeDetail && <p><strong className="text-slate-400">Type:</strong> {itemData.itemTypeDetail}</p>}
+                  {itemData.perUseCost && <p><strong className="text-slate-400">Per-Use Cost:</strong> {itemData.perUseCost} ELINT</p>}
+                  {itemData.functionText && <p><strong className="text-slate-400">Function:</strong> {itemData.functionText}</p>}
+                  {itemData.keyCrackerInfluence && <p><strong className="text-slate-400">Key Cracker Influence:</strong> {itemData.keyCrackerInfluence}</p>}
+                  {itemData.minigameEffect && <p><strong className="text-slate-400">Minigame Effect:</strong> {itemData.minigameEffect}</p>}
+                  {itemData.levelScalingNote && <p><strong className="text-slate-400">Level Scaling:</strong> {itemData.levelScalingNote}</p>}
                 </div>
               </div>
             </div>
-          </>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
+
+      {isImageModalOpen && (
+        <motion.div
+          key="full-image-modal"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="absolute inset-0 bg-lime-500/80 flex flex-col items-center justify-center z-50" 
+        >
+          <button
+            onClick={() => setIsImageModalOpen(false)}
+            className="absolute top-1 right-1 sm:top-2 sm:right-2 bg-slate-700 text-white rounded-full p-1.5 shadow-lg hover:bg-red-500 transition-colors z-[51]"
+            aria-label="Close full image view"
+          >
+            <X className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
+          <div className="relative w-[calc(100%-1rem)] h-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] sm:h-[calc(100%-2rem)] bg-purple-500/50">
+            <NextImage
+              src={'https://placehold.co/800x600.png'}
+              alt={itemData.title} 
+              layout="fill"
+              objectFit="contain"
+              data-ai-hint="item placeholder"
+              unoptimized 
+            />
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 };
+
