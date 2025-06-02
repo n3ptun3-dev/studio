@@ -99,7 +99,7 @@ export function QuantumIndustriesRedesignedShop() {
 
     if (activePage === 'aboutUs' && scroller && bgElement) {
         // Setup background styles for bgElement
-        bgElement.style.backgroundImage = `url('/spyshop/bg_about_page.jpg')`;
+        bgElement.style.backgroundImage = `url('/spyshop/about_page_panodark.jpg')`;
         bgElement.style.backgroundRepeat = 'no-repeat';
         // The background image's height will match bgElement's height (which is 100% of scroller's viewport height).
         // Its width will adjust to maintain aspect ratio.
@@ -261,12 +261,6 @@ export function QuantumIndustriesRedesignedShop() {
         </p>
         <p className="text-lg mb-6 leading-relaxed">
           Explore our catalog, equip yourself with the finest gear, and remember: in the quantum realm, the best defense is a brilliant offense, and the most valuable asset is information meticulously secured or audaciously acquired.
-        </p>
-         <p className="text-lg mb-6 leading-relaxed">
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-        </p>
-        <p className="text-lg mb-6 leading-relaxed">
-            Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.
         </p>
         <p className="text-xl text-cyan-400 font-semibold mt-10 text-center font-orbitron">
           "Innovation in Security. Excellence in Espionage."
