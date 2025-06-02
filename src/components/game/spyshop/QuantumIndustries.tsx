@@ -252,23 +252,23 @@ export function QuantumIndustries() {
     // Background and scrolling are handled by its parent wrapper and the sticky background element.
     return (
       <div className="max-w-3xl mx-auto p-6 md:p-10 text-slate-300">
-        <h2 className="text-4xl font-orbitron text-cyan-300 mb-8 text-center">About Quantum Industries</h2>
-        <p className="text-lg mb-6 leading-relaxed">
+        <h2 className="text-4xl font-orbitron text-cyan-300 mb-8 text-center" style={{ textShadow: '0 0 8px rgba(0,255,255,0.7), 0 0 15px rgba(0,255,255,0.3)' }}>About Quantum Industries</h2>
+        <p className="text-lg mb-6 leading-relaxed" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
           At Quantum Industries, we don't just engineer security solutions; we redefine the very fabric of digital defense and offense. Born from a vision of a hyper-connected, yet fiercely protected, future, we are the pioneers of ELINT security, pushing the boundaries of what's possible in a world where information is the ultimate currency.
         </p>
-        <p className="text-lg mb-6 leading-relaxed">
+        <p className="text-lg mb-6 leading-relaxed" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
           Our dedicated team of quantum physicists, cybernetic engineers, and tactical strategists aim to develop state-of-the-art Vault Hardware, impenetrable Lock Fortifiers, and revolutionary Nexus Gadgets. From the subtle hum of a Biometric Seal to the mind-bending complexity of a Temporal Flux Lock, our defensive technologies are crafted to withstand the most sophisticated infiltration attempts, ensuring your ELINT remains inviolable.
         </p>
-        <p className="text-lg mb-6 leading-relaxed">
+        <p className="text-lg mb-6 leading-relaxed" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
           But security isn't just about defense. It's also about strategic advantage. Our Offensive Tools and Assault Tech are designed for those who dare to breach the seemingly unbreachable. Whether you're wielding a precision Code Injector, a heavy-duty Hydraulic Drill, or deploying a game-changing Seismic Charge, Quantum Industries empowers you to navigate the digital battlefield with unparalleled prowess.
         </p>
-        <p className="text-lg mb-6 leading-relaxed">
+        <p className="text-lg mb-6 leading-relaxed" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
           Our commitment to excellence extends beyond product development. We foster a culture of continuous innovation, ethical conduct, and unwavering support for our operatives. We understand the stakes are high, the shadows deep, and the data invaluable. That's why Quantum Industries is more than a supplier; we are your trusted partner in the clandestine world of ELINT Heist.
         </p>
-        <p className="text-lg mb-6 leading-relaxed">
+        <p className="text-lg mb-6 leading-relaxed" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
           Explore our catalog, equip yourself with the finest gear, and remember: in the quantum realm, the best defense is a brilliant offense, and the most valuable asset is information meticulously secured or audaciously acquired.
         </p>
-        <p className="text-xl text-cyan-400 font-semibold mt-10 text-center font-orbitron">
+        <p className="text-xl text-cyan-400 font-semibold mt-10 text-center font-orbitron" style={{ textShadow: '0 0 8px rgba(0,255,255,0.7), 0 0 15px rgba(0,255,255,0.3)' }}>
           "Innovation in Security. Excellence in Espionage."
         </p>
       </div>
@@ -342,7 +342,10 @@ export function QuantumIndustries() {
             <div
               ref={activePage === 'aboutUs' ? aboutUsContentScrollerRef : null}
               className={cn(
-                activePage === 'aboutUs' && "h-full overflow-y-auto scrollbar-hide"
+                activePage === 'aboutUs' && "h-full overflow-y-auto scrollbar-hide relative", // Add relative for the absolute shadow
+                // Removed the previous before/after for blur shadow that scrolled with the text
+                // activePage === 'aboutUs' && "before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-16 before:bg-gradient-to-b before:from-slate-950 before:to-transparent before:z-10 before:pointer-events-none",
+                // activePage === 'aboutUs' && "after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-16 after:bg-gradient-to-t after:from-slate-950 before:to-transparent after:z-10 after:pointer-events-none"
               )}
             >
               {activePage === 'products' ? renderProductsPage() : renderAboutUsPage()}
