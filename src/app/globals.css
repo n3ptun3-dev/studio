@@ -459,50 +459,72 @@
 @layer components {
   /* Base for scanner background elements - .map-overlay.holographic-panel needs position: relative */
   .map-overlay.holographic-panel {
-    position: relative; 
+    position: relative;
   }
 
   /* Specific theme backgrounds - only map image and darkening layer FOR THE PANEL ITSELF */
   .map-overlay.holographic-panel.observer-background {
     background-image:
-      url('/backgrounds/World Map Green.jpg'),
-      linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2));
-    background-size: auto 102%, cover;
-    background-repeat: repeat-x, no-repeat;
-    background-position: 0 0, 0 0; /* JS will animate the first position */
+      linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), /* Darkening overlay */
+      url('/backgrounds/World Map Green.jpg'); /* Map image */
+    background-size: cover, auto 102%; /* Darkening layer covers, map image scales */
+    background-repeat: no-repeat, repeat-x; /* Darkening layer no-repeat, map repeats horizontally */
+    background-position: 0 0, 0 0; /* JS will animate the second position (map) */
     transform: translateZ(0);
   }
 
   .map-overlay.holographic-panel.cyphers-background {
     background-image:
-      url('/backgrounds/World Map Blue.jpg'),
-      linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2));
-    background-size: auto 102%, cover;
-    background-repeat: repeat-x, no-repeat;
+      linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)),
+      url('/backgrounds/World Map Blue.jpg');
+    background-size: cover, auto 102%;
+    background-repeat: no-repeat, repeat-x;
     background-position: 0 0, 0 0;
     transform: translateZ(0);
   }
 
   .map-overlay.holographic-panel.shadows-background {
     background-image:
-      url('/backgrounds/World Map Red.jpg'),
-      linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2));
-    background-size: auto 102%, cover;
-    background-repeat: repeat-x, no-repeat;
+      linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)),
+      url('/backgrounds/World Map Red.jpg');
+    background-size: cover, auto 102%;
+    background-repeat: no-repeat, repeat-x;
     background-position: 0 0, 0 0;
     transform: translateZ(0);
   }
 
   /* NEW: Dedicated class for the static grid overlay (crosses) for the SEPARATE DIV */
-  .scanner-grid-overlay-dots { /* Renaming to reflect new effect, but can keep classname if preferred */
+  .scanner-grid-overlay-dots {
+    --grid-cell-size: 20px; /* Size of each repeating cell */
+    --cross-arm-length: 5px; /* Total length of each arm of the cross */
+    --cross-thickness: 1px; /* Thickness of the lines forming the cross */
     background-image:
-      repeating-linear-gradient(0deg, hsl(var(--foreground-hsl)) 0px 1px, transparent 1px 20px), /* Horizontal lines */
-      repeating-linear-gradient(90deg, hsl(var(--foreground-hsl)) 0px 1px, transparent 1px 20px); /* Vertical lines */
-    background-size: 20px 20px, 20px 20px; /* Size of each repeating unit */
-    background-repeat: repeat, repeat;
-    /* Align both gradients to the same origin to form crosses */
-    background-position: 0 0, 0 0; 
-    border-radius: inherit; /* Match parent panel's border radius if applied via JS on .rounded-[inherit] */
+      /* Horizontal arms of the crosses */
+      repeating-linear-gradient(
+        to right,
+        transparent 0,
+        transparent calc(50% - var(--cross-arm-length) / 2),
+        hsl(var(--foreground-hsl)) calc(50% - var(--cross-arm-length) / 2),
+        hsl(var(--foreground-hsl)) calc(50% + var(--cross-arm-length) / 2),
+        transparent calc(50% + var(--cross-arm-length) / 2),
+        transparent 100%
+      ),
+      /* Vertical arms of the crosses */
+      repeating-linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent calc(50% - var(--cross-arm-length) / 2),
+        hsl(var(--foreground-hsl)) calc(50% - var(--cross-arm-length) / 2),
+        hsl(var(--foreground-hsl)) calc(50% + var(--cross-arm-length) / 2),
+        transparent calc(50% + var(--cross-arm-length) / 2),
+        transparent 100%
+      );
+    background-size:
+      var(--grid-cell-size) var(--cross-thickness), /* For horizontal arms: cell width, arm thickness */
+      var(--cross-thickness) var(--grid-cell-size); /* For vertical arms: arm thickness, cell height */
+    background-position: center center; /* Align patterns to form crosses */
+    background-repeat: repeat; /* Tile the patterns */
+    border-radius: inherit;
   }
 }
 
