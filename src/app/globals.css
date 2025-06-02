@@ -493,38 +493,18 @@
     transform: translateZ(0);
   }
 
-  /* NEW: Dedicated class for the static grid overlay (crosses) for the SEPARATE DIV */
+  /* NEW: Dedicated class for the static grid overlay (dots) for the SEPARATE DIV */
   .scanner-grid-overlay-dots {
-    --grid-cell-size: 40px; /* Increased cell size for more spacing */
-    --cross-arm-length: 5px; /* Total length of each arm of the cross */
-    --cross-thickness: 1px; /* Thickness of the lines forming the cross */
+    position: absolute;
+    inset: 0;
     background-image:
-      /* Horizontal arms of the crosses */
-      repeating-linear-gradient(
-        to right,
-        transparent 0,
-        transparent calc(50% - var(--cross-arm-length) / 2),
-        hsl(var(--foreground-hsl)) calc(50% - var(--cross-arm-length) / 2),
-        hsl(var(--foreground-hsl)) calc(50% + var(--cross-arm-length) / 2),
-        transparent calc(50% + var(--cross-arm-length) / 2),
-        transparent 100%
-      ),
-      /* Vertical arms of the crosses */
-      repeating-linear-gradient(
-        to bottom,
-        transparent 0,
-        transparent calc(50% - var(--cross-arm-length) / 2),
-        hsl(var(--foreground-hsl)) calc(50% - var(--cross-arm-length) / 2),
-        hsl(var(--foreground-hsl)) calc(50% + var(--cross-arm-length) / 2),
-        transparent calc(50% + var(--cross-arm-length) / 2),
-        transparent 100%
-      );
-    background-size:
-      var(--grid-cell-size) var(--cross-thickness), /* For horizontal arms: cell width, arm thickness */
-      var(--cross-thickness) var(--grid-cell-size); /* For vertical arms: arm thickness, cell height */
-    background-position: center center; /* Align patterns to form crosses */
-    background-repeat: repeat; /* Tile the patterns */
-    border-radius: inherit;
+      repeating-linear-gradient(0deg, hsl(var(--foreground-hsl)) 0px 1px, transparent 1px 20px), /* Horizontal lines */
+      repeating-linear-gradient(90deg, hsl(var(--foreground-hsl)) 0px 1px, transparent 1px 20px); /* Vertical lines */
+    background-size: 20px 20px, 20px 20px; /* Cell size for lines */
+    background-position: 0 0, 10px 10px; /* Offset for dot effect */
+    z-index: 3; /* Ensure it's above the panel's own background and gloss */
+    pointer-events: none;
+    border-radius: inherit; /* Respect parent's border-radius */
   }
 }
 
@@ -561,4 +541,3 @@
   75% { transform: translateY(-10px) translateX(5px); }
   100% { transform: translateY(0) translateX(0); }
 }
-
