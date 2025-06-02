@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -492,10 +493,6 @@
     transform: translateZ(0);
   }
 
-  /*
-    The .scanner-grid-overlay-dots class has been removed from here.
-    Its styles are now applied inline in ScannerSection.tsx for testing.
-  */
 }
 
 @keyframes spin {
