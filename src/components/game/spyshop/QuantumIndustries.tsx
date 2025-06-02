@@ -53,7 +53,8 @@ export function QuantumIndustries() {
   const contentScrollContainerRef = useRef<HTMLDivElement>(null);
   
   const aboutUsBackgroundElementRef = useRef<HTMLDivElement>(null);
-  const aboutUsPageContainerRef = useRef<HTMLDivElement>(null); // Added this ref
+  // const aboutUsPageContainerRef = useRef<HTMLDivElement>(null); // No longer needed for this element itself
+  const aboutUsContentScrollerRef = useRef<HTMLDivElement>(null); // For scrolling text content on About Us
 
   const [selectedProductCategory, setSelectedProductCategory] = useState<ProductCategory | null>(null);
   const [selectedItemBaseName, setSelectedItemBaseName] = useState<string | null>(null);
@@ -67,9 +68,15 @@ export function QuantumIndustries() {
     setSelectedItemBaseName(null);
     setCurrentViewItemData(null);
     
+    // Reset scroll for main container and about us content scroller
     if (contentScrollContainerRef.current) {
       requestAnimationFrame(() => {
         contentScrollContainerRef.current!.scrollTop = 0;
+      });
+    }
+    if (aboutUsContentScrollerRef.current && activePage === 'aboutUs') {
+       requestAnimationFrame(() => {
+        aboutUsContentScrollerRef.current!.scrollTop = 0;
       });
     }
   }, [selectedProductCategory, activePage]);
@@ -94,49 +101,48 @@ export function QuantumIndustries() {
     }
   }, [selectedItemBaseName, selectedLevel, selectedProductCategory]);
 
-   useEffect(() => {
-    const scrollableContent = contentScrollContainerRef.current;
+  useEffect(() => {
     const bgElement = aboutUsBackgroundElementRef.current;
+    const contentScroller = activePage === 'aboutUs' ? aboutUsContentScrollerRef.current : contentScrollContainerRef.current;
 
-    if (activePage === 'aboutUs' && scrollableContent && bgElement) {
+    if (activePage === 'aboutUs' && bgElement && contentScroller) {
         // Set initial styles for the background element
-        bgElement.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('/spyshop/bg_about_page.jpg')`;
-        bgElement.style.backgroundRepeat = 'no-repeat, no-repeat';
-        bgElement.style.backgroundSize = 'cover, auto 100%'; // Overlay covers, image fills height
-        bgElement.style.backgroundPosition = `0% 50%, 0% 50%`; // Initial for gradient, Initial for image
-        bgElement.style.transition = 'background-position 0.05s linear';
+        bgElement.style.backgroundImage = `url('/spyshop/about_page_panodark.jpg')`;
+        bgElement.style.backgroundRepeat = 'no-repeat';
+        bgElement.style.backgroundSize = 'auto 100%'; // Image fills height, width auto
+        bgElement.style.backgroundPosition = `0% 50%`; // Initial: X=0%, Y=center
+        bgElement.style.transition = 'background-position-x 0.05s linear'; // Only transition X
 
         const handleScroll = () => {
-            const scrollHeight = scrollableContent.scrollHeight - scrollableContent.clientHeight;
+            const scrollHeight = contentScroller.scrollHeight - contentScroller.clientHeight;
             if (scrollHeight > 0) {
-                const scrollTop = scrollableContent.scrollTop;
+                const scrollTop = contentScroller.scrollTop;
                 const scrollFraction = Math.min(1, Math.max(0, scrollTop / scrollHeight));
-                // Only change X position of the second background (the image)
-                bgElement.style.backgroundPosition = `0% 50%, ${scrollFraction * 100}% 50%`;
+                bgElement.style.backgroundPosition = `${scrollFraction * 100}% 50%`; // Only change X position
             } else {
-                bgElement.style.backgroundPosition = `0% 50%, 0% 50%`; // Reset if no scroll
+                bgElement.style.backgroundPosition = `0% 50%`; // Reset if no scroll
             }
         };
         
         requestAnimationFrame(() => {
-            scrollableContent.scrollTop = 0; // Reset scroll on tab switch
-            handleScroll(); // Initial position calculation
+            contentScroller.scrollTop = 0; 
+            handleScroll(); 
         });
 
-        scrollableContent.addEventListener('scroll', handleScroll, { passive: true });
+        contentScroller.addEventListener('scroll', handleScroll, { passive: true });
         
         return () => {
-            scrollableContent.removeEventListener('scroll', handleScroll);
-            // Optionally clear background styles if bgElement might be reused/visible otherwise
-            // bgElement.style.backgroundImage = '';
-            // bgElement.style.backgroundPosition = '';
+            contentScroller.removeEventListener('scroll', handleScroll);
+            if (bgElement) { // Check if bgElement still exists
+                bgElement.style.backgroundImage = '';
+                bgElement.style.backgroundPosition = '';
+            }
         };
     } else if (bgElement) {
-        // Clear styles if not on "About Us" page or refs are null
         bgElement.style.backgroundImage = '';
         bgElement.style.backgroundPosition = '';
     }
-}, [activePage, contentScrollContainerRef, aboutUsBackgroundElementRef]);
+}, [activePage]);
 
 
   const handleSelectProductCategory = (category: ProductCategory | null) => {
@@ -199,7 +205,7 @@ export function QuantumIndustries() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -50 }}
             transition={{ duration: 0.3 }}
-            className="h-full"
+            className="h-full" // Ensure it takes full height for modal parent
           >
             <SpecificItemDetailView
               itemData={currentViewItemData}
@@ -218,6 +224,7 @@ export function QuantumIndustries() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
+            className="p-4" // Added padding here for the grid view
           >
             <ItemDisplayGrid
               items={itemsToDisplayInGrid}
@@ -247,37 +254,29 @@ export function QuantumIndustries() {
   };
 
   const renderAboutUsPage = () => {
-    // This function now just returns the text content.
-    // The background and overlay are handled as siblings within contentScrollContainerRef,
-    // with the background being sticky.
+    const textShadowStyle = { textShadow: '1px 1px 2px rgba(0,0,0,0.9)' };
     return (
-      <div ref={aboutUsPageContainerRef} className="max-w-3xl mx-auto p-6 md:p-10 text-slate-300">
-        <h2 className="text-4xl font-orbitron text-cyan-300 mb-8 text-center" style={{ textShadow: '0 0 8px rgba(0,255,255,0.7), 0 0 15px rgba(0,255,255,0.3)' }}>About Quantum Industries</h2>
-        <p className="text-lg mb-6 leading-relaxed" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
-          At Quantum Industries, we don't just engineer security solutions; we redefine the very fabric of digital defense and offense. Born from a vision of a hyper-connected, yet fiercely protected, future, we are the pioneers of ELINT security, pushing the boundaries of what's possible in a world where information is the ultimate currency.
-        </p>
-        <p className="text-lg mb-6 leading-relaxed" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
-          Our dedicated team of quantum physicists, cybernetic engineers, and tactical strategists aim to develop state-of-the-art Vault Hardware, impenetrable Lock Fortifiers, and revolutionary Nexus Gadgets. From the subtle hum of a Biometric Seal to the mind-bending complexity of a Temporal Flux Lock, our defensive technologies are crafted to withstand the most sophisticated infiltration attempts, ensuring your ELINT remains inviolable.
-        </p>
-        <p className="text-lg mb-6 leading-relaxed" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
-          But security isn't just about defense. It's also about strategic advantage. Our Offensive Tools and Assault Tech are designed for those who dare to breach the seemingly unbreachable. Whether you're wielding a precision Code Injector, a heavy-duty Hydraulic Drill, or deploying a game-changing Seismic Charge, Quantum Industries empowers you to navigate the digital battlefield with unparalleled prowess.
-        </p>
-        <p className="text-lg mb-6 leading-relaxed" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
-          Our commitment to excellence extends beyond product development. We foster a culture of continuous innovation, ethical conduct, and unwavering support for our operatives. We understand the stakes are high, the shadows deep, and the data invaluable. That's why Quantum Industries is more than a supplier; we are your trusted partner in the clandestine world of ELINT Heist.
-        </p>
-         <p className="text-lg mb-6 leading-relaxed" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
-          Explore our catalog, equip yourself with the finest gear, and remember: in the quantum realm, the best defense is a brilliant offense, and the most valuable asset is information meticulously secured or audaciously acquired.
-        </p>
-        <p className="text-lg mb-6 leading-relaxed" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-        </p>
-         <p className="text-lg mb-6 leading-relaxed" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
-          Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.
-        </p>
-        <p className="text-xl text-cyan-400 font-semibold mt-10 text-center font-orbitron" style={{ textShadow: '0 0 8px rgba(0,255,255,0.7), 0 0 15px rgba(0,255,255,0.3)' }}>
-          "Innovation in Security. Excellence in Espionage."
-        </p>
-      </div>
+        <div className="max-w-3xl mx-auto p-6 md:p-10 text-slate-200">
+            <h2 className="text-4xl font-orbitron text-cyan-300 mb-8 text-center" style={{ textShadow: '0 0 8px rgba(0,255,255,0.7), 0 0 15px rgba(0,255,255,0.3)' }}>About Quantum Industries</h2>
+            <p className="text-lg mb-6 leading-relaxed" style={textShadowStyle}>
+            At Quantum Industries, we don't just engineer security solutions; we redefine the very fabric of digital defense and offense. Born from a vision of a hyper-connected, yet fiercely protected, future, we are the pioneers of ELINT security, pushing the boundaries of what's possible in a world where information is the ultimate currency.
+            </p>
+            <p className="text-lg mb-6 leading-relaxed" style={textShadowStyle}>
+            Our dedicated team of quantum physicists, cybernetic engineers, and tactical strategists aim to develop state-of-the-art Vault Hardware, impenetrable Lock Fortifiers, and revolutionary Nexus Gadgets. From the subtle hum of a Biometric Seal to the mind-bending complexity of a Temporal Flux Lock, our defensive technologies are crafted to withstand the most sophisticated infiltration attempts, ensuring your ELINT remains inviolable.
+            </p>
+            <p className="text-lg mb-6 leading-relaxed" style={textShadowStyle}>
+            But security isn't just about defense. It's also about strategic advantage. Our Offensive Tools and Assault Tech are designed for those who dare to breach the seemingly unbreachable. Whether you're wielding a precision Code Injector, a heavy-duty Hydraulic Drill, or deploying a game-changing Seismic Charge, Quantum Industries empowers you to navigate the digital battlefield with unparalleled prowess.
+            </p>
+            <p className="text-lg mb-6 leading-relaxed" style={textShadowStyle}>
+            Our commitment to excellence extends beyond product development. We foster a culture of continuous innovation, ethical conduct, and unwavering support for our operatives. We understand the stakes are high, the shadows deep, and the data invaluable. That's why Quantum Industries is more than a supplier; we are your trusted partner in the clandestine world of ELINT Heist.
+            </p>
+            <p className="text-lg mb-6 leading-relaxed" style={textShadowStyle}>
+            Explore our catalog, equip yourself with the finest gear, and remember: in the quantum realm, the best defense is a brilliant offense, and the most valuable asset is information meticulously secured or audaciously acquired.
+            </p>
+            <p className="text-xl text-cyan-400 font-semibold mt-10 text-center font-orbitron" style={{ textShadow: '0 0 8px rgba(0,255,255,0.7), 0 0 15px rgba(0,255,255,0.3)' }}>
+            "Innovation in Security. Excellence in Espionage."
+            </p>
+        </div>
     );
   };
 
@@ -327,18 +326,23 @@ export function QuantumIndustries() {
         />
         
         <div ref={contentScrollContainerRef} className="flex-grow overflow-y-auto scrollbar-hide relative z-[10]">
-          {/* Conditional background elements for "About Us" page, direct children of scroll container */}
+          {/* Conditionally rendered background + overlay container (STICKY) */}
           {activePage === 'aboutUs' && (
             <div
-                ref={aboutUsBackgroundElementRef}
-                className="sticky top-0 left-0 w-full h-full z-[1] pointer-events-none" 
-                // Background image styles are set in useEffect
+              ref={aboutUsBackgroundElementRef}
+              className="sticky top-0 left-0 w-full h-full z-[1] pointer-events-none"
+              // Background image styles applied in useEffect
             />
           )}
-          
-          {/* Content area - relative, scrolls OVER the sticky background */}
-          <div className={cn("relative", activePage === 'aboutUs' ? "z-[4]" : "z-[3]")}>
-            {/* The component returned by render functions will define its own padding and max-width */}
+
+          {/* Content area - relative, scrolls OVER the sticky background OR is normal flow */}
+           <div 
+             ref={activePage === 'aboutUs' ? aboutUsContentScrollerRef : null}
+             className={cn(
+               "relative", 
+               activePage === 'aboutUs' ? "z-[4] h-full overflow-y-auto scrollbar-hide" : "z-[3]" // If About Us, make it independently scrollable
+             )}
+           >
             {activePage === 'products' ? renderProductsPage() : renderAboutUsPage()}
           </div>
         </div>
@@ -473,10 +477,10 @@ const LevelSelectorBar: React.FC<LevelSelectorBarProps> = ({ selectedLevel, onSe
 
 const ItemDisplayGrid: React.FC<ItemDisplayGridProps> = ({ items, onSelectItem }) => {
   if (!items || items.length === 0) {
-    return <p className="text-center text-slate-400 mt-10 p-4">No items in this category yet, or clear your selection below.</p>;
+    return <p className="text-center text-slate-400 mt-10">No items in this category yet, or clear your selection below.</p>;
   }
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4 p-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
       {items.map((item) => (
         <motion.button
           key={item.id}
@@ -518,74 +522,74 @@ const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({
   if (!itemData) return <p className="text-center text-slate-400 p-8">Item details not found.</p>;
 
   return (
-    <div className="h-full flex flex-col relative"> {/* Added position: relative */}
+    <div className="h-full flex flex-col relative"> 
+      {/* Scrollable content for item details - RENDERED ONLY IF MODAL IS CLOSED */}
       {!isImageModalOpen && (
-        <LevelSelectorBar
-          selectedLevel={selectedLevel}
-          onSelectLevel={onSelectLevel}
-          playerLevel={playerLevel}
-          levelsAvailable={levelsAvailableForItem}
-        />
-      )}
+        <>
+          <LevelSelectorBar
+            selectedLevel={selectedLevel}
+            onSelectLevel={onSelectLevel}
+            playerLevel={playerLevel}
+            levelsAvailable={levelsAvailableForItem}
+          />
+          <div className="flex-grow overflow-y-auto p-1 sm:p-2 md:p-4 scrollbar-hide">
+            <button onClick={onBack} className="absolute top-4 left-4 md:top-6 md:left-6 z-20 flex items-center text-sm text-cyan-300 hover:text-cyan-100 bg-slate-800/50 hover:bg-slate-700/70 px-3 py-1.5 rounded-md transition-colors">
+              <ArrowLeft className="w-4 h-4 mr-1.5" /> Back
+            </button>
 
-      {!isImageModalOpen && (
-        <div className="flex-grow overflow-y-auto p-1 sm:p-2 md:p-4 scrollbar-hide">
-          <button onClick={onBack} className="absolute top-4 left-4 md:top-6 md:left-6 z-20 flex items-center text-sm text-cyan-300 hover:text-cyan-100 bg-slate-800/50 hover:bg-slate-700/70 px-3 py-1.5 rounded-md transition-colors">
-            <ArrowLeft className="w-4 h-4 mr-1.5" /> Back
-          </button>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-4xl mx-auto pt-8 md:pt-0">
-            <div className="flex flex-col items-center">
-              <h2 className="text-2xl md:text-3xl font-orbitron text-cyan-300 mb-3 text-center md:mt-8">{itemData.title} <span className="text-orange-400 text-xl">L{itemData.level}</span></h2>
-              <motion.div
-                className="relative w-full max-w-xs md:max-w-sm aspect-square bg-slate-800/50 border border-slate-700 rounded-lg shadow-xl overflow-hidden cursor-pointer mb-4"
-                onClick={() => setIsImageModalOpen(true)}
-                whileHover={{ scale: 1.03 }}
-              >
-                <NextImage src={itemData.imageSrc || '/spyshop/items/placeholder_large.png'} alt={itemData.title} layout="fill" objectFit="contain" data-ai-hint="item large"/>
-                <div className="absolute inset-0 bg-black/20 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <Search className="w-12 h-12 text-white/70" />
-                </div>
-              </motion.div>
-
-              <div className="text-center w-full max-w-xs md:max-w-sm">
-                <p className="text-3xl font-semibold text-orange-400 mb-1">{itemData.cost} <span className="text-xl text-slate-400">ELINT</span></p>
-                <button
-                  onClick={() => onPurchase(itemData.id)}
-                  className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold py-2.5 px-4 rounded-md transition-colors duration-200 flex items-center justify-center text-lg shadow-md hover:shadow-lg"
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-4xl mx-auto pt-8 md:pt-0">
+              <div className="flex flex-col items-center">
+                <h2 className="text-2xl md:text-3xl font-orbitron text-cyan-300 mb-3 text-center md:mt-8">{itemData.title} <span className="text-orange-400 text-xl">L{itemData.level}</span></h2>
+                <motion.div
+                  className="relative w-full max-w-xs md:max-w-sm aspect-square bg-slate-800/50 border border-slate-700 rounded-lg shadow-xl overflow-hidden cursor-pointer mb-4"
+                  onClick={() => setIsImageModalOpen(true)}
+                  whileHover={{ scale: 1.03 }}
                 >
-                  <ShoppingCart className="w-5 h-5 mr-2" /> Purchase
-                </button>
-                <p className="text-xs text-slate-500 mt-1">Scarcity: <span className="font-medium text-slate-400">{itemData.scarcity}</span></p>
+                  <NextImage src={itemData.imageSrc || '/spyshop/items/placeholder_large.png'} alt={itemData.title} layout="fill" objectFit="contain" data-ai-hint="item large"/>
+                  <div className="absolute inset-0 bg-black/20 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Search className="w-12 h-12 text-white/70" />
+                  </div>
+                </motion.div>
+
+                <div className="text-center w-full max-w-xs md:max-w-sm">
+                  <p className="text-3xl font-semibold text-orange-400 mb-1">{itemData.cost} <span className="text-xl text-slate-400">ELINT</span></p>
+                  <button
+                    onClick={() => onPurchase(itemData.id)}
+                    className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold py-2.5 px-4 rounded-md transition-colors duration-200 flex items-center justify-center text-lg shadow-md hover:shadow-lg"
+                  >
+                    <ShoppingCart className="w-5 h-5 mr-2" /> Purchase
+                  </button>
+                  <p className="text-xs text-slate-500 mt-1">Scarcity: <span className="font-medium text-slate-400">{itemData.scarcity}</span></p>
+                </div>
               </div>
-            </div>
 
-            <div className="md:pt-10">
-              <div className="bg-slate-800/60 border border-slate-700/80 rounded-lg p-4 shadow-lg">
-                <h3 className="text-xl font-orbitron text-sky-300 mb-2">Description</h3>
-                <p className="text-sm text-slate-300 mb-4 leading-relaxed">{itemData.description}</p>
+              <div className="md:pt-10">
+                <div className="bg-slate-800/60 border border-slate-700/80 rounded-lg p-4 shadow-lg">
+                  <h3 className="text-xl font-orbitron text-sky-300 mb-2">Description</h3>
+                  <p className="text-sm text-slate-300 mb-4 leading-relaxed">{itemData.description}</p>
 
-                <h3 className="text-xl font-orbitron text-sky-300 mb-3">Details</h3>
-                {itemData.strength && <ProgressBar label="Strength" value={itemData.strength.current} max={itemData.strength.max} colorClass="bg-red-500" />}
-                {itemData.resistance && <ProgressBar label="Resistance" value={itemData.resistance.current} max={itemData.resistance.max} colorClass="bg-blue-500" />}
-                {itemData.attackFactor && <ProgressBar label="Attack Factor" value={itemData.attackFactor} max={100} colorClass="bg-yellow-500" />}
+                  <h3 className="text-xl font-orbitron text-sky-300 mb-3">Details</h3>
+                  {itemData.strength && <ProgressBar label="Strength" value={itemData.strength.current} max={itemData.strength.max} colorClass="bg-red-500" />}
+                  {itemData.resistance && <ProgressBar label="Resistance" value={itemData.resistance.current} max={itemData.resistance.max} colorClass="bg-blue-500" />}
+                  {itemData.attackFactor && <ProgressBar label="Attack Factor" value={itemData.attackFactor} max={100} colorClass="bg-yellow-500" />}
 
-
-                <div className="text-sm space-y-1.5 text-slate-300 mt-3">
-                  <p><strong className="text-slate-400">Category:</strong> {itemData.category}</p>
-                  {itemData.itemTypeDetail && <p><strong className="text-slate-400">Type:</strong> {itemData.itemTypeDetail}</p>}
-                  {itemData.perUseCost && <p><strong className="text-slate-400">Per-Use Cost:</strong> {itemData.perUseCost} ELINT</p>}
-                  {itemData.functionText && <p><strong className="text-slate-400">Function:</strong> {itemData.functionText}</p>}
-                  {itemData.keyCrackerInfluence && <p><strong className="text-slate-400">Key Cracker Influence:</strong> {itemData.keyCrackerInfluence}</p>}
-                  {itemData.minigameEffect && <p><strong className="text-slate-400">Minigame Effect:</strong> {itemData.minigameEffect}</p>}
-                  {itemData.levelScalingNote && <p><strong className="text-slate-400">Level Scaling:</strong> {itemData.levelScalingNote}</p>}
+                  <div className="text-sm space-y-1.5 text-slate-300 mt-3">
+                    <p><strong className="text-slate-400">Category:</strong> {itemData.category}</p>
+                    {itemData.itemTypeDetail && <p><strong className="text-slate-400">Type:</strong> {itemData.itemTypeDetail}</p>}
+                    {itemData.perUseCost && <p><strong className="text-slate-400">Per-Use Cost:</strong> {itemData.perUseCost} ELINT</p>}
+                    {itemData.functionText && <p><strong className="text-slate-400">Function:</strong> {itemData.functionText}</p>}
+                    {itemData.keyCrackerInfluence && <p><strong className="text-slate-400">Key Cracker Influence:</strong> {itemData.keyCrackerInfluence}</p>}
+                    {itemData.minigameEffect && <p><strong className="text-slate-400">Minigame Effect:</strong> {itemData.minigameEffect}</p>}
+                    {itemData.levelScalingNote && <p><strong className="text-slate-400">Level Scaling:</strong> {itemData.levelScalingNote}</p>}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
+      {/* Full Image Modal - RENDERED ONLY IF MODAL IS OPEN */}
       {isImageModalOpen && (
         <motion.div
           key="full-image-modal"
@@ -593,23 +597,24 @@ const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="absolute inset-0 bg-lime-500/80 flex flex-col items-center justify-center z-50" 
+          className="absolute inset-0 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center z-50 p-2" 
         >
           <button
             onClick={() => setIsImageModalOpen(false)}
-            className="absolute top-1 right-1 sm:top-2 sm:right-2 bg-slate-700 text-white rounded-full p-1.5 shadow-lg hover:bg-red-500 transition-colors z-[51]"
+            className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-slate-700/80 text-white rounded-full p-1.5 shadow-lg hover:bg-red-500 transition-colors z-[51]"
             aria-label="Close full image view"
           >
-            <X className="w-4 h-4 sm:w-5 sm:h-5" />
+            <X className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
-          <div className="relative w-[calc(100%-1rem)] h-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] sm:h-[calc(100%-2rem)] bg-purple-500/50">
+          {/* Container for the image, with test background */}
+          <div className="relative w-full h-full max-w-[90vw] max-h-[85vh] bg-purple-500/30 flex items-center justify-center rounded-md overflow-hidden"> {/* Test BG Color Added */}
             <NextImage
-              src={'https://placehold.co/800x600.png'}
+              src={itemData.imageSrc || 'https://placehold.co/800x800.png'} // Using a public placeholder
               alt={itemData.title} 
               layout="fill"
               objectFit="contain"
-              data-ai-hint="item placeholder"
-              unoptimized 
+              data-ai-hint="item large placeholder"
+              unoptimized // Keep for local dev with non-standard image hosts
             />
           </div>
         </motion.div>
