@@ -65,34 +65,22 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
   const [nodes, setNodes] = useState<NetworkNode[]>(() => generateNodes());
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [foregroundHslForGrid, setForegroundHslForGrid] = useState('hsl(var(--foreground-hsl))');
 
   const nodeDisplayAreaRef = useRef<HTMLDivElement>(null);
   const animationFrameIdRef = useRef<number | null>(null);
   const currentPositionXRef = useRef(0);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const rootStyle = getComputedStyle(document.documentElement);
-      const fgHslRaw = rootStyle.getPropertyValue('--foreground-hsl').trim();
-      if (fgHslRaw) {
-        setForegroundHslForGrid(`hsl(${fgHslRaw})`);
-      } else {
-        setForegroundHslForGrid('hsl(130 80% 70% / 0.7)'); // Fallback with opacity
-      }
-    }
-  }, [currentGlobalTheme, themeVersion]);
-
-  useEffect(() => {
     const nodeDisplayArea = nodeDisplayAreaRef.current;
     if (!nodeDisplayArea) return;
 
     let lastTime = 0;
-    currentPositionXRef.current = 0; 
-    lastTime = 0; 
+    // Reset animation parameters when theme changes (panel re-mounts)
+    currentPositionXRef.current = 0;
+    lastTime = 0;
 
     const animateScroll = (timestamp: number) => {
-      if (!nodeDisplayArea) return;
+      if (!nodeDisplayArea) return; // Check again in case component unmounted
       if (!lastTime) {
         lastTime = timestamp;
       }
@@ -101,6 +89,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
 
       currentPositionXRef.current -= NODE_AREA_SCROLL_SPEED * (deltaTime / 16.67);
       // The map image is the second layer in the panel's background-image stack
+      // (after the darkening overlay)
       nodeDisplayArea.style.backgroundPosition = `0 0, ${currentPositionXRef.current}px 0px`;
 
 
@@ -114,7 +103,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
         cancelAnimationFrame(animationFrameIdRef.current);
       }
     };
-  }, [currentGlobalTheme, themeVersion]); 
+  }, [currentGlobalTheme, themeVersion]); // Re-run effect when theme changes
 
   const refreshScanner = () => {
     setIsLoading(true);
@@ -155,21 +144,6 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
 
   const scannerBgClass = getScannerBackgroundClass(currentGlobalTheme);
 
-  const gridOverlayInlineStyles: React.CSSProperties = {
-    position: 'absolute',
-    inset: '0',
-    backgroundImage: `
-      repeating-linear-gradient(to right, ${foregroundHslForGrid.replace(')', ' / 0.7)')} 0px, ${foregroundHslForGrid.replace(')', ' / 0.7)')} 1px, transparent 1px, transparent 20px),
-      repeating-linear-gradient(to bottom, ${foregroundHslForGrid.replace(')', ' / 0.7)')} 0px, ${foregroundHslForGrid.replace(')', ' / 0.7)')} 1px, transparent 1px, transparent 20px)
-    `,
-    backgroundSize: '20px 20px',
-    backgroundPosition: '0px 0px', // Solid grid lines
-    zIndex: 3,
-    pointerEvents: 'none',
-    borderRadius: 'inherit',
-  };
-
-
   return (
     <div className="flex flex-col h-full overflow-hidden p-4 md:p-6">
       <div
@@ -177,7 +151,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
           "flex flex-col flex-grow overflow-hidden rounded-lg",
           "border border-[var(--hologram-panel-border)]",
           "shadow-[0_0_15px_var(--hologram-glow-color),_inset_0_0_10px_var(--hologram-glow-color)]",
-          "bg-black/70", 
+          "bg-black/70",
           "max-w-4xl",
           "w-full mx-auto"
         )}
@@ -211,19 +185,18 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
           key={`node-display-panel-${currentGlobalTheme}-${themeVersion}`}
           className={cn(
             "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md map-overlay",
-            scannerBgClass, 
-            "pad-gloss-effect" // Restore pad-gloss-effect
+            "pad-gloss-effect", // Added pad-gloss-effect here
+            scannerBgClass
           )}
         >
-          {/* Grid Overlay Div with inline styles */}
-          <div style={gridOverlayInlineStyles} />
-
+          {/* Static Grid Overlay Div - Styled by CSS class */}
+          <div className={cn("scanner-grid-lines")} />
 
           {/* Network Nodes */}
           {nodes.map(node => (
             <div
               key={node.id}
-              className="absolute w-10 h-10 md:w-12 md:h-12 p-1 rounded-full border-2 border-transparent hover:border-accent cursor-pointer group transition-all z-[10]" 
+              className="absolute w-10 h-10 md:w-12 md:h-12 p-1 rounded-full border-2 border-transparent hover:border-accent cursor-pointer group transition-all z-[10]"
               style={{
                 left: `${node.position.x}%`,
                 top: `${node.position.y}%`,
@@ -245,8 +218,8 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
               key={`node-details-${currentGlobalTheme}-${themeVersion}-${selectedNode.id}`}
               className={cn(
                 "absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80",
-                "p-3 md:p-4 z-20 animate-slide-in-bottom font-rajdhani rounded-lg shadow-lg", 
-                "bg-black/50 backdrop-blur-sm" 
+                "p-3 md:p-4 z-20 animate-slide-in-bottom font-rajdhani rounded-lg shadow-lg",
+                "bg-black/50 backdrop-blur-sm"
               )}
             >
               <h3 className="text-lg font-orbitron mb-2 holographic-text">{selectedNode.title}</h3>
