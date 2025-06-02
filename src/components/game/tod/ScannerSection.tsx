@@ -53,14 +53,14 @@ const getScannerBackgroundClass = (theme: Theme): string => {
       return 'cyphers-background';
     case 'shadows':
       return 'shadows-background';
-    case 'terminal-green': 
+    case 'terminal-green':
     default:
       return 'observer-background';
   }
 };
 
 export function ScannerSection({ parallaxOffset }: SectionProps) {
-  const { openTODWindow } = useAppContext(); 
+  const { openTODWindow } = useAppContext();
   const { theme: currentGlobalTheme, themeVersion } = useTheme();
   const [nodes, setNodes] = useState<NetworkNode[]>(() => generateNodes());
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
@@ -75,27 +75,26 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
     if (!nodeDisplayArea) return;
 
     let lastTime = 0;
-    // Reset animation specific states when the theme/key changes, ensuring animation restarts correctly for new bg
-    currentPositionXRef.current = 0; 
-    lastTime = 0; 
+    currentPositionXRef.current = 0; // Reset scroll position on theme change/re-mount
+    lastTime = 0;
 
     const animateScroll = (timestamp: number) => {
-      if (!nodeDisplayArea) return; 
+      if (!nodeDisplayArea) return;
       if (!lastTime) {
         lastTime = timestamp;
       }
       const deltaTime = timestamp - lastTime;
       lastTime = timestamp;
 
-      currentPositionXRef.current -= NODE_AREA_SCROLL_SPEED * (deltaTime / 16.67); 
-      
-      // Update backgroundPosition for the parallax effect of the map (first layer)
-      // The grid and overlay positions (0 0 for 2nd, 3rd, 4th layers) are static.
-      nodeDisplayArea.style.backgroundPosition = `${currentPositionXRef.current}px 0px, 0 0, 0 0, 10px 10px`;
+      currentPositionXRef.current -= NODE_AREA_SCROLL_SPEED * (deltaTime / 16.67);
+
+      // Animate only the first two layers (map image and its darkening overlay)
+      // The grid lines are now in an ::after pseudo-element and are static.
+      nodeDisplayArea.style.backgroundPosition = `${currentPositionXRef.current}px 0px, 0 0`;
 
       animationFrameIdRef.current = requestAnimationFrame(animateScroll);
     };
-    
+
     animationFrameIdRef.current = requestAnimationFrame(animateScroll);
 
     return () => {
@@ -103,7 +102,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
         cancelAnimationFrame(animationFrameIdRef.current);
       }
     };
-  }, [currentGlobalTheme, themeVersion]); // Re-run effect if theme or version changes
+  }, [currentGlobalTheme, themeVersion]); // Re-run effect if theme or version changes to restart animation correctly
 
   const refreshScanner = () => {
     setIsLoading(true);
@@ -141,7 +140,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
       { showCloseButton: true }
     );
   };
-  
+
   const scannerBgClass = getScannerBackgroundClass(currentGlobalTheme);
 
   return (
@@ -149,9 +148,9 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
       <div
         className={cn(
           "flex flex-col flex-grow overflow-hidden rounded-lg",
-          "border border-[var(--hologram-panel-border)]", 
-          "shadow-[0_0_15px_var(--hologram-glow-color),_inset_0_0_10px_var(--hologram-glow-color)]", 
-          "bg-black/70",
+          "border border-[var(--hologram-panel-border)]",
+          "shadow-[0_0_15px_var(--hologram-glow-color),_inset_0_0_10px_var(--hologram-glow-color)]",
+          "bg-black/70", // Base background color for the panel container
           "max-w-4xl",
           "w-full mx-auto"
         )}
@@ -179,26 +178,19 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
           </div>
         </div>
 
+        {/* The nodeDisplayAreaRef is the HolographicPanel where the map and grid are rendered */}
         <HolographicPanel
           ref={nodeDisplayAreaRef}
-          explicitTheme={currentGlobalTheme} 
-          key={`node-display-panel-${currentGlobalTheme}-${themeVersion}`} 
+          explicitTheme={currentGlobalTheme}
+          key={`node-display-panel-${currentGlobalTheme}-${themeVersion}`}
           className={cn(
-            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md map-overlay pad-gloss-effect", 
-            scannerBgClass 
+            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md map-overlay pad-gloss-effect", // map-overlay ensures ::after is applied
+            scannerBgClass // Applies observer-background, cyphers-background, or shadows-background
           )}
+          // The background-image (map + darkening) is applied by scannerBgClass.
+          // The grid lines are applied by .map-overlay.holographic-panel::after
         >
-          {nodes.map((node, i) =>
-            i < nodes.length - 1 && (
-              <svg key={`line-${i}`} className="absolute inset-0 w-full h-full z-[10]" style={{ pointerEvents: 'none' }}>
-                <line
-                  x1={`${node.position.x}%`} y1={`${node.position.y}%`}
-                  x2={`${nodes[i + 1].position.x}%`} y2={`${nodes[i + 1].position.y}%`}
-                  stroke="hsl(var(--primary-hsl) / 0.5)" strokeWidth="1" strokeDasharray="4 2" />
-              </svg>
-            )
-          )}
-
+          {/* Network Nodes */}
           {nodes.map(node => (
             <div
               key={node.id}
@@ -217,6 +209,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             </div>
           ))}
 
+          {/* Selected Node Details Panel */}
           {selectedNode && (
             <HolographicPanel
               explicitTheme={currentGlobalTheme}
@@ -224,7 +217,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
               className={cn(
                 "absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80",
                 "p-3 md:p-4 z-20 animate-slide-in-bottom font-rajdhani rounded-lg shadow-lg",
-                "bg-black/50 backdrop-blur-sm" 
+                "bg-black/50 backdrop-blur-sm"
               )}
             >
               <h3 className="text-lg font-orbitron mb-2 holographic-text">{selectedNode.title}</h3>
@@ -271,5 +264,3 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
     </div>
   );
 }
-
-    
