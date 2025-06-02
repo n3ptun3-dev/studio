@@ -75,6 +75,10 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
     if (!nodeDisplayArea) return;
 
     let lastTime = 0;
+    // Reset animation specific states when the theme/key changes, ensuring animation restarts correctly for new bg
+    currentPositionXRef.current = 0; 
+    lastTime = 0; 
+
     const animateScroll = (timestamp: number) => {
       if (!nodeDisplayArea) return; 
       if (!lastTime) {
@@ -86,16 +90,12 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
       currentPositionXRef.current -= NODE_AREA_SCROLL_SPEED * (deltaTime / 16.67); 
       
       // Update backgroundPosition for the parallax effect of the map (first layer)
-      // The grid positions (0px 0px, 10px 10px for 2nd and 3rd layers) are static.
-      nodeDisplayArea.style.backgroundPosition = `${currentPositionXRef.current}px 0px, 0px 0px, 10px 10px`;
+      // The grid and overlay positions (0 0 for 2nd, 3rd, 4th layers) are static.
+      nodeDisplayArea.style.backgroundPosition = `${currentPositionXRef.current}px 0px, 0 0, 0 0, 10px 10px`;
 
       animationFrameIdRef.current = requestAnimationFrame(animateScroll);
     };
     
-    // Reset animation specific states when the component re-mounts (due to theme change via key)
-    currentPositionXRef.current = 0; // Reset scroll position for new background
-    lastTime = 0; // Reset lastTime for deltaTime calculation
-
     animationFrameIdRef.current = requestAnimationFrame(animateScroll);
 
     return () => {
@@ -103,7 +103,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
         cancelAnimationFrame(animationFrameIdRef.current);
       }
     };
-  }, [currentGlobalTheme, themeVersion]); // Re-run effect if theme or version changes, causing re-mount via key
+  }, [currentGlobalTheme, themeVersion]); // Re-run effect if theme or version changes
 
   const refreshScanner = () => {
     setIsLoading(true);
@@ -184,7 +184,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
           explicitTheme={currentGlobalTheme} 
           key={`node-display-panel-${currentGlobalTheme}-${themeVersion}`} 
           className={cn(
-            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md map-overlay pad-gloss-effect", // Added pad-gloss-effect
+            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md map-overlay pad-gloss-effect", 
             scannerBgClass 
           )}
         >
@@ -271,3 +271,5 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
     </div>
   );
 }
+
+    

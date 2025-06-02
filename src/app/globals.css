@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -427,15 +428,8 @@
   animation: slide-out-right-tod 0.3s ease-out forwards;
 }
 
-.map-overlay::before {
-  content: '';
-  position: absolute;
-  inset: 0; 
-  background-color: rgba(0, 0, 0, 0.2); 
-  z-index: 5; 
-  pointer-events: none; 
-  border-radius: inherit; 
-}
+/* Removed .map-overlay::before pseudo-element rule */
+
 /* CSS Background Animations */
 @keyframes parallaxScroll { 
   0% {
@@ -466,32 +460,40 @@
 
 @layer components {
   .map-overlay.holographic-panel.observer-background {
-    background-image: url('/backgrounds/World Map Green.jpg'), 
-                      repeating-linear-gradient(0deg, hsl(var(--foreground-hsl)) 0px 1px, transparent 1px 20px), 
-                      repeating-linear-gradient(90deg, hsl(var(--foreground-hsl)) 0px 1px, transparent 1px 20px);
-    background-size: auto 102%, 20px 20px, 20px 20px;
-    background-repeat: repeat-x, repeat, repeat;
-    background-position: 0 0, 0 0, 10px 10px;
+    /* Layer 1: Map, Layer 2: Darkening Overlay, Layer 3: Horizontal Grid, Layer 4: Vertical Grid */
+    background-image: 
+      url('/backgrounds/World Map Green.jpg'), 
+      linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)),
+      repeating-linear-gradient(0deg, hsl(var(--foreground-hsl)) 0px 1px, transparent 1px 20px), 
+      repeating-linear-gradient(90deg, hsl(var(--foreground-hsl)) 0px 1px, transparent 1px 20px);
+    background-size: auto 102%, cover, 20px 20px, 20px 20px;
+    background-repeat: repeat-x, no-repeat, repeat, repeat;
+    /* Initial positions: Map scrolls (JS), Overlay fixed, H-Grid fixed, V-Grid fixed with offset */
+    background-position: 0 0, 0 0, 0 0, 10px 10px; 
     transform: translateZ(0);
   }
 
   .map-overlay.holographic-panel.cyphers-background {
-    background-image: url('/backgrounds/World Map Blue.jpg'), 
-                      repeating-linear-gradient(0deg, hsl(var(--foreground-hsl)) 0px 1px, transparent 1px 20px), 
-                      repeating-linear-gradient(90deg, hsl(var(--foreground-hsl)) 0px 1px, transparent 1px 20px);
-    background-size: auto 102%, 20px 20px, 20px 20px;
-    background-repeat: repeat-x, repeat, repeat;
-    background-position: 0 0, 0 0, 10px 10px;
+    background-image: 
+      url('/backgrounds/World Map Blue.jpg'), 
+      linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)),
+      repeating-linear-gradient(0deg, hsl(var(--foreground-hsl)) 0px 1px, transparent 1px 20px), 
+      repeating-linear-gradient(90deg, hsl(var(--foreground-hsl)) 0px 1px, transparent 1px 20px);
+    background-size: auto 102%, cover, 20px 20px, 20px 20px;
+    background-repeat: repeat-x, no-repeat, repeat, repeat;
+    background-position: 0 0, 0 0, 0 0, 10px 10px;
     transform: translateZ(0);
   }
 
   .map-overlay.holographic-panel.shadows-background {
-    background-image: url('/backgrounds/World Map Red.jpg'), 
-                      repeating-linear-gradient(0deg, hsl(var(--foreground-hsl)) 0px 1px, transparent 1px 20px), 
-                      repeating-linear-gradient(90deg, hsl(var(--foreground-hsl)) 0px 1px, transparent 1px 20px);
-    background-size: auto 102%, 20px 20px, 20px 20px;
-    background-repeat: repeat-x, repeat, repeat;
-    background-position: 0 0, 0 0, 10px 10px;
+    background-image: 
+      url('/backgrounds/World Map Red.jpg'), 
+      linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)),
+      repeating-linear-gradient(0deg, hsl(var(--foreground-hsl)) 0px 1px, transparent 1px 20px), 
+      repeating-linear-gradient(90deg, hsl(var(--foreground-hsl)) 0px 1px, transparent 1px 20px);
+    background-size: auto 102%, cover, 20px 20px, 20px 20px;
+    background-repeat: repeat-x, no-repeat, repeat, repeat;
+    background-position: 0 0, 0 0, 0 0, 10px 10px;
     transform: translateZ(0);
   }
 }
@@ -528,3 +530,6 @@
   75% { transform: translateY(-10px) translateX(5px); }
   100% { transform: translateY(0) translateX(0); }
 }
+
+
+    
