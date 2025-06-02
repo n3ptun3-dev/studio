@@ -15,14 +15,14 @@ import {
   type Player,
 } from '@/lib/player-data';
 import { getItemById, type ItemCategory, type GameItemBase, type PlayerInventoryItem, type VaultSlot, type ItemLevel } from '@/lib/game-items';
-import { CodenameInput } from '@/components/game/onboarding/CodenameInput'; 
+import { CodenameInput } from '@/components/game/onboarding/CodenameInput';
 
 export type Faction = 'Cyphers' | 'Shadows' | 'Observer';
 export type OnboardingStep = 'welcome' | 'factionChoice' | 'authPrompt' | 'codenameInput' | 'fingerprint' | 'tod';
 
 export interface PlayerStats {
   xp: number;
-  level: ItemLevel; // Use ItemLevel type
+  level: ItemLevel;
   elintReserves: number;
   elintTransferred: number;
   successfulVaultInfiltrations: number;
@@ -65,13 +65,15 @@ const DEFAULT_PLAYER_STATS_FOR_NEW_PLAYER: PlayerStats = {
   hasPlacedFirstLock: false,
 };
 
+const FIXED_DEV_PI_ID = "mock_pi_id_12345"; // Exposed for WelcomeScreen to use
+
 interface AppContextType {
   currentPlayer: Player | null;
   isLoading: boolean;
   isPiBrowser: boolean;
   onboardingStep: OnboardingStep;
   messages: GameMessage[];
-  dailyTeamCode: Record<Faction | 'Observer', string>; // Ensure Observer is a valid key type
+  dailyTeamCode: Record<Faction | 'Observer', string>;
   faction: Faction;
   isAuthenticated: boolean;
   playerSpyName: string | null;
@@ -79,6 +81,7 @@ interface AppContextType {
   playerStats: PlayerStats;
   playerInventory: PlayerInventory;
   playerVault: VaultSlot[];
+  pendingPiId: string | null;
   setFaction: (faction: Faction) => Promise<void>;
   setPlayerSpyName: (name: string) => Promise<void>;
   setOnboardingStep: (step: OnboardingStep) => void;
@@ -87,6 +90,7 @@ interface AppContextType {
   updatePlayerStats: (newStats: Partial<PlayerStats>) => Promise<void>;
   addXp: (amount: number) => Promise<void>;
   handleAuthentication: (piId: string, chosenFaction: Faction) => Promise<void>;
+  attemptLoginWithPiId: (piId: string) => Promise<void>;
   logout: () => void;
   isTODWindowOpen: boolean;
   todWindowTitle: string;
@@ -110,36 +114,28 @@ interface AppContextType {
   isShopAuthenticated: boolean;
   setIsShopAuthenticated: (isAuthenticated: boolean) => void;
   todInventoryContext: {
-    category: ItemCategory; // Ensure ItemCategory is correctly typed or imported
+    category: ItemCategory;
     title: string;
     purpose?: 'equip_lock' | 'equip_nexus' | 'infiltrate_lock';
     onItemSelect?: (item: GameItemBase) => void;
   } | null;
   openInventoryTOD: (context: AppContextType['todInventoryContext']) => void;
   closeInventoryTOD: () => void;
-  // Expose playerInfo for shop
-  playerInfo: Player | null; // Or a subset like { level: ItemLevel }
+  playerInfo: Player | null;
+  // FIXED_DEV_PI_ID: string; // No longer explicitly in context type, imported directly
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
-
-const NATO_ALPHABET = [
-  "Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel",
-  "India", "Juliett", "Kilo", "Lima", "Mike", "November", "Oscar", "Papa",
-  "Quebec", "Romeo", "Sierra", "Tango", "Uniform", "Victor", "Whiskey",
-  "X-ray", "Yankee", "Zulu"
-];
 
 function generateFactionTeamCode(seedDate: Date, faction: Faction | 'Observer'): string {
   const start = new Date(seedDate.getFullYear(), 0, 0);
   const diff = seedDate.getTime() - start.getTime();
   const oneDay = 1000 * 60 * 60 * 24;
   const dayOfYear = Math.floor(diff / oneDay);
-  
-  let factionSeedOffset = 3000; // Default for Observer
+  let factionSeedOffset = 3000;
   if (faction === 'Cyphers') factionSeedOffset = 1000;
   else if (faction === 'Shadows') factionSeedOffset = 2000;
-
+  const NATO_ALPHABET = ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel", "India", "Juliett", "Kilo", "Lima", "Mike", "November", "Oscar", "Papa", "Quebec", "Romeo", "Sierra", "Tango", "Uniform", "Victor", "Whiskey", "X-ray", "Yankee", "Zulu"];
   const getRandomWord = (baseSeed: number, index: number) => {
     const combinedSeed = baseSeed + index * 100 + factionSeedOffset;
     const positiveIndex = (combinedSeed % NATO_ALPHABET.length + NATO_ALPHABET.length) % NATO_ALPHABET.length;
@@ -164,11 +160,112 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [_shopSearchTerm, _setShopSearchTerm] = useState('');
   const [_isShopAuthenticated, _setIsShopAuthenticated] = useState(false);
   const [_todInventoryContext, _setTodInventoryContext] = useState<AppContextType['todInventoryContext']>(null);
+  const [_pendingPiId, _setPendingPiId] = useState<string | null>(null);
 
   const { theme: currentGlobalTheme, themeVersion } = useTheme();
 
+  // Order of useCallback definitions:
+  // Define functions with fewer dependencies first.
+
+  const addMessage = useCallback((message: Omit<GameMessage, 'id' | 'timestamp'>) => {
+    _setMessages(prev => {
+      const newMessage: GameMessage = {
+        ...message,
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+        timestamp: new Date(),
+      };
+      const newMessagesList = [newMessage, ...prev.filter(m => !m.isPinned)];
+      const pinnedMessages = prev.filter(m => m.isPinned);
+      const combinedMessages = [...pinnedMessages, ...newMessagesList];
+      return combinedMessages.slice(0, 50);
+    });
+  }, []); // Stable: _setMessages is stable
+
+  const closeTODWindow = useCallback(() => {
+    _setIsTODWindowOpen(false);
+    _setTODWindowContent(null);
+  }, [_setIsTODWindowOpen, _setTODWindowContent]); // Stable: setters are stable
+
+  const openTODWindow = useCallback((title: string, content: ReactNode, options: TODWindowOptions = {}) => {
+    _setTODWindowTitle(title);
+    _setTODWindowContent(content);
+    const defaultShowCloseButton = options.showCloseButton === undefined ? true : options.showCloseButton;
+    const themeToUseForWindow = options.explicitTheme || currentGlobalTheme || 'terminal-green';
+    const versionToUseForWindow = options.explicitTheme ? (options.themeVersion === undefined ? themeVersion : options.themeVersion) : themeVersion;
+    _setTODWindowOptions({
+        showCloseButton: defaultShowCloseButton,
+        explicitTheme: themeToUseForWindow,
+        themeVersion: versionToUseForWindow
+    });
+    _setIsTODWindowOpen(true);
+  }, [currentGlobalTheme, themeVersion, _setTODWindowTitle, _setTODWindowContent, _setTODWindowOptions, _setIsTODWindowOpen]);
+
+  const attemptLoginWithPiId = useCallback(async (piId: string) => {
+    _setIsLoading(true);
+    const player = await getPlayer(piId);
+    if (player) {
+      _setCurrentPlayer(player);
+      if (typeof window !== "undefined") localStorage.setItem('lastPlayerId', piId);
+      if (player.faction === 'Observer') {
+        _setOnboardingStep('tod');
+      } else if (player.spyName) {
+        _setOnboardingStep('fingerprint');
+      } else {
+        _setOnboardingStep('codenameInput');
+        const factionThemeForCodename = player.faction === 'Cyphers' ? 'cyphers' : player.faction === 'Shadows' ? 'shadows' : currentGlobalTheme;
+        openTODWindow(
+          "Agent Codename",
+          <CodenameInput explicitTheme={factionThemeForCodename} />,
+          { showCloseButton: false, explicitTheme: factionThemeForCodename, themeVersion }
+        );
+      }
+      addMessage({type: 'system', text: `Welcome back, Agent ${player.spyName || piId.substring(0,8)}.`});
+    } else {
+      _setPendingPiId(piId);
+      _setOnboardingStep('factionChoice');
+      addMessage({type: 'system', text: 'New operative detected. Proceed to faction alignment.'});
+    }
+    _setIsLoading(false);
+  }, [
+    _setCurrentPlayer, _setOnboardingStep, _setIsLoading, _setPendingPiId, 
+    openTODWindow, addMessage, currentGlobalTheme, themeVersion // addMessage is stable
+  ]);
+
+  const handleAuthentication = useCallback(async (piIdToAuth: string, chosenFaction: Faction) => {
+    _setIsLoading(true);
+    if (typeof window !== "undefined") localStorage.setItem('lastPlayerId', piIdToAuth);
+    let player = await getPlayer(piIdToAuth);
+    let nextOnboardingStep: OnboardingStep = 'welcome';
+    if (player) {
+      if (player.faction !== chosenFaction && chosenFaction !== 'Observer') {
+        player = { ...player, faction: chosenFaction };
+        await updatePlayer(player);
+      }
+       _setCurrentPlayer(player);
+       nextOnboardingStep = player.spyName ? 'fingerprint' : 'codenameInput';
+       if (chosenFaction === 'Observer') nextOnboardingStep = 'tod';
+    } else {
+      player = await createPlayer(piIdToAuth, chosenFaction, { ...DEFAULT_PLAYER_STATS_FOR_NEW_PLAYER }, null);
+      _setCurrentPlayer(player);
+      nextOnboardingStep = chosenFaction === 'Observer' ? 'tod' : 'codenameInput';
+    }
+    _setPendingPiId(null);
+    if (nextOnboardingStep === 'codenameInput' && player && player.faction !== 'Observer') {
+      const factionThemeForCodename = player.faction === 'Cyphers' ? 'cyphers' : player.faction === 'Shadows' ? 'shadows' : currentGlobalTheme;
+      openTODWindow(
+        "Agent Codename",
+        <CodenameInput explicitTheme={factionThemeForCodename} />,
+        { showCloseButton: false, explicitTheme: factionThemeForCodename, themeVersion: themeVersion }
+      );
+    }
+     _setOnboardingStep(nextOnboardingStep);
+    _setIsLoading(false);
+  }, [
+    _setCurrentPlayer, _setOnboardingStep, _setIsLoading, _setPendingPiId, 
+    openTODWindow, currentGlobalTheme, themeVersion // openTODWindow depends on theme
+  ]);
+  
   useEffect(() => {
-    // console.log('[AppContext] Initializing...');
     initializePlayerData();
     const inPiBrowser = typeof window !== "undefined" && navigator.userAgent.includes("PiBrowser");
     _setIsPiBrowser(inPiBrowser);
@@ -183,180 +280,75 @@ export function AppProvider({ children }: { children: ReactNode }) {
       _setIsLoading(true);
       const lastPlayerId = typeof window !== "undefined" ? localStorage.getItem('lastPlayerId') : null;
       if (lastPlayerId) {
+        // Instead of calling attemptLoginWithPiId directly which might use addMessage too early,
+        // replicate its logic but ensure addMessage is only called *after* player state is set.
         const player = await getPlayer(lastPlayerId);
         if (player) {
-          _setCurrentPlayer(player);
+          _setCurrentPlayer(player); // Set player state first
+          // Now it's safer to call functions that might use addMessage indirectly
           if (player.faction === 'Observer') {
             _setOnboardingStep('tod');
           } else if (player.spyName) {
             _setOnboardingStep('fingerprint');
           } else {
-            _setOnboardingStep('codenameInput'); 
+             _setOnboardingStep('codenameInput');
+             const factionThemeForCodename = player.faction === 'Cyphers' ? 'cyphers' : player.faction === 'Shadows' ? 'shadows' : currentGlobalTheme;
+             openTODWindow( // This uses currentGlobalTheme, themeVersion
+              "Agent Codename",
+              <CodenameInput explicitTheme={factionThemeForCodename} />,
+              { showCloseButton: false, explicitTheme: factionThemeForCodename, themeVersion }
+            );
           }
+          // addMessage({type: 'system', text: `Session restored for Agent ${player.spyName || lastPlayerId.substring(0,8)}.`}); // Example message
         } else {
           if (typeof window !== "undefined") localStorage.removeItem('lastPlayerId');
-          _setOnboardingStep('welcome'); 
+          _setOnboardingStep('welcome');
         }
       } else {
-        _setOnboardingStep('welcome'); 
+        _setOnboardingStep('welcome');
       }
       _setIsLoading(false);
     };
     loadLastPlayer();
-  }, []);
-  
-  // useEffect(() => { console.log('[AppContext] INTERNAL _currentPlayer state changed:', _currentPlayer?.id, _currentPlayer?.faction, _currentPlayer?.spyName); }, [_currentPlayer]);
-  // useEffect(() => { console.log('[AppContext] INTERNAL _onboardingStep changed to:', _onboardingStep); }, [_onboardingStep]);
-  // useEffect(() => { console.log('[AppContext] INTERNAL _isLoading changed to:', _isLoading); }, [_isLoading]);
-  // useEffect(() => { console.log('[AppContext] isTODWindowOpen state changed to:', _isTODWindowOpen);}, [_isTODWindowOpen]);
+  // Dependencies: openTODWindow, currentGlobalTheme, themeVersion are for openTODWindow call.
+  // addMessage is not directly called here anymore to avoid early init issues.
+  // attemptLoginWithPiId is not called here.
+  }, [openTODWindow, currentGlobalTheme, themeVersion]);
 
-
-  const openTODWindow = useCallback((title: string, content: ReactNode, options: TODWindowOptions = {}) => {
-    // console.log('[AppContext] openTODWindow called. Title:', title, "Passed Options:", options);
-    _setTODWindowTitle(title);
-    _setTODWindowContent(content);
-    const defaultShowCloseButton = options.showCloseButton === undefined ? true : options.showCloseButton;
-    
-    const themeToUse = options.explicitTheme || currentGlobalTheme || 'terminal-green';
-    const versionToUse = options.explicitTheme ? (options.themeVersion === undefined ? themeVersion : options.themeVersion) : themeVersion;
-
-    _setTODWindowOptions({ 
-        showCloseButton: defaultShowCloseButton,
-        explicitTheme: themeToUse,
-        themeVersion: versionToUse
-    });
-    _setIsTODWindowOpen(true);
-    //  console.log('[AppContext] Setting _isTODWindowOpen to true. Title:', title, 'Final TODWindowOptions:', { showCloseButton: defaultShowCloseButton, explicitTheme: themeToUse, themeVersion: versionToUse });
-  }, [_setIsTODWindowOpen, _setTODWindowTitle, _setTODWindowContent, _setTODWindowOptions, currentGlobalTheme, themeVersion]);
-
-  const closeTODWindow = useCallback(() => {
-    // console.log('[AppContext] closeTODWindow called.');
-    _setIsTODWindowOpen(false);
-    _setTODWindowContent(null); 
-  }, [_setIsTODWindowOpen, _setTODWindowContent]);
 
   const setFactionAppContext = useCallback(async (newFaction: Faction) => {
-    // console.log('[AppContext] setFaction called with:', newFaction);
     if (_currentPlayer) {
       const updatedPlayer = { ..._currentPlayer, faction: newFaction };
       const result = await updatePlayer(updatedPlayer);
-      if (result) {
-          // console.log("[AppContext] Player faction updated in DB, setting current player state.");
-          _setCurrentPlayer(result);
-      } else {
-          // console.error("[AppContext] Failed to update player faction in DB.");
-      }
-    } else {
-        // console.warn("[AppContext] setFaction called but no current player.");
+      if (result) _setCurrentPlayer(result);
     }
-  }, [_currentPlayer, _setCurrentPlayer]);
+  }, [_currentPlayer]);
 
   const setPlayerSpyNameAppContext = useCallback(async (name: string) => {
-    // console.log('[AppContext] setPlayerSpyName called with:', name);
     if (_currentPlayer) {
       const updatedPlayer = { ..._currentPlayer, spyName: name };
       const result = await updatePlayer(updatedPlayer);
-       if (result) {
-          // console.log("[AppContext] Player spyName updated in DB, setting current player state.");
-          _setCurrentPlayer(result);
-      } else {
-          // console.error("[AppContext] Failed to update player spyName in DB.");
-      }
-    } else {
-        // console.warn("[AppContext] setPlayerSpyName called but no current player.");
+       if (result) _setCurrentPlayer(result);
     }
-  }, [_currentPlayer, _setCurrentPlayer]);
+  }, [_currentPlayer]);
 
   const updatePlayerStatsAppContext = useCallback(async (newStats: Partial<PlayerStats>) => {
-    //  console.log('[AppContext] updatePlayerStats called with:', newStats);
     if (_currentPlayer) {
       const updatedPlayer = {
         ..._currentPlayer,
         stats: { ..._currentPlayer.stats, ...newStats },
       };
       const result = await updatePlayer(updatedPlayer);
-      if (result) {
-        // console.log("[AppContext] Player stats updated in DB, setting current player state.");
-        _setCurrentPlayer(result);
-      } else {
-        // console.error("[AppContext] Failed to update player stats in DB.");
-      }
-    } else {
-        // console.warn("[AppContext] updatePlayerStats called but no current player.");
+      if (result) _setCurrentPlayer(result);
     }
-  }, [_currentPlayer, _setCurrentPlayer]);
-
-  const handleAuthentication = useCallback(async (piId: string, chosenFaction: Faction) => {
-    _setIsLoading(true);
-    if (typeof window !== "undefined") localStorage.setItem('lastPlayerId', piId);
-    
-    let player = await getPlayer(piId);
-    let nextOnboardingStep: OnboardingStep = 'welcome';
-
-    if (player) {
-      // console.log('[AppContext] Existing player found:', player.id, "Attempting to set faction to:", chosenFaction);
-      if (player.faction !== chosenFaction && chosenFaction !== 'Observer') {
-        player = { ...player, faction: chosenFaction };
-        await updatePlayer(player); // Persist faction change for existing player
-      } else if (player.faction !== 'Observer' && chosenFaction === 'Observer') {
-        //  console.log(`[AppContext] Existing non-Observer player ${player.id} attempted to switch to Observer. Keeping faction: ${player.faction}`);
-      }
-       _setCurrentPlayer(player); 
-
-      if (player.faction === 'Observer') {
-        nextOnboardingStep = 'tod';
-      } else if (!player.spyName) {
-        nextOnboardingStep = 'codenameInput';
-      } else {
-        nextOnboardingStep = 'fingerprint';
-      }
-    } else { 
-      // console.log('[AppContext] New player. ID:', piId, "Chosen faction:", chosenFaction);
-      const newPlayer = await createPlayer(piId, chosenFaction, { ...DEFAULT_PLAYER_STATS_FOR_NEW_PLAYER }, null);
-      _setCurrentPlayer(newPlayer);
-      player = newPlayer; // Use the newly created player for subsequent logic
-      if (chosenFaction === 'Observer') {
-        nextOnboardingStep = 'tod';
-      } else {
-        nextOnboardingStep = 'codenameInput';
-      }
-    }
-    
-    if (nextOnboardingStep === 'codenameInput' && player && player.faction !== 'Observer') {
-      const factionThemeForCodename = player.faction === 'Cyphers' ? 'cyphers' : player.faction === 'Shadows' ? 'shadows' : 'terminal-green';
-      // console.log(`[AppContext] Player faction is ${player.faction}, opening CodenameInput from handleAuthentication with theme: ${factionThemeForCodename}`);
-      openTODWindow(
-        "Agent Codename",
-        <CodenameInput explicitTheme={factionThemeForCodename} />,
-        { showCloseButton: false, explicitTheme: factionThemeForCodename, themeVersion: themeVersion } // Pass themeVersion
-      );
-    }
-
-    _setOnboardingStep(nextOnboardingStep);
-    _setIsLoading(false);
-  }, [_setCurrentPlayer, _setOnboardingStep, _setIsLoading, openTODWindow, themeVersion]); // Added themeVersion dependency
-
+  }, [_currentPlayer]);
 
   const logout = useCallback(() => {
     _setCurrentPlayer(null);
     if (typeof window !== "undefined") localStorage.removeItem('lastPlayerId');
     _setOnboardingStep('welcome');
-    _setIsLoading(false); 
+    _setIsLoading(false);
   }, [_setCurrentPlayer, _setOnboardingStep, _setIsLoading]);
-
-  const addMessage = useCallback((message: Omit<GameMessage, 'id' | 'timestamp'>) => {
-    const newMessage: GameMessage = {
-      ...message,
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-      timestamp: new Date(),
-    };
-    _setMessages(prev => {
-      const newMessagesList = [newMessage, ...prev.filter(m => !m.isPinned)];
-      const pinnedMessages = prev.filter(m => m.isPinned);
-      const combinedMessages = [...pinnedMessages, ...newMessagesList];
-      return combinedMessages.slice(0, 50);
-    });
-  }, [_setMessages]);
 
   const updatePlayerInventoryItemStrength = useCallback(async (itemId: string, newStrength: number) => {
     if (_currentPlayer) {
@@ -368,13 +360,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (result) _setCurrentPlayer(result);
       }
     }
-  }, [_currentPlayer, _setCurrentPlayer]);
+  }, [_currentPlayer]);
 
   const spendElint = useCallback(async (amount: number): Promise<boolean> => {
     if (_currentPlayer && _currentPlayer.stats.elintReserves >= amount) {
       await updatePlayerStatsAppContext({
         elintReserves: _currentPlayer.stats.elintReserves - amount,
-        elintSpentSpyShop: (_currentPlayer.stats.elintSpentSpyShop || 0) + amount, 
+        elintSpentSpyShop: (_currentPlayer.stats.elintSpentSpyShop || 0) + amount,
       });
       return true;
     }
@@ -388,12 +380,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   ) => {
     if (_currentPlayer) {
       const newInventory = { ..._currentPlayer.inventory };
-      const baseItem = getItemById(itemId); 
+      const baseItem = getItemById(itemId);
       const strengthToAdd = itemDetails?.currentStrength ?? baseItem?.maxStrength ?? undefined;
-
       if (newInventory[itemId]) {
         newInventory[itemId].quantity += quantity;
-        if (strengthToAdd !== undefined && newInventory[itemId].currentStrength === undefined) { 
+        if (strengthToAdd !== undefined && newInventory[itemId].currentStrength === undefined) {
           newInventory[itemId].currentStrength = strengthToAdd;
         }
       } else {
@@ -403,7 +394,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const result = await updatePlayer(updatedPlayer);
       if (result) _setCurrentPlayer(result);
     }
-  }, [_currentPlayer, _setCurrentPlayer]);
+  }, [_currentPlayer]);
 
   const removeItemFromInventory = useCallback(async (itemId: string, quantity: number = 1) => {
     if (_currentPlayer) {
@@ -418,15 +409,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (result) _setCurrentPlayer(result);
       }
     }
-  }, [_currentPlayer, _setCurrentPlayer]);
-
+  }, [_currentPlayer]);
+  
   const purchaseItem = useCallback(async (itemId: string): Promise<boolean> => {
     const itemData = getItemById(itemId);
     if (!itemData || !_currentPlayer) {
       addMessage({ text: `Error: Item ${itemId} not found or player data missing.`, type: 'error' });
       return false;
     }
-    if (await spendElint(itemData.cost)) {
+    if (await spendElint(itemData.cost)) { 
       await addItemToInventory(itemId, 1, { currentStrength: itemData.maxStrength });
       addMessage({ text: `Purchased ${itemData.name} L${itemData.level}`, type: 'notification' });
       return true;
@@ -437,45 +428,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const deployItemToVault = useCallback(async (slotId: string, itemIdToDeploy: string | null) => {
     if (!_currentPlayer) return;
-
     let itemBeingDeployed: GameItemBase | undefined = undefined;
     let itemBeingRemovedFromSlot: PlayerInventoryItem | null = null;
-    const newInventory = JSON.parse(JSON.stringify(_currentPlayer.inventory)); 
-    const newVault = JSON.parse(JSON.stringify(_currentPlayer.vault)); 
+    const newInventory = JSON.parse(JSON.stringify(_currentPlayer.inventory));
+    const newVault = JSON.parse(JSON.stringify(_currentPlayer.vault));
     const slotIndex = newVault.findIndex((slot: VaultSlot) => slot.id === slotId);
 
-
     if (slotIndex === -1) {
-      // console.error(`[AppContext] Vault slot ${slotId} not found.`);
-      return;
+      addMessage({ text: `Vault slot ${slotId} not found.`, type: 'error' }); return;
     }
-    
     itemBeingRemovedFromSlot = newVault[slotIndex].item;
-
     if (itemIdToDeploy) {
       itemBeingDeployed = getItemById(itemIdToDeploy);
-      if (!itemBeingDeployed) {
-        // console.error(`[AppContext] Item ${itemIdToDeploy} not found for deployment.`);
-        return;
-      }
+      if (!itemBeingDeployed) { addMessage({ text: `Item ${itemIdToDeploy} not found.`, type: 'error' }); return; }
       if (!newInventory[itemIdToDeploy] || newInventory[itemIdToDeploy].quantity <= 0) {
-        addMessage({ text: `Cannot deploy ${itemBeingDeployed.name}: Not in inventory.`, type: 'error' });
-        return;
+        addMessage({ text: `Cannot deploy ${itemBeingDeployed.name}: Not in inventory.`, type: 'error' }); return;
       }
       const deployedItemInstance: PlayerInventoryItem = {
-        id: itemBeingDeployed.id,
-        quantity: 1, 
-        currentStrength: itemBeingDeployed.maxStrength, 
+        id: itemBeingDeployed.id, quantity: 1, currentStrength: itemBeingDeployed.maxStrength,
       };
       newVault[slotIndex].item = deployedItemInstance;
       newInventory[itemIdToDeploy].quantity -= 1;
-      if (newInventory[itemIdToDeploy].quantity <= 0) {
-        delete newInventory[itemIdToDeploy];
-      }
-    } else { 
+      if (newInventory[itemIdToDeploy].quantity <= 0) delete newInventory[itemIdToDeploy];
+    } else {
       newVault[slotIndex].item = null;
     }
-
     if (itemBeingRemovedFromSlot) {
       if (newInventory[itemBeingRemovedFromSlot.id]) {
         newInventory[itemBeingRemovedFromSlot.id].quantity += itemBeingRemovedFromSlot.quantity;
@@ -483,30 +460,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
         newInventory[itemBeingRemovedFromSlot.id] = itemBeingRemovedFromSlot;
       }
     }
-
     let newStats = { ..._currentPlayer.stats };
     if (itemBeingDeployed && itemBeingDeployed.category === 'Hardware' && !newStats.hasPlacedFirstLock) {
-      newStats = {
-        ...newStats,
-        elintReserves: newStats.elintReserves + 10000,
-        hasPlacedFirstLock: true,
-      };
+      newStats = { ...newStats, elintReserves: newStats.elintReserves + 10000, hasPlacedFirstLock: true };
       addMessage({ type: 'notification', text: 'First lock deployed! ELINT Reserves boosted by 10,000!' });
     }
-
-    const updatedPlayer: Player = {
-      ..._currentPlayer,
-      stats: newStats,
-      inventory: newInventory,
-      vault: newVault,
-    };
-
+    const updatedPlayer: Player = { ..._currentPlayer, stats: newStats, inventory: newInventory, vault: newVault };
     const result = await updatePlayer(updatedPlayer);
     if (result) {
       _setCurrentPlayer(result);
       addMessage({ text: itemIdToDeploy && itemBeingDeployed ? `Deployed ${itemBeingDeployed.name} L${itemBeingDeployed.level} to vault.` : `Cleared vault slot.`, type: 'system' });
     }
-  }, [_currentPlayer, _setCurrentPlayer, addMessage]);
+  }, [_currentPlayer, addMessage, _setCurrentPlayer]);
 
   const addXp = useCallback(async (amount: number) => {
     if (_currentPlayer) {
@@ -515,29 +480,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [_currentPlayer, updatePlayerStatsAppContext, addMessage]);
 
-
   const openInventoryTOD = useCallback((context: AppContextType['todInventoryContext']) => {
     _setTodInventoryContext(context);
-    const playerForTheme = _currentPlayer; // Use the current state of _currentPlayer
-    const resolvedTheme = playerForTheme?.faction === 'Cyphers' ? 'cyphers' 
-                        : playerForTheme?.faction === 'Shadows' ? 'shadows' 
+    const playerForTheme = _currentPlayer;
+    const resolvedTheme = playerForTheme?.faction === 'Cyphers' ? 'cyphers'
+                        : playerForTheme?.faction === 'Shadows' ? 'shadows'
                         : currentGlobalTheme || 'terminal-green';
     openTODWindow(
       context?.title || "Inventory",
-      <div>Inventory Browser for {context?.category} - {context?.title}</div>, 
-      {
-        explicitTheme: resolvedTheme,
-        themeVersion: themeVersion, 
-        showCloseButton: true,
-      }
+      <div>Inventory Browser for {context?.category} - {context?.title}</div>,
+      { explicitTheme: resolvedTheme, themeVersion: themeVersion, showCloseButton: true }
     );
-  }, [_setTodInventoryContext, openTODWindow, _currentPlayer, currentGlobalTheme, themeVersion]);
+  }, [_currentPlayer, currentGlobalTheme, themeVersion, openTODWindow, _setTodInventoryContext]);
 
   const closeInventoryTOD = useCallback(() => {
     _setTodInventoryContext(null);
     closeTODWindow();
-  }, [_setTodInventoryContext, closeTODWindow]);
-  
+  }, [closeTODWindow, _setTodInventoryContext]);
+
   const playerInfoForShop = useMemo(() => {
     if (!_currentPlayer) return null;
     return {
@@ -545,9 +505,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       spyName: _currentPlayer.spyName,
       faction: _currentPlayer.faction,
       stats: { level: _currentPlayer.stats.level, elintReserves: _currentPlayer.stats.elintReserves },
-    } as Player; 
+    } as Player;
   }, [_currentPlayer]);
-
 
   const contextValue = useMemo(() => ({
     currentPlayer: _currentPlayer,
@@ -563,14 +522,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     playerStats: _currentPlayer?.stats || DEFAULT_PLAYER_STATS_FOR_NEW_PLAYER,
     playerInventory: _currentPlayer?.inventory || {},
     playerVault: _currentPlayer?.vault || [],
-    setFaction: setFactionAppContext, 
-    setPlayerSpyName: setPlayerSpyNameAppContext, 
+    pendingPiId: _pendingPiId,
+    setFaction: setFactionAppContext,
+    setPlayerSpyName: setPlayerSpyNameAppContext,
     setOnboardingStep: _setOnboardingStep,
     setIsLoading: _setIsLoading,
     addMessage,
-    updatePlayerStats: updatePlayerStatsAppContext, 
+    updatePlayerStats: updatePlayerStatsAppContext,
     addXp,
     handleAuthentication,
+    attemptLoginWithPiId,
     logout,
     isTODWindowOpen: _isTODWindowOpen,
     todWindowTitle: _todWindowTitle,
@@ -598,12 +559,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     closeInventoryTOD,
     playerInfo: playerInfoForShop,
   }), [
-    _currentPlayer, _isLoading, _isPiBrowser, _onboardingStep, _messages, _dailyTeamCode,
-    setFactionAppContext, setPlayerSpyNameAppContext, _setOnboardingStep, _setIsLoading, addMessage, updatePlayerStatsAppContext, addXp, handleAuthentication, logout,
-    _isTODWindowOpen, _todWindowTitle, _todWindowContent, _todWindowOptions, openTODWindow, closeTODWindow,
-    updatePlayerInventoryItemStrength, spendElint, purchaseItem, addItemToInventory, removeItemFromInventory, deployItemToVault,
-    _isSpyShopActive, _setIsSpyShopActive, _isSpyShopOpen, _shopSearchTerm, _setShopSearchTerm, _isShopAuthenticated, _setIsShopAuthenticated,
-    _todInventoryContext, openInventoryTOD, closeInventoryTOD, playerInfoForShop
+    _currentPlayer, _isLoading, _isPiBrowser, _onboardingStep, _messages, _dailyTeamCode, _pendingPiId,
+    _isTODWindowOpen, _todWindowTitle, _todWindowContent, _todWindowOptions,
+    _isSpyShopActive, _isSpyShopOpen, _shopSearchTerm, _isShopAuthenticated, _todInventoryContext,
+    playerInfoForShop, addMessage, openTODWindow, closeTODWindow, attemptLoginWithPiId, handleAuthentication,
+    setFactionAppContext, setPlayerSpyNameAppContext, updatePlayerStatsAppContext, addXp, logout,
+    updatePlayerInventoryItemStrength, spendElint, purchaseItem, addItemToInventory, removeItemFromInventory,
+    deployItemToVault, openInventoryTOD, closeInventoryTOD,
+    _setOnboardingStep, _setIsLoading, _setIsSpyShopActive, _setShopSearchTerm, _setIsShopAuthenticated
   ]);
 
   return (
@@ -621,3 +584,5 @@ export function useAppContext() {
   return context;
 }
 
+// Export FIXED_DEV_PI_ID if WelcomeScreen needs to import it directly
+export { FIXED_DEV_PI_ID };
