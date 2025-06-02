@@ -75,7 +75,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
     if (!nodeDisplayArea) return;
 
     let lastTime = 0;
-    currentPositionXRef.current = 0; // Reset scroll position on theme change/re-mount
+    currentPositionXRef.current = 0; 
     lastTime = 0;
 
     const animateScroll = (timestamp: number) => {
@@ -87,9 +87,8 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
       lastTime = timestamp;
 
       currentPositionXRef.current -= NODE_AREA_SCROLL_SPEED * (deltaTime / 16.67);
-
-      // Animate only the first two layers (map image and its darkening overlay)
-      // The grid lines are now in an ::after pseudo-element and are static.
+      
+      // Animate only the first two layers (map image and its darkening overlay) of the HolographicPanel
       nodeDisplayArea.style.backgroundPosition = `${currentPositionXRef.current}px 0px, 0 0`;
 
       animationFrameIdRef.current = requestAnimationFrame(animateScroll);
@@ -102,7 +101,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
         cancelAnimationFrame(animationFrameIdRef.current);
       }
     };
-  }, [currentGlobalTheme, themeVersion]); // Re-run effect if theme or version changes to restart animation correctly
+  }, [currentGlobalTheme, themeVersion]); 
 
   const refreshScanner = () => {
     setIsLoading(true);
@@ -150,7 +149,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
           "flex flex-col flex-grow overflow-hidden rounded-lg",
           "border border-[var(--hologram-panel-border)]",
           "shadow-[0_0_15px_var(--hologram-glow-color),_inset_0_0_10px_var(--hologram-glow-color)]",
-          "bg-black/70", // Base background color for the panel container
+          "bg-black/70", 
           "max-w-4xl",
           "w-full mx-auto"
         )}
@@ -178,19 +177,19 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
           </div>
         </div>
 
-        {/* The nodeDisplayAreaRef is the HolographicPanel where the map and grid are rendered */}
         <HolographicPanel
           ref={nodeDisplayAreaRef}
           explicitTheme={currentGlobalTheme}
           key={`node-display-panel-${currentGlobalTheme}-${themeVersion}`}
           className={cn(
-            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md map-overlay pad-gloss-effect", // map-overlay ensures ::after is applied
-            scannerBgClass // Applies observer-background, cyphers-background, or shadows-background
+            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md map-overlay pad-gloss-effect", // map-overlay ensures HolographicPanel is position:relative
+            scannerBgClass // Applies map image + darkening overlay to this panel
           )}
-          // The background-image (map + darkening) is applied by scannerBgClass.
-          // The grid lines are applied by .map-overlay.holographic-panel::after
         >
-          {/* Network Nodes */}
+          {/* Static Grid Overlay Div - Sits on top of the panel's background and gloss effect */}
+          <div className="absolute inset-0 z-[3] scanner-grid-overlay-dots pointer-events-none rounded-[inherit]"></div>
+
+          {/* Network Nodes - Rendered on top of the grid overlay */}
           {nodes.map(node => (
             <div
               key={node.id}
@@ -217,7 +216,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
               className={cn(
                 "absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80",
                 "p-3 md:p-4 z-20 animate-slide-in-bottom font-rajdhani rounded-lg shadow-lg",
-                "bg-black/50 backdrop-blur-sm"
+                "bg-black/50 backdrop-blur-sm" // Semi-transparent background for readability
               )}
             >
               <h3 className="text-lg font-orbitron mb-2 holographic-text">{selectedNode.title}</h3>

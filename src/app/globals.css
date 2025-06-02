@@ -457,12 +457,12 @@
 }
 
 @layer components {
-  /* Base for scanner background elements - needs position: relative for ::after */
+  /* Base for scanner background elements - .map-overlay.holographic-panel needs position: relative */
   .map-overlay.holographic-panel {
-    position: relative; /* Crucial for ::after pseudo-element positioning */
+    position: relative; 
   }
 
-  /* Specific theme backgrounds - only map image and darkening layer */
+  /* Specific theme backgrounds - only map image and darkening layer FOR THE PANEL ITSELF */
   .map-overlay.holographic-panel.observer-background {
     background-image:
       url('/backgrounds/World Map Green.jpg'),
@@ -493,20 +493,15 @@
     transform: translateZ(0);
   }
 
-  /* Grid lines applied via ::after pseudo-element, on top of gloss */
-  .map-overlay.holographic-panel::after {
-    content: "";
-    position: absolute;
-    inset: 0; /* Cover the whole panel */
+  /* NEW: Dedicated class for the static grid overlay (dots) for the SEPARATE DIV */
+  .scanner-grid-overlay-dots {
     background-image:
       repeating-linear-gradient(0deg, hsl(var(--foreground-hsl)) 0px 1px, transparent 1px 20px), /* Horizontal lines */
       repeating-linear-gradient(90deg, hsl(var(--foreground-hsl)) 0px 1px, transparent 1px 20px); /* Vertical lines */
     background-size: 20px 20px, 20px 20px; /* Size of each repeating unit */
     background-repeat: repeat, repeat;
     background-position: 0 0, 10px 10px; /* Static position for grid, vertical lines offset for dot pattern */
-    z-index: 3; /* Higher than pad-gloss-effect's z-index 1 and 2 */
-    pointer-events: none;
-    border-radius: inherit; /* Match parent panel's border radius */
+    border-radius: inherit; /* Match parent panel's border radius if applied via JS on .rounded-[inherit] */
   }
 }
 
