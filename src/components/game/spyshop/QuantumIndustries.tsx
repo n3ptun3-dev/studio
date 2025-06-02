@@ -1,5 +1,5 @@
 
-// src/components/game/spyshop/QuantumIndustriesRedesignedShop.tsx
+// src/components/game/spyshop/QuantumIndustries.tsx
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
@@ -47,7 +47,7 @@ interface SpecificItemDetailViewProps {
 
 
 // --- Main Shop Component ---
-export function QuantumIndustriesRedesignedShop() {
+export function QuantumIndustries() {
   const { closeSpyShop, playerInfo } = useAppContext();
   const [activePage, setActivePage] = useState<'products' | 'aboutUs'>('products');
   const contentScrollContainerRef = useRef<HTMLDivElement>(null);
@@ -232,7 +232,10 @@ export function QuantumIndustriesRedesignedShop() {
           >
             <h2 className="text-3xl font-orbitron text-cyan-300 mb-4">Welcome, Agent.</h2>
             <p className="text-slate-300 text-lg max-w-md mx-auto">
-              Quantum Industries provides elite tools for the discerning operative. Please select a product category below to explore our arsenal.
+              Quantum Industries provides elite tools for the discerning operative.
+            </p>
+            <p className="text-slate-300 text-lg max-w-md mx-auto">
+              Select a category below to explore our arsenal.
             </p>
           </motion.div>
         )}

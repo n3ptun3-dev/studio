@@ -4,7 +4,7 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAppContext } from '@/contexts/AppContext';
-import { QuantumIndustriesRedesignedShop } from '@/components/game/spyshop/QuantumIndustriesRedesignedShop';
+import { QuantumIndustries } from '@/components/game/spyshop/QuantumIndustries';
 
 export function SpyShopSectionWrapper() {
   const { isSpyShopOpen } = useAppContext(); // Now safe to call in a client component
@@ -20,7 +20,7 @@ export function SpyShopSectionWrapper() {
           transition={{ duration: 0.5, ease: "easeInOut" }}
           className="fixed inset-0 z-[99] flex items-center justify-center bg-black/80 backdrop-blur-sm"
         >
-          <QuantumIndustriesRedesignedShop /> {/* <-- RENDER YOUR NEW SHOP COMPONENT */}
+          <QuantumIndustries /> 
         </motion.div>
       )}
     </AnimatePresence>
