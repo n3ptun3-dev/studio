@@ -2,13 +2,13 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { HolographicPanel, HolographicButton, HolographicInput } from '@/components/game/shared/HolographicPanel'; // Added HolographicButton here
+import { HolographicPanel, HolographicButton, HolographicInput } from '@/components/game/shared/HolographicPanel';
 import { RefreshCw, Info, MapPin, AlertTriangle, Gift } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { cn } from '@/lib/utils';
 import { useTheme, type Theme } from '@/contexts/ThemeContext';
 
-const NODE_AREA_SCROLL_SPEED = 0.15; 
+const NODE_AREA_SCROLL_SPEED = 0.15;
 
 interface SectionProps {
   parallaxOffset: number;
@@ -20,9 +20,9 @@ interface NetworkNode {
   title: string;
   level?: number;
   owner?: string;
-  team?: string; 
+  team?: string;
   elintAmount?: number;
-  position: { x: number; y: number }; 
+  position: { x: number; y: number };
 }
 
 const generateNodes = (count = 15): NetworkNode[] => {
@@ -39,16 +39,28 @@ const generateNodes = (count = 15): NetworkNode[] => {
       team: type !== 'droppedItem' ? (Math.random() > 0.5 ? "Cyphers" : "Shadows") : undefined,
       elintAmount: type === 'highPriority' ? Math.floor(Math.random() * 5000) + 1000 : undefined,
       position: {
-        x: Math.random() * 80 + 10, 
-        y: Math.random() * 70 + 15  
+        x: Math.random() * 80 + 10,
+        y: Math.random() * 70 + 15
       },
     });
   }
   return nodes;
 };
 
+const getScannerBackgroundClass = (theme: Theme): string => {
+  switch (theme) {
+    case 'cyphers':
+      return 'cyphers-background';
+    case 'shadows':
+      return 'shadows-background';
+    case 'terminal-green': // Default for observer or unknown
+    default:
+      return 'observer-background';
+  }
+};
+
 export function ScannerSection({ parallaxOffset }: SectionProps) {
-  const { openTODWindow, faction: currentAppContextFaction } = useAppContext();
+  const { openTODWindow, faction: currentAppContextFaction } = useAppContext(); // currentAppContextFaction might not be needed if theme is source of truth
   const { theme: currentGlobalTheme, themeVersion } = useTheme();
   const [nodes, setNodes] = useState<NetworkNode[]>(() => generateNodes());
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
@@ -70,50 +82,33 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
       const deltaTime = timestamp - lastTime;
       lastTime = timestamp;
 
-      currentPositionXRef.current -= NODE_AREA_SCROLL_SPEED * (deltaTime / 16.67); 
+      currentPositionXRef.current -= NODE_AREA_SCROLL_SPEED * (deltaTime / 16.67);
       
-      let mapImageFilename = "World Map Green.jpg"; 
-      let gridColorHsl = "var(--terminal-green-debug-color)"; // Default for terminal-green or unknown
-      
-      if (currentGlobalTheme === 'cyphers') {
-        mapImageFilename = "World Map Blue.jpg";
-        gridColorHsl = "var(--primary-hsl)"; // Use cyphers primary for grid
-      } else if (currentGlobalTheme === 'shadows') {
-        mapImageFilename = "World Map Red.jpg";
-        gridColorHsl = "var(--primary-hsl)"; // Use shadows primary for grid
-      } else if (currentGlobalTheme === 'terminal-green') {
-        gridColorHsl = "var(--primary-hsl)"; // Use terminal-green primary for grid
-      }
-
-
-      nodeDisplayArea.style.backgroundImage = `
-        radial-gradient(hsl(${gridColorHsl} / 0.7) 0.5px, transparent 0.5px), 
-        radial-gradient(hsl(${gridColorHsl} / 0.7) 0.5px, transparent 0.5px),
-        url('/backgrounds/${mapImageFilename}')
-      `;
-      nodeDisplayArea.style.backgroundSize = `20px 20px, 20px 20px, auto 102%`;
-      nodeDisplayArea.style.backgroundPosition = `0 0, 10px 10px, ${currentPositionXRef.current}px 0`;
-      nodeDisplayArea.style.backgroundRepeat = 'repeat, repeat, repeat-x';
+      // Update backgroundPosition for the parallax effect of the map (first layer)
+      // The grid positions (0px 0px, 10px 10px for 2nd and 3rd layers) are static.
+      nodeDisplayArea.style.backgroundPosition = `${currentPositionXRef.current}px 0px, 0px 0px, 10px 10px`;
 
       animationFrameIdRef.current = requestAnimationFrame(animateScroll);
     };
 
+    // Start animation
     animationFrameIdRef.current = requestAnimationFrame(animateScroll);
 
+    // Cleanup animation frame on component unmount
     return () => {
       if (animationFrameIdRef.current) {
         cancelAnimationFrame(animationFrameIdRef.current);
       }
     };
-  }, [currentGlobalTheme]); 
+  }, []); // Empty dependency array: animation setup runs once on mount. Theme changes are handled by class updates.
 
   const refreshScanner = () => {
     setIsLoading(true);
-    setSelectedNode(null); 
+    setSelectedNode(null);
     setTimeout(() => {
       setNodes(generateNodes());
       setIsLoading(false);
-    }, 1000); 
+    }, 1000);
   };
 
   const handleNodeClick = (node: NetworkNode) => {
@@ -128,7 +123,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
       default: return <MapPin className="w-full h-full text-muted-foreground" />;
     }
   };
-  
+
   const handleScannerInfoClick = () => {
     openTODWindow(
       "Scanner Intel",
@@ -143,27 +138,27 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
       { showCloseButton: true }
     );
   };
+  
+  const scannerBgClass = getScannerBackgroundClass(currentGlobalTheme);
 
   return (
     <div className="flex flex-col h-full overflow-hidden p-4 md:p-6">
-      {/* Main content area with holographic border */}
       <div
         className={cn(
           "flex flex-col flex-grow overflow-hidden rounded-lg",
-          "border border-[var(--hologram-panel-border)]",
-          "shadow-[0_0_15px_var(--hologram-glow-color),_inset_0_0_10px_var(--hologram-glow-color)]",
-          "bg-black/70", 
+          "border border-[var(--hologram-panel-border)]", // Uses JS-set variable for border
+          "shadow-[0_0_15px_var(--hologram-glow-color),_inset_0_0_10px_var(--hologram-glow-color)]", // Uses JS-set variable for shadow
+          "bg-black/70",
           "max-w-4xl",
           "w-full mx-auto"
         )}
       >
-        {/* Title Area */}
         <div className="flex-none flex items-center justify-between p-3 md:p-4">
           <h2 className="text-2xl font-orbitron holographic-text">Scanner</h2>
           <div className="flex items-center space-x-2">
             <HolographicButton
               onClick={handleScannerInfoClick}
-              className="!p-2" 
+              className="!p-2"
               explicitTheme={currentGlobalTheme}
               aria-label="Scanner Information"
             >
@@ -181,17 +176,16 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
           </div>
         </div>
 
-        {/* Node Display Area - This IS a HolographicPanel for its own styling */}
         <HolographicPanel
           ref={nodeDisplayAreaRef}
-          explicitTheme={currentGlobalTheme} 
-          key={`node-display-panel-${currentGlobalTheme}-${themeVersion}`} 
+          explicitTheme={currentGlobalTheme} // For border, glow etc. of the panel itself
+          key={`node-display-panel-${currentGlobalTheme}-${themeVersion}`} // Ensures panel re-evaluates if theme changes fundamentally
           className={cn(
-            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md map-overlay" 
+            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md map-overlay",
+            scannerBgClass // Apply the theme-specific background class for image and grids
           )}
-         // The style prop for background image is managed by the useEffect hook
+          // The style prop for background image and its animation is managed by the useEffect hook & CSS
         >
-          {/* Connecting Lines */}
           {nodes.map((node, i) =>
             i < nodes.length - 1 && (
               <svg key={`line-${i}`} className="absolute inset-0 w-full h-full z-[10]" style={{ pointerEvents: 'none' }}>
@@ -203,7 +197,6 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             )
           )}
 
-          {/* Nodes */}
           {nodes.map(node => (
             <div
               key={node.id}
@@ -222,7 +215,6 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
             </div>
           ))}
 
-          {/* Selected Node Details Overlay */}
           {selectedNode && (
             <HolographicPanel
               explicitTheme={currentGlobalTheme}
@@ -230,7 +222,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
               className={cn(
                 "absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80",
                 "p-3 md:p-4 z-20 animate-slide-in-bottom font-rajdhani rounded-lg shadow-lg",
-                "bg-black/50 backdrop-blur-sm" 
+                "bg-black/50 backdrop-blur-sm"
               )}
             >
               <h3 className="text-lg font-orbitron mb-2 holographic-text">{selectedNode.title}</h3>
@@ -277,3 +269,5 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
     </div>
   );
 }
+
+    
