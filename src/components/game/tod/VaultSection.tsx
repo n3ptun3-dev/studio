@@ -7,6 +7,7 @@ import { HolographicPanel, HolographicButton, HolographicInput } from '@/compone
 import { ShieldCheck, ShieldOff, ShieldAlert, Edit3, Lock, Unlock, Sigma } from 'lucide-react'; // Added Sigma for ELINT
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/contexts/ThemeContext'; // Import useTheme
+import { getItemById } from '@/lib/game-items'; // Ensure getItemById is imported
 
 interface SectionProps {
   parallaxOffset: number;
@@ -61,8 +62,14 @@ export function VaultSection({ parallaxOffset }: SectionProps) {
     let todTitle = '';
     let purpose: 'equip_lock' | 'equip_nexus' | undefined;
 
+    // Determine category based on slot type
     if (slot.type === 'lock') {
-      categoryToOpen = 'Hardware'; 
+      // For lock slots, we want to show items from 'Hardware' (which are locks)
+      // AND 'Lock Fortifiers'
+      // This requires a special handling or a combined category view if your InventoryBrowserInTOD supports it.
+      // For now, let's assume we might need to refine this or the InventoryBrowser.
+      // Opening 'Hardware' for now as it contains actual locks.
+      categoryToOpen = 'Hardware'; // Or a new combined category if needed
       todTitle = `Equip Lock Slot ${parseInt(slot.id.split('_')[2]) + 1}`;
       purpose = 'equip_lock';
     } else if (slot.type === 'upgrade') {
@@ -147,7 +154,7 @@ export function VaultSection({ parallaxOffset }: SectionProps) {
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
             <Sigma className="w-8 h-8 md:w-10 md:h-10 text-primary icon-glow opacity-60 mb-1" />
             <p className="text-3xl md:text-4xl font-digital7 font-bold holographic-text text-primary leading-none">
-              {playerStats.elintReserves.toLocaleString()}
+              {(playerStats.elintReserves ?? 0).toLocaleString()}
             </p>
             <p className="text-sm text-muted-foreground font-rajdhani uppercase tracking-wider">ELINT</p>
           </div>
@@ -162,7 +169,7 @@ export function VaultSection({ parallaxOffset }: SectionProps) {
             const y = `calc(50% + ${radius} * ${Math.sin(angle * Math.PI / 180)})`;
             
             const itemDetails = slot.item ? getItemById(slot.item.id) : null;
-            const itemColor = itemDetails ? `hsl(var(${itemDetails.colorVar}))` : 'hsl(var(--muted-hsl))';
+            const itemColor = itemDetails && itemDetails.colorVar ? `hsl(var(${itemDetails.colorVar}))` : 'hsl(var(--muted-hsl))';
             const canClear = slot.item !== null;
 
             return (
