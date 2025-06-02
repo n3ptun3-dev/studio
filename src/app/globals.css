@@ -495,7 +495,7 @@
 
   /* NEW: Dedicated class for the static grid overlay (crosses) for the SEPARATE DIV */
   .scanner-grid-overlay-dots {
-    --grid-cell-size: 20px; /* Size of each repeating cell */
+    --grid-cell-size: 40px; /* Increased cell size for more spacing */
     --cross-arm-length: 5px; /* Total length of each arm of the cross */
     --cross-thickness: 1px; /* Thickness of the lines forming the cross */
     background-image:
@@ -561,3 +561,4 @@
   75% { transform: translateY(-10px) translateX(5px); }
   100% { transform: translateY(0) translateX(0); }
 }
+
