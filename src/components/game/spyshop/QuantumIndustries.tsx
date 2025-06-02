@@ -1,3 +1,4 @@
+
 // src/components/game/spyshop/QuantumIndustries.tsx
 "use client";
 
@@ -52,7 +53,7 @@ export function QuantumIndustries() {
   const contentScrollContainerRef = useRef<HTMLDivElement>(null);
   
   const aboutUsBackgroundElementRef = useRef<HTMLDivElement>(null);
-  const aboutUsContentScrollerRef = useRef<HTMLDivElement>(null); // Ref for the "About Us" text scroller
+  const aboutUsContentScrollerRef = useRef<HTMLDivElement>(null);
 
   const [selectedProductCategory, setSelectedProductCategory] = useState<ProductCategory | null>(null);
   const [selectedItemBaseName, setSelectedItemBaseName] = useState<string | null>(null);
@@ -65,7 +66,7 @@ export function QuantumIndustries() {
   useEffect(() => {
     setSelectedItemBaseName(null);
     setCurrentViewItemData(null);
-    // Reset scroll for the main container AND the dedicated "About Us" scroller
+    
     if (contentScrollContainerRef.current) {
       requestAnimationFrame(() => {
         contentScrollContainerRef.current!.scrollTop = 0;
@@ -96,47 +97,43 @@ export function QuantumIndustries() {
     } else {
       setCurrentViewItemData(null);
     }
-    // Scroll reset handled by the effect above that listens to selectedProductCategory and activePage
   }, [selectedItemBaseName, selectedLevel, selectedProductCategory]);
 
-  // Parallax scroll effect for About Us page background
    useEffect(() => {
-    const scroller = activePage === 'aboutUs' ? aboutUsContentScrollerRef.current : null;
+    const scroller = aboutUsContentScrollerRef.current; // Use the dedicated scroller for "About Us"
     const bgElement = aboutUsBackgroundElementRef.current;
 
     if (activePage === 'aboutUs' && scroller && bgElement) {
-        // Setup background styles for bgElement
-        // Removed the linear-gradient overlay here to make the background fully visible
-        bgElement.style.backgroundImage = `url('/spyshop/about_page_panodark.jpg')`;
-        bgElement.style.backgroundRepeat = 'no-repeat';
-        bgElement.style.backgroundSize = 'cover'; // Image fills height
-        bgElement.style.backgroundPosition = `0% 50%`;   // Initial: image at left-center
-        // bgElement.style.transition = 'background-position 0.05s linear'; // Optional: for smoother X parallax
+        bgElement.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('/spyshop/about_page_panodark.jpg')`;
+        bgElement.style.backgroundRepeat = 'no-repeat, no-repeat';
+        bgElement.style.backgroundSize = 'cover, auto 100%'; // cover for gradient, auto 100% for image
+        bgElement.style.backgroundPosition = '0% 50%, 0% 50%'; // Initial for gradient, Initial for image
+        bgElement.style.transition = 'background-position 0.05s linear';
+
 
         const handleScroll = () => {
             const scrollHeight = scroller.scrollHeight - scroller.clientHeight;
             if (scrollHeight > 0) {
                 const scrollTop = scroller.scrollTop;
                 const scrollFraction = Math.min(1, Math.max(0, scrollTop / scrollHeight));
-                // Update X position of the background image
-                bgElement.style.backgroundPosition = `${scrollFraction * 100}% 50%`;
+                // Only change X position of the second background (the image)
+                bgElement.style.backgroundPosition = `0% 50%, ${scrollFraction * 100}% 50%`;
             } else {
-                bgElement.style.backgroundPosition = `0% 50%`; // Reset if not scrollable
+                bgElement.style.backgroundPosition = `0% 50%, 0% 50%`;
             }
         };
 
         scroller.addEventListener('scroll', handleScroll, { passive: true });
-        handleScroll(); // Initial call to set position
+        handleScroll();
 
         return () => {
             scroller.removeEventListener('scroll', handleScroll);
         };
     } else if (bgElement) {
-        // Clear background if not on About Us page or refs not ready
         bgElement.style.backgroundImage = '';
         bgElement.style.backgroundPosition = '';
     }
-}, [activePage]);
+}, [activePage, aboutUsContentScrollerRef, aboutUsBackgroundElementRef]);
 
 
   const handleSelectProductCategory = (category: ProductCategory | null) => {
@@ -154,7 +151,7 @@ export function QuantumIndustries() {
   const handleSelectItemTile = (itemBaseName: string) => {
     setSelectedItemBaseName(itemBaseName);
     const l1Data = selectedProductCategory?.itemSubCategories.flatMap(sc => sc.items)
-      .find(it => it.name === itemBaseName)
+      .find(it => it.name === selectedItemBaseName)
       ?.getItemLevelData(1);
     if (l1Data) {
       setSelectedLevel(l1Data.level);
@@ -174,7 +171,6 @@ export function QuantumIndustries() {
 
   const handlePurchase = (itemId: string) => {
     console.log("Purchasing item:", itemId);
-    // Add to cart logic or direct purchase
   };
 
   const levelsAvailableForItem = selectedItemBaseName && selectedProductCategory
@@ -200,7 +196,7 @@ export function QuantumIndustries() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -50 }}
             transition={{ duration: 0.3 }}
-            className="h-full" // Ensure it takes up space for internal scrolling if needed
+            className="h-full"
           >
             <SpecificItemDetailView
               itemData={currentViewItemData}
@@ -248,8 +244,6 @@ export function QuantumIndustries() {
   };
 
   const renderAboutUsPage = () => {
-    // This function now just returns the text content structure.
-    // Background and scrolling are handled by its parent wrapper and the sticky background element.
     return (
       <div className="max-w-3xl mx-auto p-6 md:p-10 text-slate-300">
         <h2 className="text-4xl font-orbitron text-cyan-300 mb-8 text-center" style={{ textShadow: '0 0 8px rgba(0,255,255,0.7), 0 0 15px rgba(0,255,255,0.3)' }}>About Quantum Industries</h2>
@@ -268,6 +262,12 @@ export function QuantumIndustries() {
         <p className="text-lg mb-6 leading-relaxed" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
           Explore our catalog, equip yourself with the finest gear, and remember: in the quantum realm, the best defense is a brilliant offense, and the most valuable asset is information meticulously secured or audaciously acquired.
         </p>
+         <p className="text-lg mb-6 leading-relaxed" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
+          Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+        </p>
+         <p className="text-lg mb-6 leading-relaxed" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
+          Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.
+        </p>
         <p className="text-xl text-cyan-400 font-semibold mt-10 text-center font-orbitron" style={{ textShadow: '0 0 8px rgba(0,255,255,0.7), 0 0 15px rgba(0,255,255,0.3)' }}>
           "Innovation in Security. Excellence in Espionage."
         </p>
@@ -283,9 +283,8 @@ export function QuantumIndustries() {
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
-        className="w-full h-full max-w-2xl md:max-w-4xl lg:max-w-6xl md:h-[90vh] md:max-h-[800px] bg-slate-950 text-slate-100 flex flex-col shadow-2xl shadow-cyan-500/30 border border-cyan-700/50 relative"
+        className="w-full h-full max-w-2xl md:max-w-4xl lg:max-w-6xl md:h-[90vh] md:max-h-[800px] bg-slate-950 text-slate-100 flex flex-col shadow-2xl shadow-cyan-500/30 border border-cyan-700/50 relative md:rounded-lg"
       >
-        {/* Background pattern for Products Page (conditional) - Moved here to be sticky relative to the main shop container */}
         {activePage === 'products' && (
           <>
             <div
@@ -319,34 +318,21 @@ export function QuantumIndustries() {
           onClose={closeSpyShop}
           isSmallHeader={isSmallHeader}
         />
-
+        
         <div ref={contentScrollContainerRef} className="flex-grow overflow-y-auto scrollbar-hide relative z-[10]">
-          
-          {/* STICKY Background & Overlay container for "About Us" */}
           {activePage === 'aboutUs' && (
             <div
               ref={aboutUsBackgroundElementRef}
               className="sticky top-0 left-0 w-full h-full z-[1] pointer-events-none"
-              // Background image, size, repeat, position, and overlay (via linear-gradient) are set in useEffect
             />
           )}
-
-          {/* CONTENT WRAPPER: Relative for products, Absolute for "About Us" to overlay sticky background */}
+          
           <div
-            className={cn(
-              "relative z-[4]", // Default for products page, flows normally
-              activePage === 'aboutUs' && "absolute inset-0" // For "About Us", covers parent and allows internal scroll
-            )}
+             className={cn("relative z-[4]", activePage === 'aboutUs' && "absolute inset-0")}
           >
-            {/* INNER SCROLLER: Only active and scrolling for "About Us" */}
             <div
               ref={activePage === 'aboutUs' ? aboutUsContentScrollerRef : null}
-              className={cn(
-                activePage === 'aboutUs' && "h-full overflow-y-auto scrollbar-hide relative", // Add relative for the absolute shadow
-                // Removed the previous before/after for blur shadow that scrolled with the text
-                // activePage === 'aboutUs' && "before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-16 before:bg-gradient-to-b before:from-slate-950 before:to-transparent before:z-10 before:pointer-events-none",
-                // activePage === 'aboutUs' && "after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-16 after:bg-gradient-to-t after:from-slate-950 before:to-transparent after:z-10 after:pointer-events-none"
-              )}
+              className={cn(activePage === 'aboutUs' && "h-full overflow-y-auto scrollbar-hide")}
             >
               {activePage === 'products' ? renderProductsPage() : renderAboutUsPage()}
             </div>
@@ -528,8 +514,7 @@ const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({
   if (!itemData) return <p className="text-center text-slate-400 p-8">Item details not found.</p>;
 
   return (
-    <div className="h-full flex flex-col"> {/* This is the root for the item detail view */}
-      {/* LevelSelectorBar is only shown when image is NOT full screen */}
+    <div className="h-full flex flex-col">
       {!isImageModalOpen && (
         <LevelSelectorBar
           selectedLevel={selectedLevel}
@@ -539,40 +524,36 @@ const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({
         />
       )}
 
-      {/* This div is the main container for content, becoming the image modal area or the details area */}
-      <div className="flex-grow overflow-y-auto p-4 md:p-6 scrollbar-hide relative">
+      <div className="flex-grow overflow-y-auto p-1 sm:p-2 md:p-4 scrollbar-hide relative bg-transparent"> {/* TEMPORARY: bg-red-900/50 to see bounds */}
         {isImageModalOpen ? (
-          // Full Image View (within the scrollable area)
           <motion.div
-            key="full-image-view-internal" // Ensure key changes for AnimatePresence if used, though not strictly needed here
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }} // This exit might not be visible if not using AnimatePresence directly on this
+            key="full-image-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="relative w-full h-full flex flex-col items-center justify-center min-h-[calc(100%-2rem)]" 
-            // min-h to ensure it tries to fill space, actual size determined by parent flex-grow
+            className="absolute inset-0 bg-lime-500/80 flex flex-col items-center justify-center z-50" // TEMPORARY: lime background
           >
             <button
               onClick={() => setIsImageModalOpen(false)}
-              className="absolute top-1 right-1 md:top-2 md:right-2 bg-slate-800/80 text-white rounded-full p-1.5 shadow-lg hover:bg-red-600 transition-colors z-20" // z-20 to be above image
+              className="absolute top-1 right-1 sm:top-2 sm:right-2 bg-slate-700 text-white rounded-full p-1.5 shadow-lg hover:bg-red-500 transition-colors z-[51]"
               aria-label="Close full image view"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
-            {/* Container for the image to allow scrolling if image is larger than this container */}
-            <div className="relative w-full h-full flex-grow overflow-auto scrollbar-hide rounded-md border border-slate-700/50 bg-slate-900/30">
+            {/* Image Container - this is relative for Next/Image */}
+            <div className="relative w-[calc(100%-1rem)] h-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] sm:h-[calc(100%-2rem)] bg-purple-500/50"> {/* TEMPORARY: purple background */}
               <Image
-                src={itemData.imageSrc || '/spyshop/items/placeholder_large.png'}
+                src={itemData.imageSrc || 'https://placehold.co/800x600.png'} // Using public placeholder
                 alt={itemData.title}
-                layout="fill" // Fill the parent div
-                objectFit="contain" // Contain within bounds, show all image
-                className="p-2" // Optional padding around the image itself
+                layout="fill"
+                objectFit="contain"
                 data-ai-hint="item closeup"
+                unoptimized // Good for debugging local images, especially with placeholders
               />
             </div>
           </motion.div>
         ) : (
-          // Normal Item Details View
           <>
             <button onClick={onBack} className="absolute top-4 left-4 md:top-6 md:left-6 z-20 flex items-center text-sm text-cyan-300 hover:text-cyan-100 bg-slate-800/50 hover:bg-slate-700/70 px-3 py-1.5 rounded-md transition-colors">
               <ArrowLeft className="w-4 h-4 mr-1.5" /> Back
