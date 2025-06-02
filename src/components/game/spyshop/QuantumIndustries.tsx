@@ -2,8 +2,8 @@
 // src/components/game/spyshop/QuantumIndustries.tsx
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import NextImage from 'next/image'; // Use NextImage
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import NextImage from 'next/image';
 import { X, ChevronDown, ChevronUp, ArrowLeft, ShoppingCart, Search } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -28,7 +28,7 @@ interface LevelSelectorBarProps {
   onSelectLevel: (level: ItemLevel) => void;
   playerLevel: ItemLevel;
   levelsAvailable: ItemLevel[];
-  onBack: () => void; // Added for the integrated back button
+  onBack: () => void;
 }
 
 interface ItemDisplayGridProps {
@@ -46,15 +46,26 @@ interface SpecificItemDetailViewProps {
   levelsAvailableForItem: ItemLevel[];
 }
 
+const ProgressBar: React.FC<{ label: string; value: number; max: number; colorClass?: string }> = ({ label, value, max, colorClass = "bg-green-500" }) => (
+  <div className="mb-2">
+    <div className="flex justify-between text-xs text-slate-400 mb-0.5">
+      <span>{label}</span>
+      <span>{value} / {max}</span>
+    </div>
+    <div className="w-full bg-slate-700 rounded-full h-2.5 overflow-hidden">
+      <div className={`${colorClass} h-2.5 rounded-full transition-all duration-500`} style={{ width: `${(value / max) * 100}%` }}></div>
+    </div>
+  </div>
+);
 
 // --- Main Shop Component ---
 export function QuantumIndustries() {
   const { closeSpyShop, playerInfo } = useAppContext();
   const [activePage, setActivePage] = useState<'products' | 'aboutUs'>('products');
-  const contentScrollContainerRef = useRef<HTMLDivElement>(null);
   
-  const aboutUsBackgroundElementRef = useRef<HTMLDivElement>(null);
-  const aboutUsContentScrollerRef = useRef<HTMLDivElement>(null); 
+  const contentScrollContainerRef = useRef<HTMLDivElement>(null); // Main scroller for products / container for about us
+  const aboutUsBackgroundElementRef = useRef<HTMLDivElement>(null); // For the sticky background image
+  const aboutUsContentScrollerRef = useRef<HTMLDivElement>(null); // NEW: For scrolling text content of "About Us"
 
   const [selectedProductCategory, setSelectedProductCategory] = useState<ProductCategory | null>(null);
   const [selectedItemBaseName, setSelectedItemBaseName] = useState<string | null>(null);
@@ -63,8 +74,8 @@ export function QuantumIndustries() {
 
   const isSmallHeader = selectedItemBaseName !== null || activePage === 'aboutUs' || !!selectedProductCategory;
 
-
   useEffect(() => {
+    // Reset selections and scroll positions when activePage or selectedProductCategory changes
     setSelectedItemBaseName(null);
     setCurrentViewItemData(null);
     
@@ -73,9 +84,13 @@ export function QuantumIndustries() {
         contentScrollContainerRef.current!.scrollTop = 0;
       });
     }
-    if (aboutUsContentScrollerRef.current && activePage === 'aboutUs') {
-       requestAnimationFrame(() => {
+    if (activePage === 'aboutUs' && aboutUsContentScrollerRef.current) {
+      requestAnimationFrame(() => {
         aboutUsContentScrollerRef.current!.scrollTop = 0;
+      });
+    } else if (activePage === 'products' && contentScrollContainerRef.current) {
+       requestAnimationFrame(() => {
+        contentScrollContainerRef.current!.scrollTop = 0;
       });
     }
   }, [selectedProductCategory, activePage]);
@@ -102,48 +117,46 @@ export function QuantumIndustries() {
 
   useEffect(() => {
     const bgElement = aboutUsBackgroundElementRef.current;
-    const contentScroller = activePage === 'aboutUs' ? aboutUsContentScrollerRef.current : null; // Only use contentScroller if on About Us
+    // The scroll source is now explicitly the aboutUsContentScrollerRef for the 'aboutUs' page
+    const scrollSourceElement = activePage === 'aboutUs' ? aboutUsContentScrollerRef.current : null;
 
-    if (activePage === 'aboutUs' && bgElement && contentScroller) {
-        // Set initial styles for the background element
-        bgElement.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.0), rgba(0,0,0,0.0)), url('/spyshop/about_page_panodark.jpg')`;
-        bgElement.style.backgroundRepeat = 'no-repeat, no-repeat';
-        bgElement.style.backgroundSize = 'cover, auto 100%'; // Overlay covers, image scaled for height
-        bgElement.style.backgroundPosition = '0% 50%, 0% 50%'; // Initial X=0% (left) for image, Y=center
-        // bgElement.style.transition = 'background-position-x 0.05s linear'; // Only transition X if needed
+    if (activePage === 'aboutUs' && bgElement && scrollSourceElement) {
+        bgElement.style.backgroundImage = `url('/spyshop/about_page_panodark.jpg')`; // No overlay gradient
+        bgElement.style.backgroundRepeat = 'no-repeat';
+        bgElement.style.backgroundSize = 'auto 100%'; // Image height matches container, width auto
+        bgElement.style.backgroundPositionX = '0%';
+        bgElement.style.backgroundPositionY = '50%'; // Vertically center
+        // bgElement.style.transition = 'background-position-x 0.05s linear';
 
         const handleScroll = () => {
-            const scrollHeight = contentScroller.scrollHeight - contentScroller.clientHeight;
+            const scrollHeight = scrollSourceElement.scrollHeight - scrollSourceElement.clientHeight;
             if (scrollHeight > 0) {
-                const scrollTop = contentScroller.scrollTop;
+                const scrollTop = scrollSourceElement.scrollTop;
                 const scrollFraction = Math.min(1, Math.max(0, scrollTop / scrollHeight));
-                // Only change X position of the second background layer (the image)
-                bgElement.style.backgroundPosition = `0% 50%, ${scrollFraction * 100}% 50%`; 
+                bgElement.style.backgroundPositionX = `${scrollFraction * 100}%`;
             } else {
-                bgElement.style.backgroundPosition = '0% 50%, 0% 50%'; // Reset if no scroll
+                bgElement.style.backgroundPositionX = '0%';
             }
         };
         
-        requestAnimationFrame(() => {
-            contentScroller.scrollTop = 0; 
-            handleScroll(); 
+        requestAnimationFrame(() => { // Ensure initial position is set after layout
+            handleScroll();
         });
 
-        contentScroller.addEventListener('scroll', handleScroll, { passive: true });
+        scrollSourceElement.addEventListener('scroll', handleScroll, { passive: true });
         
         return () => {
-            contentScroller.removeEventListener('scroll', handleScroll);
+            scrollSourceElement.removeEventListener('scroll', handleScroll);
             if (bgElement) { 
                 bgElement.style.backgroundImage = '';
                 bgElement.style.backgroundPosition = '';
             }
         };
-    } else if (bgElement) {
-        // Clear styles if not on aboutUs page or elements are missing
+    } else if (bgElement) { // Cleanup if not 'aboutUs' or elements are missing
         bgElement.style.backgroundImage = '';
         bgElement.style.backgroundPosition = '';
     }
-}, [activePage]);
+  }, [activePage]);
 
 
   const handleSelectProductCategory = (category: ProductCategory | null) => {
@@ -160,12 +173,10 @@ export function QuantumIndustries() {
 
   const handleSelectItemTile = (itemBaseName: string) => {
     setSelectedItemBaseName(itemBaseName);
-    // Try to find the item in the currently selected category first
     let itemTile = selectedProductCategory?.itemSubCategories
         .flatMap(sc => sc.items)
         .find(it => it.name === itemBaseName);
 
-    // If not found, search all categories (though ideally it should be in the selected one)
     if (!itemTile) {
         for (const cat of SHOP_CATEGORIES) {
             itemTile = cat.itemSubCategories.flatMap(sc => sc.items).find(it => it.name === itemBaseName);
@@ -174,13 +185,7 @@ export function QuantumIndustries() {
     }
     
     const l1Data = itemTile?.getItemLevelData(1);
-
-    if (l1Data) {
-      setSelectedLevel(l1Data.level);
-    } else {
-      // Fallback if L1 data isn't found (shouldn't happen if items are defined correctly)
-      setSelectedLevel(playerInfo?.stats.level as ItemLevel || ITEM_LEVELS[0]);
-    }
+    setSelectedLevel(l1Data ? l1Data.level : (playerInfo?.stats.level as ItemLevel || ITEM_LEVELS[0]));
   };
 
   const handleSelectLevel = (level: ItemLevel) => {
@@ -194,26 +199,22 @@ export function QuantumIndustries() {
 
   const handlePurchase = (itemId: string) => {
     console.log("Purchasing item:", itemId);
-    // Placeholder: Add item to player inventory, deduct ELINT, etc.
   };
 
   const levelsAvailableForItem = useMemo(() => {
     if (!selectedItemBaseName) return [];
-    
     let itemTile: ItemTile | undefined;
     if (selectedProductCategory) {
         itemTile = selectedProductCategory.itemSubCategories
             .flatMap(sc => sc.items)
             .find(it => it.name === selectedItemBaseName);
     }
-    // If not found in current category, or no category selected, search all
     if (!itemTile) {
         for (const cat of SHOP_CATEGORIES) {
             itemTile = cat.itemSubCategories.flatMap(sc => sc.items).find(it => it.name === selectedItemBaseName);
             if (itemTile) break;
         }
     }
-    
     return itemTile ? ITEM_LEVELS.filter(level => !!itemTile?.getItemLevelData(level)) : [];
   }, [selectedItemBaseName, selectedProductCategory]);
 
@@ -231,7 +232,7 @@ export function QuantumIndustries() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -50 }}
             transition={{ duration: 0.3 }}
-            className="h-full"
+            className="h-full" // Ensure SpecificItemDetailView can take full height
           >
             <SpecificItemDetailView
               itemData={currentViewItemData}
@@ -280,23 +281,24 @@ export function QuantumIndustries() {
   };
 
   const renderAboutUsPage = () => {
-    const textShadowStyle = { textShadow: '1px 1px 2px rgba(0,0,0,0.9)' };
+    // This function now just returns the text content.
+    // The background and overlay are handled by parent elements when activePage === 'aboutUs'.
     return (
-        <div className="max-w-3xl mx-auto p-6 md:p-10 text-slate-200">
+        <div className="max-w-3xl mx-auto p-6 md:p-10 text-slate-200" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9), 0 0 5px rgba(0,0,0,0.5)' }}>
             <h2 className="text-4xl font-orbitron text-cyan-300 mb-8 text-center" style={{ textShadow: '0 0 8px rgba(0,255,255,0.7), 0 0 15px rgba(0,255,255,0.3)' }}>About Quantum Industries</h2>
-            <p className="text-lg mb-6 leading-relaxed" style={textShadowStyle}>
+            <p className="text-lg mb-6 leading-relaxed">
             At Quantum Industries, we don't just engineer security solutions; we redefine the very fabric of digital defense and offense. Born from a vision of a hyper-connected, yet fiercely protected, future, we are the pioneers of ELINT security, pushing the boundaries of what's possible in a world where information is the ultimate currency.
             </p>
-            <p className="text-lg mb-6 leading-relaxed" style={textShadowStyle}>
+            <p className="text-lg mb-6 leading-relaxed">
             Our dedicated team of quantum physicists, cybernetic engineers, and tactical strategists aim to develop state-of-the-art Vault Hardware, impenetrable Lock Fortifiers, and revolutionary Nexus Gadgets. From the subtle hum of a Biometric Seal to the mind-bending complexity of a Temporal Flux Lock, our defensive technologies are crafted to withstand the most sophisticated infiltration attempts, ensuring your ELINT remains inviolable.
             </p>
-            <p className="text-lg mb-6 leading-relaxed" style={textShadowStyle}>
+            <p className="text-lg mb-6 leading-relaxed">
             But security isn't just about defense. It's also about strategic advantage. Our Offensive Tools and Assault Tech are designed for those who dare to breach the seemingly unbreachable. Whether you're wielding a precision Code Injector, a heavy-duty Hydraulic Drill, or deploying a game-changing Seismic Charge, Quantum Industries empowers you to navigate the digital battlefield with unparalleled prowess.
             </p>
-             <p className="text-lg mb-6 leading-relaxed" style={textShadowStyle}>
+             <p className="text-lg mb-6 leading-relaxed">
             Our commitment to excellence extends beyond product development. We foster a culture of continuous innovation, ethical conduct, and unwavering support for our operatives. We understand the stakes are high, the shadows deep, and the data invaluable. That's why Quantum Industries is more than a supplier; we are your trusted partner in the clandestine world of ELINT Heist.
             </p>
-            <p className="text-lg mb-6 leading-relaxed" style={textShadowStyle}>
+            <p className="text-lg mb-6 leading-relaxed">
             Explore our catalog, equip yourself with the finest gear, and remember: in the quantum realm, the best defense is a brilliant offense, and the most valuable asset is information meticulously secured or audaciously acquired.
             </p>
             <p className="text-xl text-cyan-400 font-semibold mt-10 text-center font-orbitron" style={{ textShadow: '0 0 8px rgba(0,255,255,0.7), 0 0 15px rgba(0,255,255,0.3)' }}>
@@ -316,7 +318,7 @@ export function QuantumIndustries() {
         transition={{ duration: 0.3, ease: "easeInOut" }}
         className="w-full h-full max-w-2xl md:max-w-4xl lg:max-w-6xl md:h-[90vh] md:max-h-[800px] bg-slate-950 text-slate-100 flex flex-col shadow-2xl shadow-cyan-500/30 border border-cyan-700/50 relative md:rounded-lg"
       >
-        {/* Background patterns for products page */}
+        {/* Background patterns for products page (only when activePage is products) */}
         {activePage === 'products' && (
           <>
             <div
@@ -351,26 +353,30 @@ export function QuantumIndustries() {
           isSmallHeader={isSmallHeader}
         />
         
+        {/* Main scrollable content area */}
         <div ref={contentScrollContainerRef} className="flex-grow overflow-y-auto scrollbar-hide relative z-[10]">
-          {/* Conditionally rendered background (STICKY) for About Us page */}
+          {/* Conditionally rendered STICKY background for About Us page */}
           {activePage === 'aboutUs' && (
             <div
               ref={aboutUsBackgroundElementRef}
-              className="sticky top-0 left-0 w-full h-full z-[1] pointer-events-none" // Stays full height of parent
+              className="sticky top-0 left-0 w-full h-full z-[1] pointer-events-none"
               // Background image styles applied in useEffect
             />
           )}
 
-          {/* Content area - scrolls OVER the sticky background (if 'aboutUs') OR is normal flow */}
-           <div 
-             ref={activePage === 'aboutUs' ? aboutUsContentScrollerRef : null}
-             className={cn(
-               "relative", 
-               activePage === 'aboutUs' ? "z-[4] h-full overflow-y-auto scrollbar-hide" : "z-[3]" 
-             )}
-           >
-            {activePage === 'products' ? renderProductsPage() : renderAboutUsPage()}
-          </div>
+          {/* Content area - wrapper for products or the "About Us" text scroller */}
+          {activePage === 'aboutUs' ? (
+            <div 
+              ref={aboutUsContentScrollerRef} 
+              className="absolute inset-0 overflow-y-auto scrollbar-hide z-[4]" // Absolute, fills parent, scrolls its own content
+            >
+              {renderAboutUsPage()}
+            </div>
+          ) : (
+            <div className="relative z-[3]"> {/* Products page content, normal flow */}
+              {renderProductsPage()}
+            </div>
+          )}
         </div>
 
         {activePage === 'products' && (
@@ -536,18 +542,6 @@ const ItemDisplayGrid: React.FC<ItemDisplayGridProps> = ({ items, onSelectItem }
   );
 };
 
-const ProgressBar: React.FC<{ label: string; value: number; max: number; colorClass?: string }> = ({ label, value, max, colorClass = "bg-green-500" }) => (
-  <div className="mb-2">
-    <div className="flex justify-between text-xs text-slate-400 mb-0.5">
-      <span>{label}</span>
-      <span>{value} / {max}</span>
-    </div>
-    <div className="w-full bg-slate-700 rounded-full h-2.5 overflow-hidden">
-      <div className={`${colorClass} h-2.5 rounded-full transition-all duration-500`} style={{ width: `${(value / max) * 100}%` }}></div>
-    </div>
-  </div>
-);
-
 
 const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({
   itemData, onBack, onPurchase, selectedLevel, onSelectLevel, playerLevel, levelsAvailableForItem
@@ -555,26 +549,23 @@ const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({
   if (!itemData) return <p className="text-center text-slate-400 p-8">Item details not found.</p>;
 
   return (
-    <div className="h-full flex flex-col relative"> 
+    <div className="h-full flex flex-col relative"> {/* Main container is relative for children */}
       <LevelSelectorBar
         selectedLevel={selectedLevel}
         onSelectLevel={onSelectLevel}
         playerLevel={playerLevel}
         levelsAvailable={levelsAvailableForItem}
-        onBack={onBack} // Pass onBack to the LevelSelectorBar
+        onBack={onBack}
       />
       {/* Scrollable content for item details */}
       <div className="flex-grow overflow-y-auto p-1 sm:p-2 md:p-4 scrollbar-hide">
-        {/* Removed explicit back button from here as it's now in LevelSelectorBar */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-4xl mx-auto pt-4 md:pt-2"> {/* Reduced top padding */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-4xl mx-auto pt-4 md:pt-2">
           <div className="flex flex-col items-center">
             <h2 className="text-2xl md:text-3xl font-orbitron text-cyan-300 mb-3 text-center">{itemData.title} <span className="text-orange-400 text-xl">L{itemData.level}</span></h2>
             <motion.div
               className="relative w-full max-w-xs md:max-w-sm aspect-square bg-slate-800/50 border border-slate-700 rounded-lg shadow-xl overflow-hidden mb-4"
-              // Removed onClick and whileHover related to modal
             >
-              <NextImage src={itemData.imageSrc || '/spyshop/items/placeholder_large.png'} alt={itemData.title} layout="fill" objectFit="contain" data-ai-hint="item large"/>
-              {/* Removed Search icon overlay */}
+              <NextImage src={itemData.imageSrc || 'https://placehold.co/400x400.png'} alt={itemData.title} layout="fill" objectFit="contain" data-ai-hint="item large"/>
             </motion.div>
 
             <div className="text-center w-full max-w-xs md:max-w-sm">
@@ -589,7 +580,7 @@ const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({
             </div>
           </div>
 
-          <div className="md:pt-2"> {/* Reduced top padding */}
+          <div className="md:pt-2">
             <div className="bg-slate-800/60 border border-slate-700/80 rounded-lg p-4 shadow-lg">
               <h3 className="text-xl font-orbitron text-sky-300 mb-2">Description</h3>
               <p className="text-sm text-slate-300 mb-4 leading-relaxed">{itemData.description}</p>
@@ -612,7 +603,7 @@ const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({
           </div>
         </div>
       </div>
-      {/* Full Image Modal has been removed */}
     </div>
   );
 };
+
