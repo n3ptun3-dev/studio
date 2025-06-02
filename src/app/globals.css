@@ -493,14 +493,15 @@
     transform: translateZ(0);
   }
 
-  /* NEW: Dedicated class for the static grid overlay (dots) for the SEPARATE DIV */
-  .scanner-grid-overlay-dots {
+  /* NEW: Dedicated class for the static grid overlay (crosses) for the SEPARATE DIV */
+  .scanner-grid-overlay-dots { /* Renaming to reflect new effect, but can keep classname if preferred */
     background-image:
       repeating-linear-gradient(0deg, hsl(var(--foreground-hsl)) 0px 1px, transparent 1px 20px), /* Horizontal lines */
       repeating-linear-gradient(90deg, hsl(var(--foreground-hsl)) 0px 1px, transparent 1px 20px); /* Vertical lines */
     background-size: 20px 20px, 20px 20px; /* Size of each repeating unit */
     background-repeat: repeat, repeat;
-    background-position: 0 0, 10px 10px; /* Static position for grid, vertical lines offset for dot pattern */
+    /* Align both gradients to the same origin to form crosses */
+    background-position: 0 0, 0 0; 
     border-radius: inherit; /* Match parent panel's border radius if applied via JS on .rounded-[inherit] */
   }
 }
