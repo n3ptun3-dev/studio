@@ -202,7 +202,8 @@ function generateItemLevels<T extends Omit<GameItemBase, 'level' | 'id' | 'cost'
   return ITEM_LEVELS.map(level => {
     const levelIndex = level - 1;
     const configForLevel = levelConfigs[levelIndex] || levelConfigs[0]; // Fallback to L1 config if not all defined
-    const itemTitle = `${baseName} ${configForLevel.titleSuffix || `L${level}`}`;
+    // MODIFIED LINE: Ensure itemTitle only contains the base name and any specific suffix, NOT the level
+    const itemTitle = `${baseName}${configForLevel.titleSuffix ? ` ${configForLevel.titleSuffix}` : ''}`;
     
     let specificStrength, specificResistance, specificAttackFactor;
     if ('strength' in baseConfig && typeof baseConfig.strength === 'object' && baseConfig.strength !== null && 'current' in baseConfig.strength) { 
@@ -444,7 +445,7 @@ export const ALL_ITEMS_BY_CATEGORY: Record<ItemCategory, GameItemBase[]> = {
   'Hardware': HARDWARE_ITEMS,
   'Lock Fortifiers': LOCK_FORTIFIER_ITEMS,
   'Infiltration Gear': ENTRY_TOOL_ITEMS,
-  'Nexus Upgrades': NEXUS_UPGRADE_ITEMS,
+  'Nexus Upgrades': NEXUS_UPGRADE_ITEMS, // Corrected from NEXUS_UPGRADES_ITEMS
   'Assault Tech': ASSAULT_TECH_ITEMS,
   'Aesthetic Schemes': AESTHETIC_SCHEME_ITEMS,
 };
