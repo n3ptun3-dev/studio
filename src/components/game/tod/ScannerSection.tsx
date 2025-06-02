@@ -65,32 +65,45 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
   const [nodes, setNodes] = useState<NetworkNode[]>(() => generateNodes());
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [foregroundHslForGrid, setForegroundHslForGrid] = useState('hsl(var(--foreground-hsl))');
 
   const nodeDisplayAreaRef = useRef<HTMLDivElement>(null);
   const animationFrameIdRef = useRef<number | null>(null);
   const currentPositionXRef = useRef(0);
 
   useEffect(() => {
+    // Update the HSL value when the theme changes
+    if (typeof window !== 'undefined') {
+      const rootStyle = getComputedStyle(document.documentElement);
+      const fgHsl = rootStyle.getPropertyValue('--foreground-hsl').trim();
+      if (fgHsl) {
+        setForegroundHslForGrid(`hsl(${fgHsl})`);
+      } else {
+        // Fallback if CSS variable not found (should ideally not happen)
+        setForegroundHslForGrid('hsl(130 80% 70%)');
+      }
+    }
+  }, [currentGlobalTheme, themeVersion]);
+
+
+  useEffect(() => {
     const nodeDisplayArea = nodeDisplayAreaRef.current;
     if (!nodeDisplayArea) return;
 
     let lastTime = 0;
-    // Reset animation parameters when theme changes (due to key change on HolographicPanel)
     currentPositionXRef.current = 0;
     lastTime = 0;
 
     const animateScroll = (timestamp: number) => {
-      if (!nodeDisplayArea) return; // Ensure nodeDisplayArea is still mounted
+      if (!nodeDisplayArea) return; // Check again in case component unmounted
       if (!lastTime) {
         lastTime = timestamp;
       }
       const deltaTime = timestamp - lastTime;
       lastTime = timestamp;
 
-      currentPositionXRef.current -= NODE_AREA_SCROLL_SPEED * (deltaTime / 16.67);
-
-      // Animate only the second layer (map image) of the HolographicPanel's background
-      // The first layer (darkening overlay) is static.
+      currentPositionXRef.current -= NODE_AREA_SCROLL_SPEED * (deltaTime / 16.67); // Normalize speed
+      // Animate only the second layer (map image), keeping the first layer (darkening overlay) static at 0 0
       nodeDisplayArea.style.backgroundPosition = `0 0, ${currentPositionXRef.current}px 0px`;
 
 
@@ -104,7 +117,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
         cancelAnimationFrame(animationFrameIdRef.current);
       }
     };
-  }, [currentGlobalTheme, themeVersion]); // Rerun when theme changes to restart animation correctly
+  }, [currentGlobalTheme, themeVersion]); // Rerun when theme changes to restart animation correctly for new bg
 
   const refreshScanner = () => {
     setIsLoading(true);
@@ -144,6 +157,22 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
   };
 
   const scannerBgClass = getScannerBackgroundClass(currentGlobalTheme);
+
+  // Inline styles for the grid overlay
+  const gridOverlayStyles: React.CSSProperties = {
+    position: 'absolute',
+    inset: '0',
+    backgroundImage: `
+      repeating-linear-gradient(to right, ${foregroundHslForGrid} 0px, ${foregroundHslForGrid} 1px, transparent 1px, transparent 20px),
+      repeating-linear-gradient(to bottom, ${foregroundHslForGrid} 0px, ${foregroundHslForGrid} 1px, transparent 1px, transparent 20px)
+    `,
+    backgroundSize: '20px 20px, 20px 20px', // First for horizontal, second for vertical
+    backgroundPosition: '0px 0px, 10px 10px', // Horizontal lines start at 0,0; Vertical lines start at 10,10 (offset)
+    zIndex: 3,
+    pointerEvents: 'none',
+    borderRadius: 'inherit', // Ensure it respects parent's border radius
+  };
+
 
   return (
     <div className="flex flex-col h-full overflow-hidden p-4 md:p-6">
@@ -186,14 +215,14 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
           key={`node-display-panel-${currentGlobalTheme}-${themeVersion}`} // Key ensures re-mount on theme change
           className={cn(
             "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md map-overlay pad-gloss-effect",
-            scannerBgClass // Applies map image + darkening overlay
+            scannerBgClass
           )}
         >
-          {/* Static Grid Overlay Div - Sits on top of the panel's background and gloss effect */}
-          <div className="absolute inset-0 z-[3] scanner-grid-overlay-dots pointer-events-none rounded-[inherit]"></div>
+          {/* Grid Overlay Div with inline styles - ensure this is a direct child */}
+          <div style={gridOverlayStyles} />
 
 
-          {/* Network Nodes - Rendered on top of the grid overlay */}
+          {/* Network Nodes */}
           {nodes.map(node => (
             <div
               key={node.id}
@@ -267,3 +296,5 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
     </div>
   );
 }
+
+    
