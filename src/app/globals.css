@@ -472,6 +472,7 @@
     background-size: auto 102%, 20px 20px, 20px 20px;
     background-repeat: repeat-x, repeat, repeat;
     background-position: 0 0, 0 0, 10px 10px;
+    transform: translateZ(0);
   }
 
   .map-overlay.holographic-panel.cyphers-background {
@@ -481,6 +482,7 @@
     background-size: auto 102%, 20px 20px, 20px 20px;
     background-repeat: repeat-x, repeat, repeat;
     background-position: 0 0, 0 0, 10px 10px;
+    transform: translateZ(0);
   }
 
   .map-overlay.holographic-panel.shadows-background {
@@ -490,6 +492,7 @@
     background-size: auto 102%, 20px 20px, 20px 20px;
     background-repeat: repeat-x, repeat, repeat;
     background-position: 0 0, 0 0, 10px 10px;
+    transform: translateZ(0);
   }
 }
 @keyframes spin {
