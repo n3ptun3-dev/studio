@@ -51,7 +51,8 @@ export function QuantumIndustries() {
   const [activePage, setActivePage] = useState<'products' | 'aboutUs'>('products');
   const contentScrollContainerRef = useRef<HTMLDivElement>(null);
   
-  const aboutUsBackgroundElementRef = useRef<HTMLDivElement>(null); 
+  const aboutUsBackgroundElementRef = useRef<HTMLDivElement>(null);
+  const aboutUsContentScrollerRef = useRef<HTMLDivElement>(null); // Ref for the "About Us" text scroller
 
   const [selectedProductCategory, setSelectedProductCategory] = useState<ProductCategory | null>(null);
   const [selectedItemBaseName, setSelectedItemBaseName] = useState<string | null>(null);
@@ -64,10 +65,19 @@ export function QuantumIndustries() {
   useEffect(() => {
     setSelectedItemBaseName(null);
     setCurrentViewItemData(null);
+    // Reset scroll for the main container AND the dedicated "About Us" scroller
     if (contentScrollContainerRef.current) {
-      contentScrollContainerRef.current.scrollTop = 0;
+      requestAnimationFrame(() => {
+        contentScrollContainerRef.current!.scrollTop = 0;
+      });
+    }
+    if (activePage === 'aboutUs' && aboutUsContentScrollerRef.current) {
+      requestAnimationFrame(() => {
+        aboutUsContentScrollerRef.current!.scrollTop = 0;
+      });
     }
   }, [selectedProductCategory, activePage]);
+
 
   useEffect(() => {
     if (selectedItemBaseName && selectedProductCategory) {
@@ -86,52 +96,47 @@ export function QuantumIndustries() {
     } else {
       setCurrentViewItemData(null);
     }
-    if (contentScrollContainerRef.current) {
-      contentScrollContainerRef.current.scrollTop = 0;
-    }
+    // Scroll reset handled by the effect above that listens to selectedProductCategory and activePage
   }, [selectedItemBaseName, selectedLevel, selectedProductCategory]);
 
   // Parallax scroll effect for About Us page background
    useEffect(() => {
-    const scroller = contentScrollContainerRef.current;
-    const bgElement = aboutUsBackgroundElementRef.current; // This is the dedicated background div
+    const scroller = activePage === 'aboutUs' ? aboutUsContentScrollerRef.current : null;
+    const bgElement = aboutUsBackgroundElementRef.current;
 
     if (activePage === 'aboutUs' && scroller && bgElement) {
         // Setup background styles for bgElement
+        // Removed the linear-gradient overlay here to make the background fully visible
         bgElement.style.backgroundImage = `url('/spyshop/about_page_panodark.jpg')`;
         bgElement.style.backgroundRepeat = 'no-repeat';
-        // The background image's height will match bgElement's height (which is 100% of scroller's viewport height).
-        // Its width will adjust to maintain aspect ratio.
-        bgElement.style.backgroundSize = 'auto 100%'; 
-        bgElement.style.backgroundPositionX = '0%';    // Start at left
-        bgElement.style.backgroundPositionY = '50%';   // Vertically center image within bgElement
+        bgElement.style.backgroundSize = 'cover'; // Image fills height
+        bgElement.style.backgroundPosition = `0% 50%`;   // Initial: image at left-center
+        // bgElement.style.transition = 'background-position 0.05s linear'; // Optional: for smoother X parallax
 
         const handleScroll = () => {
             const scrollHeight = scroller.scrollHeight - scroller.clientHeight;
             if (scrollHeight > 0) {
                 const scrollTop = scroller.scrollTop;
                 const scrollFraction = Math.min(1, Math.max(0, scrollTop / scrollHeight));
-                // Only change the X position of the background image within bgElement
-                bgElement.style.backgroundPositionX = `${scrollFraction * 100}%`;
+                // Update X position of the background image
+                bgElement.style.backgroundPosition = `${scrollFraction * 100}% 50%`;
             } else {
-                bgElement.style.backgroundPositionX = '0%';
+                bgElement.style.backgroundPosition = `0% 50%`; // Reset if not scrollable
             }
         };
 
         scroller.addEventListener('scroll', handleScroll, { passive: true });
-        handleScroll(); // Initial call
+        handleScroll(); // Initial call to set position
 
         return () => {
             scroller.removeEventListener('scroll', handleScroll);
-            // Optional: Clear styles if bgElement might be reused or if styles leak
-            // bgElement.style.backgroundImage = '';
-            // bgElement.style.backgroundPositionX = '';
         };
     } else if (bgElement) {
-        // Clear background if not on About Us page to prevent it from showing
+        // Clear background if not on About Us page or refs not ready
         bgElement.style.backgroundImage = '';
+        bgElement.style.backgroundPosition = '';
     }
-}, [activePage]); // Dependency: activePage
+}, [activePage]);
 
 
   const handleSelectProductCategory = (category: ProductCategory | null) => {
@@ -195,7 +200,7 @@ export function QuantumIndustries() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -50 }}
             transition={{ duration: 0.3 }}
-            className="h-full"
+            className="h-full" // Ensure it takes up space for internal scrolling if needed
           >
             <SpecificItemDetailView
               itemData={currentViewItemData}
@@ -243,9 +248,8 @@ export function QuantumIndustries() {
   };
 
   const renderAboutUsPage = () => {
-    // This function now just returns the text content.
-    // The background and overlay are handled as siblings within contentScrollContainerRef,
-    // conditionally rendered based on activePage === 'aboutUs'.
+    // This function now just returns the text content structure.
+    // Background and scrolling are handled by its parent wrapper and the sticky background element.
     return (
       <div className="max-w-3xl mx-auto p-6 md:p-10 text-slate-300">
         <h2 className="text-4xl font-orbitron text-cyan-300 mb-8 text-center">About Quantum Industries</h2>
@@ -281,6 +285,34 @@ export function QuantumIndustries() {
         transition={{ duration: 0.3, ease: "easeInOut" }}
         className="w-full h-full max-w-2xl md:max-w-4xl lg:max-w-6xl md:h-[90vh] md:max-h-[800px] bg-slate-950 text-slate-100 flex flex-col shadow-2xl shadow-cyan-500/30 border border-cyan-700/50 relative"
       >
+        {/* Background pattern for Products Page (conditional) - Moved here to be sticky relative to the main shop container */}
+        {activePage === 'products' && (
+          <>
+            <div
+              className="absolute inset-0 z-[1] pointer-events-none" 
+              style={{
+                backgroundImage: "url('/spyshop/bg_quantum_pattern.png')",
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+              }}
+            />
+            <div
+              className="absolute inset-0 z-[2] animate-pulse-grid pointer-events-none" 
+              style={{
+                backgroundImage: "url('/spyshop/hexagons.png')",
+                backgroundSize: 'cover',
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'center',
+              }}
+            />
+            <div className="absolute inset-0 pointer-events-none z-[3] overflow-hidden">
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-700/5 rounded-full blur-3xl animate-float-one opacity-30"></div>
+                <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-700/5 rounded-full blur-3xl animate-float-two opacity-30"></div>
+            </div>
+          </>
+        )}
+
         <NewStickyHeader
           activePage={activePage}
           setActivePage={setActivePage}
@@ -290,53 +322,31 @@ export function QuantumIndustries() {
 
         <div ref={contentScrollContainerRef} className="flex-grow overflow-y-auto scrollbar-hide relative z-[10]">
           
-          {/* Background pattern for Products Page (conditional) */}
-          {activePage === 'products' && (
-            <>
-              <div
-                className="absolute inset-0 z-[1] pointer-events-none" 
-                style={{
-                  backgroundImage: "url('/spyshop/bg_quantum_pattern.png')",
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundRepeat: 'no-repeat',
-                }}
-              />
-              <div
-                className="absolute inset-0 z-[2] animate-pulse-grid pointer-events-none" 
-                style={{
-                  backgroundImage: "url('/spyshop/hexagons.png')",
-                  backgroundSize: 'cover',
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'center',
-                }}
-              />
-              <div className="absolute inset-0 pointer-events-none z-[3] overflow-hidden">
-                  <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-700/5 rounded-full blur-3xl animate-float-one opacity-30"></div>
-                  <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-700/5 rounded-full blur-3xl animate-float-two opacity-30"></div>
-              </div>
-            </>
-          )}
-
-          {/* Background elements for About Us Page - direct children of contentScrollContainerRef */}
+          {/* STICKY Background & Overlay container for "About Us" */}
           {activePage === 'aboutUs' && (
-            <>
-              {/* This div is for the background image. It sticks to the top of contentScrollContainerRef */}
-              <div
-                ref={aboutUsBackgroundElementRef}
-                className="sticky top-0 left-0 w-full h-full z-[1] pointer-events-none"
-                // Background image, size, repeat, position set in useEffect for parallax
-              />
-              {/* This div is the overlay. It also sticks to the top, on top of the background. */}
-              {/* Removed bg-black/70 from here */}
-              <div className="sticky top-0 left-0 w-full h-full z-[2] pointer-events-none" />
-            </>
+            <div
+              ref={aboutUsBackgroundElementRef}
+              className="sticky top-0 left-0 w-full h-full z-[1] pointer-events-none"
+              // Background image, size, repeat, position, and overlay (via linear-gradient) are set in useEffect
+            />
           )}
 
-          {/* Content area - this div's content will determine scroll height for contentScrollContainerRef */}
-          {/* It needs to be above the sticky backgrounds/overlay */}
-          <div className="relative z-[4]"> {/* Ensures content is above background/overlay */}
-            {activePage === 'products' ? renderProductsPage() : renderAboutUsPage()}
+          {/* CONTENT WRAPPER: Relative for products, Absolute for "About Us" to overlay sticky background */}
+          <div
+            className={cn(
+              "relative z-[4]", // Default for products page, flows normally
+              activePage === 'aboutUs' && "absolute inset-0" // For "About Us", covers parent and allows internal scroll
+            )}
+          >
+            {/* INNER SCROLLER: Only active and scrolling for "About Us" */}
+            <div
+              ref={activePage === 'aboutUs' ? aboutUsContentScrollerRef : null}
+              className={cn(
+                activePage === 'aboutUs' && "h-full overflow-y-auto scrollbar-hide"
+              )}
+            >
+              {activePage === 'products' ? renderProductsPage() : renderAboutUsPage()}
+            </div>
           </div>
         </div>
 
@@ -515,8 +525,8 @@ const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({
   if (!itemData) return <p className="text-center text-slate-400 p-8">Item details not found.</p>;
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Conditionally render LevelSelectorBar only if image is NOT full screen */}
+    <div className="h-full flex flex-col"> {/* This is the root for the item detail view */}
+      {/* LevelSelectorBar is only shown when image is NOT full screen */}
       {!isImageModalOpen && (
         <LevelSelectorBar
           selectedLevel={selectedLevel}
@@ -526,36 +536,40 @@ const SpecificItemDetailView: React.FC<SpecificItemDetailViewProps> = ({
         />
       )}
 
-      {/* Scrollable content area for item details OR full image */}
+      {/* This div is the main container for content, becoming the image modal area or the details area */}
       <div className="flex-grow overflow-y-auto p-4 md:p-6 scrollbar-hide relative">
         {isImageModalOpen ? (
+          // Full Image View (within the scrollable area)
           <motion.div
-            key="full-image-view-internal"
+            key="full-image-view-internal" // Ensure key changes for AnimatePresence if used, though not strictly needed here
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
+            exit={{ opacity: 0, scale: 0.9 }} // This exit might not be visible if not using AnimatePresence directly on this
             transition={{ duration: 0.2 }}
             className="relative w-full h-full flex flex-col items-center justify-center min-h-[calc(100%-2rem)]" 
+            // min-h to ensure it tries to fill space, actual size determined by parent flex-grow
           >
             <button
               onClick={() => setIsImageModalOpen(false)}
-              className="absolute top-1 right-1 md:top-2 md:right-2 bg-slate-800/80 text-white rounded-full p-1.5 shadow-lg hover:bg-red-600 transition-colors z-20"
+              className="absolute top-1 right-1 md:top-2 md:right-2 bg-slate-800/80 text-white rounded-full p-1.5 shadow-lg hover:bg-red-600 transition-colors z-20" // z-20 to be above image
               aria-label="Close full image view"
             >
               <X className="w-5 h-5" />
             </button>
+            {/* Container for the image to allow scrolling if image is larger than this container */}
             <div className="relative w-full h-full flex-grow overflow-auto scrollbar-hide rounded-md border border-slate-700/50 bg-slate-900/30">
               <Image
                 src={itemData.imageSrc || '/spyshop/items/placeholder_large.png'}
                 alt={itemData.title}
-                layout="fill"
-                objectFit="contain"
-                className="p-2"
+                layout="fill" // Fill the parent div
+                objectFit="contain" // Contain within bounds, show all image
+                className="p-2" // Optional padding around the image itself
                 data-ai-hint="item closeup"
               />
             </div>
           </motion.div>
         ) : (
+          // Normal Item Details View
           <>
             <button onClick={onBack} className="absolute top-4 left-4 md:top-6 md:left-6 z-20 flex items-center text-sm text-cyan-300 hover:text-cyan-100 bg-slate-800/50 hover:bg-slate-700/70 px-3 py-1.5 rounded-md transition-colors">
               <ArrowLeft className="w-4 h-4 mr-1.5" /> Back
