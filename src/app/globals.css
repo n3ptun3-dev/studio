@@ -466,21 +466,27 @@
 
 @layer components {
   .map-overlay.holographic-panel.observer-background {
-    background-image: url('/backgrounds/World Map Green.jpg'), repeating-linear-gradient(0deg, hsl(var(--foreground-hsl) / 0.8) 0px 1px, transparent 1px 20px), repeating-linear-gradient(90deg, hsl(var(--foreground-hsl) / 0.8) 0px 1px, transparent 1px 20px);
+    background-image: url('/backgrounds/World Map Green.jpg'), 
+                      repeating-linear-gradient(0deg, hsl(var(--foreground-hsl)) 0px 1px, transparent 1px 20px), 
+                      repeating-linear-gradient(90deg, hsl(var(--foreground-hsl)) 0px 1px, transparent 1px 20px);
     background-size: auto 102%, 20px 20px, 20px 20px;
     background-repeat: repeat-x, repeat, repeat;
     background-position: 0 0, 0 0, 10px 10px;
   }
 
   .map-overlay.holographic-panel.cyphers-background {
-    background-image: url('/backgrounds/World Map Blue.jpg'), repeating-linear-gradient(0deg, hsl(var(--foreground-hsl) / 0.8) 0px 1px, transparent 1px 20px), repeating-linear-gradient(90deg, hsl(var(--foreground-hsl) / 0.8) 0px 1px, transparent 1px 20px);
+    background-image: url('/backgrounds/World Map Blue.jpg'), 
+                      repeating-linear-gradient(0deg, hsl(var(--foreground-hsl)) 0px 1px, transparent 1px 20px), 
+                      repeating-linear-gradient(90deg, hsl(var(--foreground-hsl)) 0px 1px, transparent 1px 20px);
     background-size: auto 102%, 20px 20px, 20px 20px;
     background-repeat: repeat-x, repeat, repeat;
     background-position: 0 0, 0 0, 10px 10px;
   }
 
   .map-overlay.holographic-panel.shadows-background {
-    background-image: url('/backgrounds/World Map Red.jpg'), repeating-linear-gradient(0deg, hsl(var(--foreground-hsl) / 0.8) 0px 1px, transparent 1px 20px), repeating-linear-gradient(90deg, hsl(var(--foreground-hsl) / 0.8) 0px 1px, transparent 1px 20px);
+    background-image: url('/backgrounds/World Map Red.jpg'), 
+                      repeating-linear-gradient(0deg, hsl(var(--foreground-hsl)) 0px 1px, transparent 1px 20px), 
+                      repeating-linear-gradient(90deg, hsl(var(--foreground-hsl)) 0px 1px, transparent 1px 20px);
     background-size: auto 102%, 20px 20px, 20px 20px;
     background-repeat: repeat-x, repeat, repeat;
     background-position: 0 0, 0 0, 10px 10px;

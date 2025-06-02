@@ -53,14 +53,14 @@ const getScannerBackgroundClass = (theme: Theme): string => {
       return 'cyphers-background';
     case 'shadows':
       return 'shadows-background';
-    case 'terminal-green': // Default for observer or unknown
+    case 'terminal-green': 
     default:
       return 'observer-background';
   }
 };
 
 export function ScannerSection({ parallaxOffset }: SectionProps) {
-  const { openTODWindow, faction: currentAppContextFaction } = useAppContext(); // currentAppContextFaction might not be needed if theme is source of truth
+  const { openTODWindow } = useAppContext(); 
   const { theme: currentGlobalTheme, themeVersion } = useTheme();
   const [nodes, setNodes] = useState<NetworkNode[]>(() => generateNodes());
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
@@ -76,13 +76,14 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
 
     let lastTime = 0;
     const animateScroll = (timestamp: number) => {
+      if (!nodeDisplayArea) return; 
       if (!lastTime) {
         lastTime = timestamp;
       }
       const deltaTime = timestamp - lastTime;
       lastTime = timestamp;
 
-      currentPositionXRef.current -= NODE_AREA_SCROLL_SPEED * (deltaTime / 16.67);
+      currentPositionXRef.current -= NODE_AREA_SCROLL_SPEED * (deltaTime / 16.67); 
       
       // Update backgroundPosition for the parallax effect of the map (first layer)
       // The grid positions (0px 0px, 10px 10px for 2nd and 3rd layers) are static.
@@ -90,17 +91,19 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
 
       animationFrameIdRef.current = requestAnimationFrame(animateScroll);
     };
+    
+    // Reset animation specific states when the component re-mounts (due to theme change via key)
+    currentPositionXRef.current = 0; // Reset scroll position for new background
+    lastTime = 0; // Reset lastTime for deltaTime calculation
 
-    // Start animation
     animationFrameIdRef.current = requestAnimationFrame(animateScroll);
 
-    // Cleanup animation frame on component unmount
     return () => {
       if (animationFrameIdRef.current) {
         cancelAnimationFrame(animationFrameIdRef.current);
       }
     };
-  }, []); // Empty dependency array: animation setup runs once on mount. Theme changes are handled by class updates.
+  }, [currentGlobalTheme, themeVersion]); // Re-run effect if theme or version changes, causing re-mount via key
 
   const refreshScanner = () => {
     setIsLoading(true);
@@ -146,8 +149,8 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
       <div
         className={cn(
           "flex flex-col flex-grow overflow-hidden rounded-lg",
-          "border border-[var(--hologram-panel-border)]", // Uses JS-set variable for border
-          "shadow-[0_0_15px_var(--hologram-glow-color),_inset_0_0_10px_var(--hologram-glow-color)]", // Uses JS-set variable for shadow
+          "border border-[var(--hologram-panel-border)]", 
+          "shadow-[0_0_15px_var(--hologram-glow-color),_inset_0_0_10px_var(--hologram-glow-color)]", 
           "bg-black/70",
           "max-w-4xl",
           "w-full mx-auto"
@@ -178,13 +181,12 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
 
         <HolographicPanel
           ref={nodeDisplayAreaRef}
-          explicitTheme={currentGlobalTheme} // For border, glow etc. of the panel itself
-          key={`node-display-panel-${currentGlobalTheme}-${themeVersion}`} // Ensures panel re-evaluates if theme changes fundamentally
+          explicitTheme={currentGlobalTheme} 
+          key={`node-display-panel-${currentGlobalTheme}-${themeVersion}`} 
           className={cn(
-            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md map-overlay",
-            scannerBgClass // Apply the theme-specific background class for image and grids
+            "flex-grow relative overflow-hidden p-1 m-2 md:m-3 rounded-md map-overlay pad-gloss-effect", // Added pad-gloss-effect
+            scannerBgClass 
           )}
-          // The style prop for background image and its animation is managed by the useEffect hook & CSS
         >
           {nodes.map((node, i) =>
             i < nodes.length - 1 && (
@@ -222,7 +224,7 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
               className={cn(
                 "absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80",
                 "p-3 md:p-4 z-20 animate-slide-in-bottom font-rajdhani rounded-lg shadow-lg",
-                "bg-black/50 backdrop-blur-sm"
+                "bg-black/50 backdrop-blur-sm" 
               )}
             >
               <h3 className="text-lg font-orbitron mb-2 holographic-text">{selectedNode.title}</h3>
@@ -269,5 +271,3 @@ export function ScannerSection({ parallaxOffset }: SectionProps) {
     </div>
   );
 }
-
-    
