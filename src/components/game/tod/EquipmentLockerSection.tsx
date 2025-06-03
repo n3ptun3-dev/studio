@@ -1,3 +1,4 @@
+
 // src/components/game/tod/EquipmentLockerSection.tsx
 "use client";
 
@@ -10,7 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { getItemById, type GameItemBase, type ItemCategory, type ItemLevel } from '@/lib/game-items';
 import { ITEM_LEVEL_COLORS_CSS_VARS } from '@/lib/constants';
-import { ChevronsUpDown, MousePointerSquare, Layers } from 'lucide-react';
+import { ChevronsUpDown, MousePointerClick, Layers, ChevronLeft, ChevronRight } from 'lucide-react';
 import NextImage from 'next/image'; // Changed from default import to NextImage
 
 const CAROUSEL_ITEM_WIDTH = 160; // width of a single card in px
@@ -20,19 +21,19 @@ const MAX_DISPLAY_ENTITIES = 8;
 // Types for display entities in the carousel
 interface DisplayIndividualItem {
   type: 'item';
-  id: string; 
+  id: string;
   item: GameItemBase;
   inventoryQuantity: number;
-  currentStrength?: number; 
+  currentStrength?: number;
 }
 
 interface DisplayItemStack {
   type: 'stack';
-  id: string; 
-  name: string; 
-  items: DisplayIndividualItem[]; 
-  topItem: GameItemBase; 
-  count: number; 
+  id: string;
+  name: string;
+  items: DisplayIndividualItem[];
+  topItem: GameItemBase;
+  count: number;
   isCategoryStack?: boolean;
   categoryName?: ItemCategory; // Storing the actual category name
 }
@@ -75,7 +76,7 @@ const processInventoryForCarousel = (
   // Handle stack expansion
   if (expandedStackPath.length > 0) {
     const currentStackIdToExpand = expandedStackPath[expandedStackPath.length - 1];
-    
+
     if (currentStackIdToExpand.startsWith('stack_category_')) {
       const category = currentStackIdToExpand.replace('stack_category_', '') as ItemCategory;
       const itemsInCategory = detailedInventoryItems.filter(di => di.item.category === category);
@@ -96,7 +97,7 @@ const processInventoryForCarousel = (
       // Expanding an item-type stack shows individual level variants
       const [,, categoryPart, ...nameParts] = currentStackIdToExpand.split('_');
       const itemName = nameParts.join(' ').replace(/\b\w/g, l => l.toUpperCase()); // Reconstruct name
-      
+
       return detailedInventoryItems.filter(di => di.item.name === itemName && di.item.category === categoryPart as ItemCategory);
     }
   }
@@ -155,7 +156,7 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
     setActiveIndex(0);
     setCarouselOffset(0);
   }, [carouselItems.length]);
-  
+
   const navigateCarousel = (direction: number) => {
     if (carouselItems.length === 0) return;
     setActiveIndex(prev => {
@@ -166,7 +167,7 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
 
   useEffect(() => {
     if (carouselRef.current) {
-      const targetOffset = -activeIndex * (CAROUSEL_ITEM_WIDTH + CAROUSEL_ITEM_GAP) + 
+      const targetOffset = -activeIndex * (CAROUSEL_ITEM_WIDTH + CAROUSEL_ITEM_GAP) +
                            (carouselRef.current.clientWidth / 2 - CAROUSEL_ITEM_WIDTH / 2);
       setCarouselOffset(targetOffset);
     }
@@ -200,13 +201,13 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
     openTODWindow(
       item.name,
       <div className="p-4 font-rajdhani text-center space-y-3">
-        <NextImage 
-            src={item.imageSrc || `https://placehold.co/128x128/000000/FFFFFF.png?text=${item.name.substring(0,3)}`} 
-            alt={item.name} 
-            width={128} height={128} 
+        <NextImage
+            src={item.imageSrc || `https://placehold.co/128x128/000000/FFFFFF.png?text=${item.name.substring(0,3)}`}
+            alt={item.name}
+            width={128} height={128}
             className="mx-auto rounded-md mb-2 object-contain bg-black/20 p-1"
             data-ai-hint={`${item.category} icon large`}
-            unoptimized 
+            unoptimized
         />
         <p className="text-lg font-semibold" style={{color: `hsl(${ITEM_LEVEL_COLORS_CSS_VARS[item.level]})`}}>{item.name} - L{item.level}</p>
         <p className="text-sm text-muted-foreground">{item.description}</p>
@@ -225,7 +226,7 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
       { showCloseButton: true }
     );
   };
-  
+
   const handleDragEnd = (e: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     isDraggingRef.current = false;
     const velocityThreshold = 200;
@@ -237,7 +238,7 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
     } else {
         // Snap back to current activeIndex if not enough drag
          if (carouselRef.current) {
-            const targetOffset = -activeIndex * (CAROUSEL_ITEM_WIDTH + CAROUSEL_ITEM_GAP) + 
+            const targetOffset = -activeIndex * (CAROUSEL_ITEM_WIDTH + CAROUSEL_ITEM_GAP) +
                                  (carouselRef.current.clientWidth / 2 - CAROUSEL_ITEM_WIDTH / 2);
             setCarouselOffset(targetOffset);
         }
@@ -251,7 +252,7 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
     >
       <div className="flex-shrink-0 flex justify-between items-center mb-2 md:mb-4 px-2">
         <h2 className="text-xl md:text-2xl font-orbitron holographic-text">
-          {expandedStackPath.length > 0 
+          {expandedStackPath.length > 0
             ? expandedStackPath[expandedStackPath.length -1].replace('stack_category_', '').replace('stack_item_', '').replace(/_/g, ' ')
             : "Equipment Locker"}
         </h2>
@@ -261,13 +262,13 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
                     <Layers className="w-4 h-4 md:w-5 md:h-5 transform " />
                 </HolographicButton>
             )}
-             <HolographicButton 
-                onClick={() => carouselItems.length > 0 && handleCardTapOrSwipeDown(carouselItems[activeIndex])} 
-                className="!p-1.5 md:!p-2" 
+             <HolographicButton
+                onClick={() => carouselItems.length > 0 && handleCardTapOrSwipeDown(carouselItems[activeIndex])}
+                className="!p-1.5 md:!p-2"
                 title="Select / Expand Stack"
                 disabled={carouselItems.length === 0}
             >
-                <MousePointerSquare className="w-4 h-4 md:w-5 md:h-5" />
+                <MousePointerClick className="w-4 h-4 md:w-5 md:h-5" />
             </HolographicButton>
         </div>
       </div>
@@ -293,7 +294,7 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
                 const itemForStyling = entity.type === 'item' ? entity.item : entity.topItem;
                 const itemColorVar = ITEM_LEVEL_COLORS_CSS_VARS[itemForStyling.level] || '--foreground';
                 const itemColor = `hsl(${itemColorVar})`;
-                
+
                 const scale = isActive ? 1.05 : 0.9;
                 const opacity = isActive ? 1 : 0.65;
                 const zIndex = isActive ? carouselItems.length : carouselItems.length - Math.abs(index - activeIndex);
@@ -324,7 +325,7 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
                         style={{
                             borderColor: itemColor,
                             background: `
-                                linear-gradient(145deg, hsla(var(--card-hsl), 0.95), hsla(var(--card-hsl), 0.75)), 
+                                linear-gradient(145deg, hsla(var(--card-hsl), 0.95), hsla(var(--card-hsl), 0.75)),
                                 radial-gradient(circle at top left, ${itemColor}0A, transparent 70%),
                                 radial-gradient(circle at bottom right, ${itemColor}1A, transparent 60%)
                             `,
@@ -332,11 +333,11 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
                         }}
                     >
                         {entity.type === 'stack' && entity.isCategoryStack && (
-                            <div 
+                            <div
                                 className="absolute -top-[13px] left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full border text-xs font-semibold"
                                 style={{
                                     backgroundColor: `hsl(var(--background-hsl))`,
-                                    borderColor: itemColor, 
+                                    borderColor: itemColor,
                                     color: itemColor,
                                     boxShadow: `0 2px 5px ${itemColor}50`
                                 }}
@@ -411,4 +412,3 @@ function groupBy<T>(array: T[], keyAccessor: (item: T) => string): Record<string
     return result;
   }, {} as Record<string, T[]>);
 }
-
