@@ -11,8 +11,8 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { getItemById, type GameItemBase, type ItemCategory, type ItemLevel } from '@/lib/game-items';
 import { ITEM_LEVEL_COLORS_CSS_VARS } from '@/lib/constants';
-import { ChevronsUpDown, MousePointerClick, Layers, ChevronLeft, ChevronRight } from 'lucide-react';
-import NextImage from 'next/image'; // Changed from default import to NextImage
+import { Layers, MousePointerClick, ChevronLeft, ChevronRight, ShoppingCart } from 'lucide-react'; // Added ShoppingCart
+import NextImage from 'next/image';
 
 const CAROUSEL_ITEM_WIDTH = 160; // width of a single card in px
 const CAROUSEL_ITEM_GAP = 20; // gap between cards in px
@@ -42,7 +42,6 @@ type CarouselDisplayEntity = DisplayIndividualItem | DisplayItemStack;
 
 const findHighestLevelItem = (items: DisplayIndividualItem[]): GameItemBase => {
   if (!items || items.length === 0) {
-    // Fallback, though this case should ideally be prevented by upstream logic
     return { id:'placeholder', name:'No Item', description:'Empty stack', level:1, cost:0, scarcity:'Common', category:'Hardware', colorVar:1, dataAiHint: "placeholder item"};
   }
   return items.reduce((highest, current) => (current.item.level > highest.item.level ? current.item : highest.item), items[0].item);
@@ -50,7 +49,7 @@ const findHighestLevelItem = (items: DisplayIndividualItem[]): GameItemBase => {
 
 const processInventoryForCarousel = (
   inventory: Record<string, PlayerInventoryItem>,
-  expandedStackPath: string[] = [] // e.g., ['stack_category_Hardware', 'stack_item_Cypher Lock']
+  expandedStackPath: string[] = []
 ): CarouselDisplayEntity[] => {
   if (!inventory || Object.keys(inventory).length === 0) {
     return [];
@@ -62,7 +61,7 @@ const processInventoryForCarousel = (
       if (!baseItem) return null;
       return {
         type: 'item' as 'item',
-        id: invItem.id, // Use the specific item ID (e.g., basic_pick_l1)
+        id: invItem.id,
         item: baseItem,
         inventoryQuantity: invItem.quantity,
         currentStrength: invItem.currentStrength,
@@ -73,15 +72,12 @@ const processInventoryForCarousel = (
 
   if (detailedInventoryItems.length === 0) return [];
 
-  // Handle stack expansion
   if (expandedStackPath.length > 0) {
     const currentStackIdToExpand = expandedStackPath[expandedStackPath.length - 1];
 
     if (currentStackIdToExpand.startsWith('stack_category_')) {
       const category = currentStackIdToExpand.replace('stack_category_', '') as ItemCategory;
       const itemsInCategory = detailedInventoryItems.filter(di => di.item.category === category);
-
-      // Group these items by their base name to form sub-stacks (e.g., "Cypher Lock" stack)
       const groupedByName = groupBy(itemsInCategory, (di) => di.item.name);
       return Object.entries(groupedByName).map(([name, itemsInNameGroup]): DisplayItemStack => ({
         type: 'stack',
@@ -94,21 +90,16 @@ const processInventoryForCarousel = (
       })).sort((a,b) => a.name.localeCompare(b.name));
 
     } else if (currentStackIdToExpand.startsWith('stack_item_')) {
-      // Expanding an item-type stack shows individual level variants
       const [,, categoryPart, ...nameParts] = currentStackIdToExpand.split('_');
-      const itemName = nameParts.join(' ').replace(/\b\w/g, l => l.toUpperCase()); // Reconstruct name
-
+      const itemName = nameParts.join(' ').replace(/\b\w/g, l => l.toUpperCase());
       return detailedInventoryItems.filter(di => di.item.name === itemName && di.item.category === categoryPart as ItemCategory);
     }
   }
 
-  // Initial Grouping Strategy
-  // 1. If total distinct items (name + level variants) <= MAX_DISPLAY_ENTITIES, show individually
   if (detailedInventoryItems.length <= MAX_DISPLAY_ENTITIES) {
     return detailedInventoryItems;
   }
 
-  // 2. Group by item base name (e.g., all "Cypher Lock" regardless of level)
   const groupedByName = groupBy(detailedInventoryItems, (di) => di.item.name);
   let nameStacks: DisplayItemStack[] = Object.entries(groupedByName).map(([name, items]): DisplayItemStack => ({
     type: 'stack',
@@ -124,7 +115,6 @@ const processInventoryForCarousel = (
     return nameStacks.sort((a,b) => a.name.localeCompare(b.name));
   }
 
-  // 3. Group by category
   const groupedByCategory = groupBy(detailedInventoryItems, (di) => di.item.category);
   return Object.entries(groupedByCategory).map(([categoryName, items]): DisplayItemStack => ({
     type: 'stack',
@@ -140,7 +130,7 @@ const processInventoryForCarousel = (
 
 
 export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: number }) {
-  const { playerInventory, openTODWindow } = useAppContext();
+  const { playerInventory, openTODWindow, openSpyShop } = useAppContext(); // Added openSpyShop
   const { theme } = useTheme();
 
   const [expandedStackPath, setExpandedStackPath] = useState<string[]>([]);
@@ -177,7 +167,7 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
   const handleCardTapOrSwipeDown = (entity: CarouselDisplayEntity) => {
     if (entity.type === 'stack') {
       setExpandedStackPath(prev => [...prev, entity.id]);
-      setActiveIndex(0); // Reset index for new view
+      setActiveIndex(0); 
     } else if (entity.type === 'item') {
       openItemActionModal(entity);
     }
@@ -186,7 +176,7 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
   const handleSwipeUpToCollapse = () => {
     if (expandedStackPath.length > 0) {
       setExpandedStackPath(prev => prev.slice(0, -1));
-      setActiveIndex(0); // Reset index for new view
+      setActiveIndex(0); 
     }
   };
 
@@ -233,10 +223,9 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
     const offsetThreshold = CAROUSEL_ITEM_WIDTH / 3;
 
     if (Math.abs(info.velocity.x) > velocityThreshold || Math.abs(info.offset.x) > offsetThreshold) {
-        if (info.offset.x < 0) navigateCarousel(1); // Swipe left, move to next
-        else navigateCarousel(-1); // Swipe right, move to previous
+        if (info.offset.x < 0) navigateCarousel(1); 
+        else navigateCarousel(-1); 
     } else {
-        // Snap back to current activeIndex if not enough drag
          if (carouselRef.current) {
             const targetOffset = -activeIndex * (CAROUSEL_ITEM_WIDTH + CAROUSEL_ITEM_GAP) +
                                  (carouselRef.current.clientWidth / 2 - CAROUSEL_ITEM_WIDTH / 2);
@@ -270,6 +259,13 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
             >
                 <MousePointerClick className="w-4 h-4 md:w-5 md:h-5" />
             </HolographicButton>
+            <HolographicButton
+                onClick={openSpyShop}
+                className="!p-1.5 md:!p-2"
+                title="Open Spy Shop"
+            >
+                <ShoppingCart className="w-4 h-4 md:w-5 md:h-5" />
+            </HolographicButton>
         </div>
       </div>
 
@@ -280,14 +276,14 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
       ) : (
         <div ref={carouselRef} className="flex-grow flex items-center justify-start relative overflow-hidden select-none">
             <motion.div
-                className="flex absolute h-full items-center" // Ensure items are vertically centered
+                className="flex absolute h-full items-center" 
                 drag="x"
                 dragConstraints={carouselRef}
                 onDragStart={() => isDraggingRef.current = true}
                 onDragEnd={handleDragEnd}
                 animate={{ x: carouselOffset }}
                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                style={{ paddingLeft: CAROUSEL_ITEM_GAP / 2, paddingRight: CAROUSEL_ITEM_GAP / 2 }} // For centering first/last
+                style={{ paddingLeft: CAROUSEL_ITEM_GAP / 2, paddingRight: CAROUSEL_ITEM_GAP / 2 }} 
             >
             {carouselItems.map((entity, index) => {
                 const isActive = index === activeIndex;
@@ -305,7 +301,7 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
                     className="flex-shrink-0 origin-center cursor-pointer"
                     style={{
                         width: CAROUSEL_ITEM_WIDTH,
-                        height: CAROUSEL_ITEM_WIDTH * 1.5, // Aspect ratio for card
+                        height: CAROUSEL_ITEM_WIDTH * 1.5, 
                         marginRight: index === carouselItems.length -1 ? 0 : CAROUSEL_ITEM_GAP,
                     }}
                     animate={{ scale, opacity, zIndex }}
@@ -382,7 +378,7 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
                                 style={{ '--progress-color': itemColor } as React.CSSProperties}
                             />
                             </div>
-                        ) : <div className="h-[calc(0.375rem+0.375rem)] flex-shrink-0"></div> /* Placeholder for height of progress bar area */ }
+                        ) : <div className="h-[calc(0.375rem+0.375rem)] flex-shrink-0"></div> }
                     </div>
                 </motion.div>
                 );

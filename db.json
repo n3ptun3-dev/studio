@@ -1,3 +1,4 @@
+
 {
   "players": [
     {
@@ -22,10 +23,11 @@
         "elintSpentSpyShop": 750,
         "hasPlacedFirstLock": true
       },
-      "inventory": [
-        { "itemId": "item_stealth_suit", "quantity": 1, "stats": { "stealthBoost": 5 } },
-        { "itemId": "item_hacking_tool", "quantity": 2, "stats": { "hackingBoost": 3 } }
-      ],
+      "inventory": {
+        "basic_pick_l1": { "id": "basic_pick_l1", "quantity": 1 },
+        "cypher_lock_l1": { "id": "cypher_lock_l1", "quantity": 4 },
+        "reinforced_deadbolt_l2": { "id": "reinforced_deadbolt_l2", "quantity": 2 }
+      },
       "vault": [
         { "id": "lock_slot_0", "type": "lock", "item": null },
         { "id": "lock_slot_1", "type": "lock", "item": null },
