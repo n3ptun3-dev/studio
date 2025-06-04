@@ -11,14 +11,14 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { getItemById, type GameItemBase, type ItemCategory, type ItemLevel } from '@/lib/game-items';
 import { ITEM_LEVEL_COLORS_CSS_VARS } from '@/lib/constants';
-import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Layers, ShoppingCart, XCircle } from 'lucide-react'; // Added XCircle for collapse
+import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Layers, ShoppingCart, XCircle, ArrowLeft } from 'lucide-react';
 import NextImage from 'next/image';
 
-const CAROUSEL_ITEM_WIDTH = 160; // width of a single card in px
-const CAROUSEL_ITEM_GAP = 20; // gap between cards in px
-const EXPANDED_CHILD_ITEM_WIDTH = 120; // width for items inside an expanded stack
-const EXPANDED_CHILD_ITEM_GAP = 10;
-const MAX_DISPLAY_ENTITIES = 8;
+const CAROUSEL_ITEM_WIDTH = 160;
+const CAROUSEL_ITEM_GAP = 20;
+const OVERLAY_CHILD_ITEM_WIDTH = 130;
+const OVERLAY_CHILD_ITEM_GAP = 15;
+const MAX_DISPLAY_ENTITIES_MAIN_CAROUSEL = 8;
 
 interface DisplayIndividualItem {
   type: 'item';
@@ -30,15 +30,13 @@ interface DisplayIndividualItem {
 
 interface DisplayItemStack {
   type: 'stack';
-  id: string; // e.g., stack_category_Hardware, stack_item_Hardware_cypher_lock
-  name: string; // Category name or base item name
-  items: DisplayIndividualItem[]; // All individual items that make up this stack
+  id: string;
+  name: string;
+  items: DisplayIndividualItem[];
   topItem: GameItemBase;
   count: number;
-  isCategoryStack?: boolean; // True if this stack represents a whole category
-  categoryName?: ItemCategory; // The category this stack belongs to or represents
-  isExpanded?: boolean; // New: True if this stack is currently rendering its children
-  childrenToDisplay?: CarouselDisplayEntity[]; // New: Children to render if expanded
+  isCategoryStack?: boolean;
+  categoryName?: ItemCategory;
 }
 
 type CarouselDisplayEntity = DisplayIndividualItem | DisplayItemStack;
@@ -61,7 +59,6 @@ const findHighestLevelItem = (items: DisplayIndividualItem[]): GameItemBase => {
   }, validItems[0]?.item || FALLBACK_GAME_ITEM);
 };
 
-// Helper: Simple groupBy function
 function groupBy<T>(array: T[], keyAccessor: (item: T) => string): Record<string, T[]> {
   return array.reduce((result, currentValue) => {
     const groupKey = keyAccessor(currentValue);
@@ -72,17 +69,18 @@ function groupBy<T>(array: T[], keyAccessor: (item: T) => string): Record<string
 
 const processInventoryForCarousel = (
   inventory: Record<string, PlayerInventoryItem>,
-  expandedStackPath: string[] = []
+  currentExpansionPath: string[] = []
 ): CarouselDisplayEntity[] => {
   if (!inventory || Object.keys(inventory).length === 0) return [];
 
-  const detailedInventoryItems: DisplayIndividualItem[] = Object.entries(inventory)
+  const allDetailedInventoryItems: DisplayIndividualItem[] = Object.entries(inventory)
     .flatMap(([itemId, invItem]) => {
       const baseItem = getItemById(itemId);
       if (!baseItem) return [];
+      // Create one DisplayIndividualItem per actual instance for accurate counting and individual display
       return Array.from({ length: invItem.quantity }, (_, index) => ({
         type: 'item' as 'item',
-        id: `${itemId}_instance_${index}`, // Ensure unique ID for each instance
+        id: `${itemId}_instance_${index}`,
         item: baseItem,
         inventoryQuantity: 1, // Each instance is 1
         currentStrength: invItem.currentStrength,
@@ -91,20 +89,18 @@ const processInventoryForCarousel = (
     .filter((item): item is DisplayIndividualItem => !!item && !!item.item)
     .sort((a, b) => b.item.level - a.item.level || a.item.name.localeCompare(b.item.name));
 
-  if (detailedInventoryItems.length === 0) return [];
+  if (allDetailedInventoryItems.length === 0) return [];
 
-  let currentLevelEntities: CarouselDisplayEntity[] = [];
+  let itemsToProcess = allDetailedInventoryItems;
 
-  if (expandedStackPath.length > 0) {
-    const currentStackIdToExpand = expandedStackPath[expandedStackPath.length - 1];
-    const parentStackId = expandedStackPath.length > 1 ? expandedStackPath[expandedStackPath.length - 2] : null;
-
-    if (currentStackIdToExpand.startsWith('stack_category_')) {
-      const category = currentStackIdToExpand.replace('stack_category_', '') as ItemCategory;
-      const itemsInCategory = detailedInventoryItems.filter(di => di.item.category === category);
-      const groupedByName = groupBy(itemsInCategory, (di) => di.item.name);
-      
-      currentLevelEntities = Object.entries(groupedByName).map(([name, itemsInNameGroup]): DisplayItemStack => ({
+  if (currentExpansionPath.length > 0) {
+    const deepestStackId = currentExpansionPath[currentExpansionPath.length - 1];
+    if (deepestStackId.startsWith('stack_category_')) {
+      const category = deepestStackId.replace('stack_category_', '') as ItemCategory;
+      itemsToProcess = allDetailedInventoryItems.filter(di => di.item.category === category);
+      // Now, for this category, group by base item name to form item stacks
+      const groupedByName = groupBy(itemsToProcess, (di) => di.item.name);
+      return Object.entries(groupedByName).map(([name, itemsInNameGroup]): DisplayItemStack => ({
         type: 'stack',
         id: `stack_item_${category}_${name.toLowerCase().replace(/\s+/g, '_').replace(/[()]/g, '')}`,
         name: name,
@@ -114,53 +110,23 @@ const processInventoryForCarousel = (
         categoryName: category,
       })).sort((a,b) => a.name.localeCompare(b.name));
 
-    } else if (currentStackIdToExpand.startsWith('stack_item_')) {
-      const stackIdParts = currentStackIdToExpand.split('_');
+    } else if (deepestStackId.startsWith('stack_item_')) {
+      const stackIdParts = deepestStackId.split('_');
       const categoryFromId = stackIdParts[2] as ItemCategory;
       const baseNameFromId = stackIdParts.slice(3).map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
-      currentLevelEntities = detailedInventoryItems.filter(di => di.item.name === baseNameFromId && di.item.category === categoryFromId);
+      // This is a stack of identical items; expand to individual items
+      return allDetailedInventoryItems.filter(di => di.item.name === baseNameFromId && di.item.category === categoryFromId);
     }
-     // If we are deep in an expansion, mark the parent stack as expanded and set its children
-     if (parentStackId) {
-        const grandParentPath = expandedStackPath.slice(0, -2);
-        const parentLevelEntities = processInventoryForCarousel(inventory, grandParentPath); // Get entities at parent level
-        return parentLevelEntities.map(entity => {
-            if (entity.id === parentStackId && entity.type === 'stack') {
-                // Find the specific child stack that is now expanded
-                const expandedChildStack = (entity.items // Assuming items are individual items here, need to re-group if parent was category
-                    .filter(item => item.item.name === currentLevelEntities[0]?.item?.name) // Find items matching the current expansion
-                );
-                // This part is tricky: processInventoryForCarousel returns the *current* level.
-                // We need to inject the `isExpanded` and `childrenToDisplay` into the *parent's* representation.
-                // This logic might need rethinking for deep in-place expansion.
-                // For now, returning currentLevelEntities for the deepest expansion.
-                return {
-                    ...entity,
-                    isExpanded: true, // Mark the parent as expanded
-                    // childrenToDisplay: currentLevelEntities, // THIS IS WHERE THE MAGIC HAPPENS
-                    // The children are actually what currentLevelEntities represent for the *parent's context*
-                    // This recursive structure is a bit complex. Let's simplify for now.
-                    // For the in-place version, the stack being expanded will have its children processed differently.
-                } as DisplayItemStack;
-
-            }
-            return entity;
-        });
-        // This indicates a deeper expansion. The `processInventoryForCarousel` logic
-        // as structured returns the items for the *current deepest path*.
-        // The in-place expansion will require the *parent stack* to know it's expanded and what children to render.
-        return currentLevelEntities; // This is correct for showing the items of the deepest stack.
-    }
-    return currentLevelEntities;
-
-  } else { // Root level (no expansion path)
-    const groupedByNameForRoot = groupBy(detailedInventoryItems, (di) => di.item.name);
+    return []; // Should not happen if path is valid
+  } else {
+    // Root level: group by base item name first
+    const groupedByNameForRoot = groupBy(itemsToProcess, (di) => di.item.name);
     const rootEntitiesByName: CarouselDisplayEntity[] = [];
     Object.entries(groupedByNameForRoot).forEach(([name, items]) => {
       if (items.length === 1) {
-        rootEntitiesByName.push(items[0]);
+        rootEntitiesByName.push(items[0]); // Single item, show directly
       } else {
-        rootEntitiesByName.push({
+        rootEntitiesByName.push({ // Multiple of same item, create a stack
           type: 'stack',
           id: `stack_item_${items[0].item.category}_${name.toLowerCase().replace(/\s+/g, '_').replace(/[()]/g, '')}`,
           name: name,
@@ -172,21 +138,21 @@ const processInventoryForCarousel = (
       }
     });
 
-    if (rootEntitiesByName.length <= MAX_DISPLAY_ENTITIES) {
+    if (rootEntitiesByName.length <= MAX_DISPLAY_ENTITIES_MAIN_CAROUSEL) {
       return rootEntitiesByName.sort((a, b) => {
-          const nameA = a.type === 'item' ? a.item.name : a.name;
-          const nameB = b.type === 'item' ? b.item.name : b.name;
-          return nameA.localeCompare(nameB);
+        const nameA = a.type === 'item' ? a.item.name : a.name;
+        const nameB = b.type === 'item' ? b.item.name : b.name;
+        return nameA.localeCompare(nameB);
       });
     }
 
-    // If more than MAX_DISPLAY_ENTITIES by name, group by category
-    const groupedByCategory = groupBy(detailedInventoryItems, (di) => di.item.category);
+    // If still too many, group by category
+    const groupedByCategory = groupBy(itemsToProcess, (di) => di.item.category);
     return Object.entries(groupedByCategory).map(([categoryName, items]): DisplayItemStack => ({
       type: 'stack',
       id: `stack_category_${categoryName as ItemCategory}`,
       name: categoryName as ItemCategory,
-      items: items,
+      items: items, // All items in this category
       topItem: findHighestLevelItem(items),
       count: items.length,
       isCategoryStack: true,
@@ -198,92 +164,76 @@ const processInventoryForCarousel = (
 
 export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: number }) {
   const { playerInventory, openTODWindow, openSpyShop, faction } = useAppContext();
-  const { theme } = useTheme(); // For themed backgrounds
+  const { theme } = useTheme();
 
-  const [expandedStackPath, setExpandedStackPath] = useState<string[]>([]);
+  const [mainCarouselItems, setMainCarouselItems] = useState<CarouselDisplayEntity[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
   const [carouselOffset, setCarouselOffset] = useState(0);
-
-  // Determine primary HSL for themed background
-  const getPrimaryHslForTheme = useCallback(() => {
-    // This needs access to the actual HSL values from ThemeContext or globals.css
-    // For simplicity, I'll use a placeholder logic based on faction.
-    // A robust solution would involve ThemeContext providing these values.
-    if (faction === 'Cyphers') return 'var(--primary-hsl)'; // Assumes primary HSL is set for cyphers
-    if (faction === 'Shadows') return 'var(--primary-hsl)'; // Assumes primary HSL is set for shadows
-    return 'var(--primary-hsl)'; // Default for Observer or terminal-green
-  }, [faction]);
-
-
-  const carouselItems = useMemo(() => {
-    const baseItems = processInventoryForCarousel(playerInventory, expandedStackPath);
-    // If a stack is selected and expanded, we modify its representation
-    if (selectedEntityId && expandedStackPath.includes(selectedEntityId)) {
-      return baseItems.map(entity => {
-        if (entity.id === selectedEntityId && entity.type === 'stack') {
-          // Get children for this expanded stack
-          const children = processInventoryForCarousel(playerInventory, [...expandedStackPath]);
-          return { ...entity, isExpanded: true, childrenToDisplay: children };
-        }
-        return entity;
-      });
-    }
-    return baseItems;
-  }, [playerInventory, expandedStackPath, selectedEntityId]);
-
+  const [expandedStackPath, setExpandedStackPath] = useState<string[]>([]);
+  
+  const [isOverlayOpen, setIsOverlayOpen] = useState(false);
+  const [overlayItems, setOverlayItems] = useState<CarouselDisplayEntity[]>([]);
+  const [overlayTitle, setOverlayTitle] = useState<string>("Expanded View");
 
   const carouselRef = useRef<HTMLDivElement>(null);
+  const overlayContentRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
+  const mainCarouselSnapshotRef = useRef<{ activeIndex: number, offset: number } | null>(null);
+
 
   useEffect(() => {
-    // When carousel items change (e.g., stack expansion/collapse),
-    // try to maintain a sensible activeIndex or reset if necessary.
-    if (carouselItems.length > 0) {
-        const newIndex = Math.max(0, Math.min(carouselItems.length - 1, activeIndex));
-        if (newIndex !== activeIndex) {
-            setActiveIndex(newIndex);
-        }
-    } else {
+    const newMainItems = processInventoryForCarousel(playerInventory, []);
+    setMainCarouselItems(newMainItems);
+    if (newMainItems.length > 0) {
         setActiveIndex(0);
+    } else {
+        setActiveIndex(0); // Or handle empty state appropriately
     }
-  }, [carouselItems.length]);
+    // Reset overlay when main inventory changes fundamentally
+    setIsOverlayOpen(false);
+    setExpandedStackPath([]);
+    setSelectedEntityId(null);
+  }, [playerInventory]);
 
-
-  const navigateCarousel = useCallback((direction: number) => {
-    if (carouselItems.length === 0) return;
-    setActiveIndex(prev => {
-      const newIndex = prev + direction;
-      return Math.max(0, Math.min(carouselItems.length - 1, newIndex));
-    });
-  }, [carouselItems.length]);
 
   useEffect(() => {
-    if (carouselRef.current && carouselItems.length > 0) {
-      const currentEntity = carouselItems[activeIndex];
-      let currentItemWidth = CAROUSEL_ITEM_WIDTH;
-      if (currentEntity?.type === 'stack' && currentEntity.isExpanded && currentEntity.childrenToDisplay) {
-        // Calculate width for expanded stack
-        currentItemWidth = (currentEntity.childrenToDisplay.length * (EXPANDED_CHILD_ITEM_WIDTH + EXPANDED_CHILD_ITEM_GAP)) - EXPANDED_CHILD_ITEM_GAP + 40; // + padding
-      }
-
-      let totalWidthBeforeActive = 0;
-      for (let i = 0; i < activeIndex; i++) {
-        const entity = carouselItems[i];
-        if (entity.type === 'stack' && entity.isExpanded && entity.childrenToDisplay) {
-          totalWidthBeforeActive += (entity.childrenToDisplay.length * (EXPANDED_CHILD_ITEM_WIDTH + EXPANDED_CHILD_ITEM_GAP)) - EXPANDED_CHILD_ITEM_GAP + 40 + CAROUSEL_ITEM_GAP;
+    if (isOverlayOpen) {
+      const newOverlayItems = processInventoryForCarousel(playerInventory, expandedStackPath);
+      setOverlayItems(newOverlayItems);
+      if (expandedStackPath.length > 0) {
+        const currentStackId = expandedStackPath[expandedStackPath.length - 1];
+        const stackEntity = mainCarouselItems.find(e => e.id === currentStackId) || overlayItems.find(e => e.id === currentStackId);
+        if (stackEntity && stackEntity.type === 'stack') {
+          setOverlayTitle(stackEntity.name);
         } else {
-          totalWidthBeforeActive += CAROUSEL_ITEM_WIDTH + CAROUSEL_ITEM_GAP;
+            const parts = currentStackId.replace(/^stack_(category|item)_/, '').split('_');
+            setOverlayTitle(parts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' '));
         }
       }
-      
-      const targetOffset = -totalWidthBeforeActive + (carouselRef.current.clientWidth / 2 - currentItemWidth / 2);
-      setCarouselOffset(targetOffset);
-
-    } else if (carouselItems.length === 0 && carouselRef.current) {
-        setCarouselOffset(carouselRef.current.clientWidth / 2 - CAROUSEL_ITEM_WIDTH / 2);
     }
-  }, [activeIndex, carouselItems, carouselRef.current?.clientWidth]);
+  }, [isOverlayOpen, expandedStackPath, playerInventory, mainCarouselItems]);
+
+
+  const navigateCarousel = useCallback((direction: number, itemsArray: CarouselDisplayEntity[], setActiveIdxFunc: React.Dispatch<React.SetStateAction<number>>) => {
+    if (itemsArray.length === 0) return;
+    setActiveIdxFunc(prev => {
+      const newIndex = prev + direction;
+      return Math.max(0, Math.min(itemsArray.length - 1, newIndex));
+    });
+  }, []);
+
+  // Effect for main carousel offset
+  useEffect(() => {
+    if (carouselRef.current && mainCarouselItems.length > 0 && !isOverlayOpen) {
+      const itemWidth = CAROUSEL_ITEM_WIDTH;
+      const totalWidthBeforeActive = activeIndex * (itemWidth + CAROUSEL_ITEM_GAP);
+      const targetOffset = -totalWidthBeforeActive + (carouselRef.current.clientWidth / 2 - itemWidth / 2);
+      setCarouselOffset(targetOffset);
+    } else if (mainCarouselItems.length === 0 && carouselRef.current) {
+        setCarouselOffset(carouselRef.current.clientWidth / 2 - CAROUSEL_ITEM_WIDTH / 2); // Center placeholder if empty
+    }
+  }, [activeIndex, mainCarouselItems, carouselRef.current?.clientWidth, isOverlayOpen]);
 
 
   const openItemActionModal = (displayItem: DisplayIndividualItem) => {
@@ -292,7 +242,7 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
       `${item.name} L${item.level}`,
       <div className="p-4 font-rajdhani text-center space-y-3">
         <NextImage
-            src={item.imageSrc || `https://placehold.co/128x128/000000/FFFFFF.png?text=${item.name.substring(0,3)}`}
+            src={item.tileImageSrc || item.imageSrc || `https://placehold.co/128x128.png?text=${item.name.substring(0,3)}`}
             alt={item.name}
             width={128} height={128}
             className="mx-auto rounded-md mb-2 object-contain bg-black/20 p-1"
@@ -305,8 +255,8 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
         {item.category === 'Hardware' && item.strength && typeof item.strength.current === 'number' && typeof item.strength.max === 'number' && (
           <div className="w-full max-w-xs mx-auto">
             <p className="text-xs text-muted-foreground mt-1">Strength:</p>
-            <Progress value={(item.strength.current / item.strength.max) * 100} className="h-2 [&>div]:bg-[var(--progress-color)]" style={{ '--progress-color': ITEM_LEVEL_COLORS_CSS_VARS[item.level] || 'var(--primary-hsl)' } as React.CSSProperties}/>
-            <p className="text-xs text-muted-foreground mt-1">{item.strength.current} / {item.strength.max}</p>
+            <Progress value={((item.strength.current ?? item.strength.max) / item.strength.max) * 100} className="h-2 [&>div]:bg-[var(--progress-color)]" style={{ '--progress-color': ITEM_LEVEL_COLORS_CSS_VARS[item.level] || 'var(--primary-hsl)' } as React.CSSProperties}/>
+            <p className="text-xs text-muted-foreground mt-1">{item.strength.current ?? item.strength.max} / {item.strength.max}</p>
           </div>
         )}
         {item.category === 'Infiltration Gear' && typeof item.attackFactor === 'number' && (
@@ -333,320 +283,273 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
     );
   };
 
- const handleDownOrExpandAction = () => {
-    if (carouselItems.length === 0 || activeIndex < 0 || activeIndex >= carouselItems.length) return;
-    const entityAtActiveIndex = carouselItems[activeIndex];
-    if (!entityAtActiveIndex) return;
+  const handleEntityInteraction = (entity: CarouselDisplayEntity, isFromOverlay: boolean = false) => {
+    if (entity.type === 'stack') {
+      setSelectedEntityId(entity.id); // Keep track of the stack that was clicked to open overlay
+      setExpandedStackPath(prev => [...prev, entity.id]);
+      setIsOverlayOpen(true);
+      if (!isFromOverlay && carouselRef.current) { // Snapshot main carousel state
+        mainCarouselSnapshotRef.current = { activeIndex, offset: carouselOffset };
+      }
+    } else if (entity.type === 'item') {
+      openItemActionModal(entity as DisplayIndividualItem);
+    }
+  };
 
-    if (selectedEntityId && selectedEntityId !== entityAtActiveIndex.id) {
-      // An item is selected, but it's not the one in the center. Deselect old, select new.
-      setSelectedEntityId(entityAtActiveIndex.id);
-    } else if (!selectedEntityId) {
-      // Nothing is selected, select the one in the center.
-      setSelectedEntityId(entityAtActiveIndex.id);
-    } else {
-      // The item in the center IS the selectedEntityId. Perform expand/action.
-      if (entityAtActiveIndex.type === 'stack') {
-        // If it's a stack and already selected, expand it.
-        setExpandedStackPath(prev => {
-            // Prevent re-adding if already the last in path (meaning it's expanded)
-            if (prev.length > 0 && prev[prev.length - 1] === entityAtActiveIndex.id) return prev;
-            return [...prev, entityAtActiveIndex.id];
-        });
-        // setSelectedEntityId(null); // Deselect to allow re-selection of children, or keep selected? For now, keep parent selected.
-        setActiveIndex(0); // Reset activeIndex for the new view within the stack
-      } else if (entityAtActiveIndex.type === 'item') {
-        openItemActionModal(entityAtActiveIndex as DisplayIndividualItem);
+  const handleDownOrExpandAction = () => {
+    if (isOverlayOpen && overlayItems.length > 0) {
+      // If overlay is open, "down" action targets the first item in the overlay for further expansion or action
+      // This logic might need refinement based on how selection works *within* the overlay
+      const firstOverlayItem = overlayItems[0];
+      if (firstOverlayItem) handleEntityInteraction(firstOverlayItem, true);
+    } else if (mainCarouselItems.length > 0) {
+      const entityAtActiveIndex = mainCarouselItems[activeIndex];
+      if (!entityAtActiveIndex) return;
+
+      if (selectedEntityId && selectedEntityId !== entityAtActiveIndex.id) {
+        setSelectedEntityId(entityAtActiveIndex.id);
+      } else if (!selectedEntityId) {
+        setSelectedEntityId(entityAtActiveIndex.id);
+      } else { // selectedEntityId IS entityAtActiveIndex.id
+        handleEntityInteraction(entityAtActiveIndex, false);
       }
     }
   };
 
   const handleUpOrCollapseAction = () => {
-    const currentExpandedStackId = expandedStackPath.length > 0 ? expandedStackPath[expandedStackPath.length - 1] : null;
-
-    if (currentExpandedStackId && selectedEntityId === currentExpandedStackId) {
-      // If the currently selected entity IS the one defining the current expanded view,
-      // then "up" should collapse this view.
+    if (expandedStackPath.length > 0) {
       const newPath = expandedStackPath.slice(0, -1);
       setExpandedStackPath(newPath);
-      
-      const parentViewItems = processInventoryForCarousel(playerInventory, newPath);
-      const parentStackIndex = parentViewItems.findIndex(item => item.id === currentExpandedStackId);
-      
-      setSelectedEntityId(currentExpandedStackId); // Keep the parent stack selected.
-      setActiveIndex(parentStackIndex >= 0 ? parentStackIndex : 0);
-
+      if (newPath.length === 0) {
+        setIsOverlayOpen(false);
+        // Restore main carousel position if snapshot exists
+        if (mainCarouselSnapshotRef.current) {
+            setActiveIndex(mainCarouselSnapshotRef.current.activeIndex);
+            setCarouselOffset(mainCarouselSnapshotRef.current.offset);
+            mainCarouselSnapshotRef.current = null; // Clear snapshot
+        }
+        // The selectedEntityId should ideally be the stack that was just collapsed from
+        // For now, setting to null or the parent might be complex without direct parent ref
+        // setSelectedEntityId(newPath.length > 0 ? newPath[newPath.length - 1] : null);
+      } else {
+        // Update overlay for the new shallower path
+        const parentStackId = newPath[newPath.length - 1];
+        setSelectedEntityId(parentStackId); // Select the parent stack
+      }
     } else if (selectedEntityId) {
-      // If something else is selected (or nothing is expanded to this specific entity), just deselect.
-      setSelectedEntityId(null);
+      setSelectedEntityId(null); // Just deselect if no overlay/expansion active
     }
   };
-
-
-  const handleCardTap = (entity: CarouselDisplayEntity, index: number) => {
+  
+  const handleMainCarouselCardTap = (entity: CarouselDisplayEntity, index: number) => {
     if (isDraggingRef.current) return;
-
-    if (entity.id === selectedEntityId) { // Tapped an already selected card
-      if (entity.type === 'stack' && !entity.isExpanded) {
-        setExpandedStackPath(prev => [...prev, entity.id]);
-        // When expanding a stack by tapping it, it should remain the selectedEntityId
-        // And the activeIndex within its children view should be 0
-        setActiveIndex(0); 
-      } else if (entity.type === 'item') {
+    setActiveIndex(index); // Center the tapped card
+    setSelectedEntityId(entity.id); // Mark as selected for potential "down" action
+    // If it's a stack, the "down" action or another tap will expand it into the overlay
+    // If it's an item, "down" or another tap will open modal
+    if (entity.type === 'stack') {
+        // Prepare for overlay on next "down" or direct tap if desired
+        // For immediate overlay on tap:
+        handleEntityInteraction(entity, false);
+    } else {
         openItemActionModal(entity as DisplayIndividualItem);
-      }
-      // If it's an expanded stack, tapping again might do nothing or collapse (TBD)
-    } else { // Tapped a new card
-      setSelectedEntityId(entity.id);
-      setActiveIndex(index);
-      // If this tap is on a stack that was previously part of an expanded path,
-      // we need to truncate expandedStackPath to this stack's level.
-      const existingPathIndex = expandedStackPath.indexOf(entity.id);
-      if (entity.type === 'stack' && existingPathIndex !== -1) {
-        setExpandedStackPath(expandedStackPath.slice(0, existingPathIndex + 1));
-      } else if (entity.type === 'stack') {
-        // If tapping a new stack not in the current path, reset path to just this stack for potential expansion
-        // For now, just selecting it. Expansion happens on subsequent down/tap.
-      }
     }
   };
   
   const handleDragEnd = (e: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     isDraggingRef.current = false;
-    if (carouselRef.current && carouselItems.length > 0) {
+    if (carouselRef.current && mainCarouselItems.length > 0) {
         const itemPlusGap = CAROUSEL_ITEM_WIDTH + CAROUSEL_ITEM_GAP;
         const currentVisualStartOfCarouselContents = carouselOffset + info.offset.x;
         const viewportCenterLine = carouselRef.current.clientWidth / 2;
+        
+        let cumulativeWidth = 0;
         let closestIndex = 0;
         let minDistance = Infinity;
-        for (let i = 0; i < carouselItems.length; i++) {
-            const entity = carouselItems[i];
-            let itemWidth = CAROUSEL_ITEM_WIDTH;
-             if (entity.type === 'stack' && entity.isExpanded && entity.childrenToDisplay) {
-                itemWidth = (entity.childrenToDisplay.length * (EXPANDED_CHILD_ITEM_WIDTH + EXPANDED_CHILD_ITEM_GAP)) - EXPANDED_CHILD_ITEM_GAP + 40;
-            }
-            const itemCenterRelative = (i * (CAROUSEL_ITEM_WIDTH + CAROUSEL_ITEM_GAP)) + (itemWidth / 2); // Approximate center for non-expanded
+
+        for (let i = 0; i < mainCarouselItems.length; i++) {
+            const itemWidth = CAROUSEL_ITEM_WIDTH;
+            const itemCenterRelative = cumulativeWidth + (itemWidth / 2);
             const itemCenterInViewport = currentVisualStartOfCarouselContents + itemCenterRelative;
             const distanceToViewportCenter = Math.abs(itemCenterInViewport - viewportCenterLine);
+
             if (distanceToViewportCenter < minDistance) {
                 minDistance = distanceToViewportCenter;
                 closestIndex = i;
             }
+            cumulativeWidth += itemWidth + CAROUSEL_ITEM_GAP;
         }
-        setActiveIndex(Math.max(0, Math.min(carouselItems.length - 1, closestIndex)));
-    } else {
-       setActiveIndex(prev => Math.max(0, Math.min(carouselItems.length - 1, prev || 0)));
+        setActiveIndex(Math.max(0, Math.min(mainCarouselItems.length - 1, closestIndex)));
     }
   };
+  
 
-  const primaryHsl = getPrimaryHslForTheme();
+  const renderCard = (entity: CarouselDisplayEntity, isOverlayChild: boolean, indexInCurrentView?: number) => {
+    const itemForStyling = entity.type === 'item' ? entity.item : (entity as DisplayItemStack).topItem || FALLBACK_GAME_ITEM;
+    const itemLevelForColor = itemForStyling.level || 1;
+    const itemColorCssVar = ITEM_LEVEL_COLORS_CSS_VARS[itemLevelForColor] || ITEM_LEVEL_COLORS_CSS_VARS[1];
+    
+    const isActuallySelectedInMain = !isOverlayChild && entity.id === selectedEntityId;
+    // For overlay, "selected" state might not be used in the same way, or could be first item.
+    
+    const scale = !isOverlayChild && isActuallySelectedInMain ? 1.15 : 1;
+    const opacity = !isOverlayChild && isActuallySelectedInMain ? 1 : 0.75;
+    const yOffset = !isOverlayChild && isActuallySelectedInMain ? -10 : 0;
+
+    const cardStyle: React.CSSProperties = {
+        borderColor: itemColorCssVar,
+        boxShadow: isActuallySelectedInMain ? `0 0 20px 0px ${itemColorCssVar}B3, inset 0 0 12px ${itemColorCssVar}50` : `0 0 8px -3px ${itemColorCssVar}90, inset 0 0 6px ${itemColorCssVar}30`,
+    };
+    
+    return (
+        <motion.div
+            key={entity.id}
+            layout // Enable layout animation for this card
+            className={cn(
+                "flex-shrink-0 origin-center cursor-pointer rounded-lg border-2 p-2 flex flex-col items-center justify-start text-center overflow-hidden relative transition-all duration-200 aspect-[3/4]",
+                "bg-[hsla(var(--primary-hsl)/0.1)] backdrop-blur-sm", // Themed background
+                isActuallySelectedInMain ? "shadow-2xl" : "shadow-md"
+            )}
+            style={{
+                width: isOverlayChild ? OVERLAY_CHILD_ITEM_WIDTH : CAROUSEL_ITEM_WIDTH,
+                marginRight: isOverlayChild ? (indexInCurrentView === (overlayItems.length -1) ? 0 : OVERLAY_CHILD_ITEM_GAP) : (indexInCurrentView === (mainCarouselItems.length-1) ? 0 : CAROUSEL_ITEM_GAP),
+                ...cardStyle
+            }}
+            animate={isOverlayChild ? {} : { scale, opacity, y: yOffset }} // Simpler animation for overlay children
+            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            onTap={() => isOverlayChild ? handleEntityInteraction(entity, true) : handleMainCarouselCardTap(entity, indexInCurrentView ?? 0)}
+        >
+            {entity.type === 'stack' && entity.isCategoryStack && (
+                <div className="absolute -top-[13px] left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full border text-xs font-semibold"
+                    style={{ backgroundColor: `hsl(var(--background-hsl))`, borderColor: itemColorCssVar, color: itemColorCssVar, boxShadow: `0 2px 5px ${itemColorCssVar}50`}}>
+                    {entity.name}
+                </div>
+            )}
+            <p className="text-xs md:text-sm font-semibold leading-tight mb-1 flex-shrink-0 truncate w-full px-1" style={{ color: itemColorCssVar }}>
+                {itemForStyling.name} L{itemForStyling.level}
+            </p>
+            <div className="relative w-full h-2/3 mb-1 flex-shrink-0">
+                <NextImage
+                    src={(itemForStyling.tileImageSrc || itemForStyling.imageSrc) || `https://placehold.co/128x128.png`}
+                    alt={itemForStyling.name} layout="fill" objectFit="contain" className="drop-shadow-md"
+                    data-ai-hint={`${itemForStyling.category} icon tile`} unoptimized
+                />
+            </div>
+            <div className="flex flex-col items-center w-full flex-grow justify-end text-[10px] md:text-xs mt-auto">
+                {entity.type === 'stack' && !entity.isCategoryStack && (
+                    <p className="text-muted-foreground mb-0.5">(Quantity: {entity.count})</p>
+                )}
+                {itemForStyling.category === 'Hardware' && itemForStyling.strength?.max && (
+                    <div className="w-full px-1 mt-0.5">
+                        <p className="text-[9px] text-muted-foreground">Strength</p>
+                        <Progress value={((itemForStyling.strength.current ?? itemForStyling.strength.max) / itemForStyling.strength.max) * 100} className="h-1.5 [&>div]:bg-[var(--progress-color)]" style={{ '--progress-color': itemColorCssVar } as React.CSSProperties} />
+                    </div>
+                )}
+                {itemForStyling.category === 'Infiltration Gear' && typeof itemForStyling.attackFactor === 'number' && (
+                    <div className="w-full px-1 mt-0.5">
+                        <p className="text-[9px] text-muted-foreground">Attack Factor</p>
+                        <Progress value={(itemForStyling.attackFactor / 100) * 100} className="h-1.5 [&>div]:bg-[var(--progress-color)]" style={{ '--progress-color': itemColorCssVar } as React.CSSProperties} />
+                    </div>
+                )}
+                {itemForStyling.type === 'Rechargeable' && (
+                    <div className="mt-0.5 text-center">
+                        <p style={{ color: itemColorCssVar }}>Type: Rechargeable</p>
+                        {itemForStyling.perUseCost && <p className="text-muted-foreground text-[9px]">Cost: {itemForStyling.perUseCost} ELINT</p>}
+                    </div>
+                )}
+                {(itemForStyling.type === 'Consumable' || itemForStyling.type === 'One-Time Use') && (
+                    <p className="mt-0.5" style={{ color: itemColorCssVar }}>Type: {itemForStyling.type}</p>
+                )}
+            </div>
+        </motion.div>
+    );
+  };
   
   return (
     <HolographicPanel
-      className="w-full h-full flex flex-col relative overflow-hidden p-0 md:p-0" // Adjusted padding
+      className="w-full h-full flex flex-col relative overflow-hidden p-0 md:p-0"
       explicitTheme={theme}
     >
-      {/* Header Area */}
       <div className="flex-shrink-0 flex justify-between items-center p-2 md:p-4 mb-0 border-b border-current/20">
-        <h2 className="text-xl md:text-2xl font-orbitron holographic-text truncate max-w-[calc(100%-150px)]">
-          {expandedStackPath.length > 0 && carouselItems[activeIndex]?.type === 'stack'
-            ? (carouselItems[activeIndex] as DisplayItemStack).name // Show name of expanded stack
-            : expandedStackPath.length > 0 
-            ? expandedStackPath[expandedStackPath.length -1].replace('stack_category_', '').replace(/^stack_item_[^_]+_/, '').replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
-            : "Equipment Locker"}
+        <h2 className="text-xl md:text-2xl font-orbitron holographic-text truncate max-w-[calc(100%-100px)]">
+          {isOverlayOpen ? overlayTitle : "Equipment Locker"}
         </h2>
         <div className="flex items-center space-x-2">
-            <HolographicButton onClick={handleUpOrCollapseAction} disabled={!selectedEntityId && expandedStackPath.length === 0} className="!p-1.5 md:!p-2" title="Go Up / Collapse Stack / Deselect">
-                <Layers className="w-4 h-4 md:w-5 md:h-5" />
-            </HolographicButton>
             <HolographicButton onClick={openSpyShop} className="!p-1.5 md:!p-2" title="Open Spy Shop">
                 <ShoppingCart className="w-4 h-4 md:w-5 md:h-5" />
             </HolographicButton>
         </div>
       </div>
 
-      {/* Carousel Area */}
-      {carouselItems.length === 0 ? (
+      {/* Main Carousel Area */}
+      {mainCarouselItems.length === 0 ? (
         <div className="flex-grow flex items-center justify-center">
           <p className="text-muted-foreground font-rajdhani text-lg">Inventory empty.</p>
         </div>
       ) : (
         <div ref={carouselRef} className="flex-grow flex items-center justify-start relative overflow-hidden select-none -mx-2 md:-mx-4">
-          <motion.div
-              className="flex absolute h-full items-center" 
-              drag="x"
-              dragConstraints={{ 
-                  left: carouselItems.length > 0 ? -(carouselItems.reduce((acc, entity) => {
-                      let width = CAROUSEL_ITEM_WIDTH;
-                      if (entity.type === 'stack' && entity.isExpanded && entity.childrenToDisplay) {
-                          width = (entity.childrenToDisplay.length * (EXPANDED_CHILD_ITEM_WIDTH + EXPANDED_CHILD_ITEM_GAP)) - EXPANDED_CHILD_ITEM_GAP + 40;
-                      }
-                      return acc + width + CAROUSEL_ITEM_GAP;
-                  }, 0) - (carouselRef.current?.clientWidth || 0) + CAROUSEL_ITEM_WIDTH / 2 + CAROUSEL_ITEM_GAP / 2 ) : 0, 
-                  right: carouselItems.length > 0 ? ((carouselRef.current?.clientWidth || 0)/2 - CAROUSEL_ITEM_WIDTH/2 - CAROUSEL_ITEM_GAP/2) : 0 
-              }}
-              onDragStart={() => isDraggingRef.current = true}
-              onDragEnd={handleDragEnd}
-              animate={{ x: carouselOffset }}
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              style={{ paddingLeft: CAROUSEL_ITEM_GAP / 2, paddingRight: CAROUSEL_ITEM_GAP / 2 }} 
-              layout // Enable layout animations for children reordering/resizing
-          >
-            {carouselItems.map((entity, index) => {
-                const isActuallySelected = entity.id === selectedEntityId;
-                let itemForStyling: GameItemBase = entity.type === 'item' ? entity.item : (entity as DisplayItemStack).topItem;
-                if (!itemForStyling) itemForStyling = FALLBACK_GAME_ITEM;
-                
-                const itemLevelForColor = itemForStyling.level || 1;
-                const itemColorCssVar = ITEM_LEVEL_COLORS_CSS_VARS[itemLevelForColor] || ITEM_LEVEL_COLORS_CSS_VARS[1];
-                
-                const baseCardWidth = CAROUSEL_ITEM_WIDTH;
-                let animatedWidth = baseCardWidth;
-                const isExpandedStack = entity.type === 'stack' && entity.isExpanded && entity.childrenToDisplay && entity.childrenToDisplay.length > 0;
-
-                if (isExpandedStack) {
-                    animatedWidth = (entity.childrenToDisplay!.length * (EXPANDED_CHILD_ITEM_WIDTH + EXPANDED_CHILD_ITEM_GAP)) - EXPANDED_CHILD_ITEM_GAP + 30; // + horizontal padding for container
-                }
-
-                const scale = isActuallySelected && !isExpandedStack ? 1.15 : 1;
-                const opacity = isActuallySelected && !isExpandedStack ? 1 : 0.75;
-                const zIndex = isActuallySelected ? carouselItems.length + 1 : carouselItems.length - Math.abs(index - activeIndex);
-                const yOffset = isActuallySelected && !isExpandedStack ? -10 : 0;
-                
-                const cardBgStyle: React.CSSProperties = {
-                    background: `hsla(${primaryHsl}, 0.1)`,
-                    backdropFilter: 'blur(4px)',
-                    borderColor: itemColorCssVar,
-                    boxShadow: isActuallySelected ? `0 0 20px 0px ${itemColorCssVar}B3, inset 0 0 12px ${itemColorCssVar}50` : `0 0 8px -3px ${itemColorCssVar}90, inset 0 0 6px ${itemColorCssVar}30`,
-                };
-
-                return (
-                <motion.div
-                    key={entity.id}
-                    layout // Enable layout animation for this card
-                    className="flex-shrink-0 origin-center cursor-pointer"
-                    style={{
-                        // width: baseCardWidth, // Initial width, framer-motion will animate if 'animate' prop changes width
-                        height: CAROUSEL_ITEM_WIDTH * 1.5, 
-                        marginRight: index === carouselItems.length -1 ? 0 : CAROUSEL_ITEM_GAP,
-                    }}
-                    animate={{ scale, opacity, zIndex, y: yOffset, width: animatedWidth }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                    onTap={() => handleCardTap(entity, index)}
-                >
-                    <div
-                        className={cn(
-                            "w-full h-full rounded-lg border-2 p-2 flex flex-col items-center justify-start text-center overflow-hidden relative transition-all duration-200",
-                            isActuallySelected ? "shadow-2xl" : "shadow-md"
-                        )}
-                        style={cardBgStyle}
-                    >
-                        {isExpandedStack ? (
-                            // Expanded Stack Rendering
-                            <div className="w-full h-full flex flex-col">
-                                <div className="flex-shrink-0 flex justify-between items-center w-full p-1 border-b" style={{borderColor: itemColorCssVar}}>
-                                    <span className="text-xs font-semibold" style={{color: itemColorCssVar}}>{(entity as DisplayItemStack).name} ({(entity as DisplayItemStack).count})</span>
-                                    <HolographicButton 
-                                        onClick={(e) => { e.stopPropagation(); handleUpOrCollapseAction();}} 
-                                        className="!p-1 !text-xs"
-                                        title="Collapse Stack"
-                                    >
-                                        <XCircle className="w-3 h-3"/>
-                                    </HolographicButton>
-                                </div>
-                                <div className="flex-grow flex items-center overflow-x-auto py-2 px-1 space-x-2 scrollbar-hide">
-                                    {(entity as DisplayItemStack).childrenToDisplay?.map(childEntity => {
-                                        const childItem = childEntity.type === 'item' ? childEntity.item : (childEntity as DisplayItemStack).topItem || FALLBACK_GAME_ITEM;
-                                        const childColorVar = ITEM_LEVEL_COLORS_CSS_VARS[childItem.level || 1] || ITEM_LEVEL_COLORS_CSS_VARS[1];
-                                        return (
-                                            <div key={childEntity.id} className="flex-shrink-0 rounded border-2 p-1.5 flex flex-col items-center" style={{
-                                                width: EXPANDED_CHILD_ITEM_WIDTH, 
-                                                height: CAROUSEL_ITEM_WIDTH * 1.5 * 0.8, // Slightly smaller height for children
-                                                borderColor: childColorVar,
-                                                background: `hsla(${primaryHsl}, 0.15)`, // Slightly different bg for children
-                                                backdropFilter: 'blur(2px)'
-                                            }}
-                                            onClick={(e) => { e.stopPropagation(); if (childEntity.type === 'item') openItemActionModal(childEntity); else handleCardTap(childEntity, -1)/*Or find its index*/;}}
-                                            >
-                                                 <p className="text-[10px] font-semibold leading-tight mb-0.5" style={{ color: childColorVar }}>
-                                                    {childItem.name} L{childItem.level}
-                                                </p>
-                                                <div className="relative w-full h-1/2 mb-0.5">
-                                                   <NextImage src={(childItem.tileImageSrc || childItem.imageSrc) || `https://placehold.co/80x80.png`} alt={childItem.name} layout="fill" objectFit="contain" unoptimized data-ai-hint={`${childItem.category} icon tile`}/>
-                                                </div>
-                                                {childEntity.type === 'stack' && <p className="text-[9px] text-muted-foreground">(Qty: {(childEntity as DisplayItemStack).count})</p>}
-                                                 {/* Simplified strength/attack factor display for children */}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        ) : (
-                            // Default Card Content (Stack or Individual Item)
-                            <>
-                                {entity.type === 'stack' && entity.isCategoryStack && (
-                                    <div className="absolute -top-[13px] left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full border text-xs font-semibold"
-                                        style={{ backgroundColor: `hsl(var(--background-hsl))`, borderColor: itemColorCssVar, color: itemColorCssVar, boxShadow: `0 2px 5px ${itemColorCssVar}50`}}>
-                                        {entity.name}
-                                    </div>
-                                )}
-                                <p className="text-xs md:text-sm font-semibold leading-tight mb-1 flex-shrink-0" style={{ color: itemColorCssVar }}>
-                                    {itemForStyling.name} L{itemForStyling.level}
-                                </p>
-                                <div className="relative w-full h-[60%] mb-1 flex-shrink-0"> {/* Adjusted image height */}
-                                    <NextImage
-                                        src={(itemForStyling.tileImageSrc || itemForStyling.imageSrc) || `https://placehold.co/128x128.png`}
-                                        alt={itemForStyling.name} layout="fill" objectFit="contain" className="drop-shadow-md"
-                                        data-ai-hint={`${itemForStyling.category} icon tile`} unoptimized
-                                    />
-                                </div>
-                                <div className="flex flex-col items-center w-full flex-grow justify-end text-[10px] md:text-xs mt-auto">
-                                    {entity.type === 'stack' && !entity.isCategoryStack && (
-                                        <p className="text-muted-foreground mb-0.5">(Quantity: {entity.count})</p>
-                                    )}
-                                    {itemForStyling.category === 'Hardware' && itemForStyling.strength?.max && (
-                                        <div className="w-full px-1 mt-0.5">
-                                            <p className="text-[9px] text-muted-foreground">Strength</p>
-                                            <Progress value={((itemForStyling.strength.current ?? itemForStyling.strength.max) / itemForStyling.strength.max) * 100} className="h-1.5 [&>div]:bg-[var(--progress-color)]" style={{ '--progress-color': itemColorCssVar } as React.CSSProperties} />
-                                        </div>
-                                    )}
-                                    {itemForStyling.category === 'Infiltration Gear' && typeof itemForStyling.attackFactor === 'number' && (
-                                        <div className="w-full px-1 mt-0.5">
-                                            <p className="text-[9px] text-muted-foreground">Attack Factor</p>
-                                            <Progress value={(itemForStyling.attackFactor / 100) * 100} className="h-1.5 [&>div]:bg-[var(--progress-color)]" style={{ '--progress-color': itemColorCssVar } as React.CSSProperties} />
-                                        </div>
-                                    )}
-                                    {itemForStyling.type === 'Rechargeable' && (
-                                        <div className="mt-0.5 text-center">
-                                            <p style={{ color: itemColorCssVar }}>Type: Rechargeable</p>
-                                            {itemForStyling.perUseCost && <p className="text-muted-foreground text-[9px]">Cost: {itemForStyling.perUseCost} ELINT</p>}
-                                        </div>
-                                    )}
-                                    {(itemForStyling.type === 'Consumable' || itemForStyling.type === 'One-Time Use') && (
-                                        <p className="mt-0.5" style={{ color: itemColorCssVar }}>Type: {itemForStyling.type}</p>
-                                    )}
-                                </div>
-                            </>
-                        )}
-                    </div>
-                </motion.div>
-                );
-            })}
+          <AnimatePresence>
+          {!isOverlayOpen && (
+            <motion.div
+                key="main-carousel"
+                className="flex absolute h-full items-center" 
+                drag="x"
+                dragConstraints={{ 
+                    left: mainCarouselItems.length > 0 ? -(mainCarouselItems.reduce((acc) => acc + CAROUSEL_ITEM_WIDTH + CAROUSEL_ITEM_GAP, 0) - (carouselRef.current?.clientWidth || 0) + CAROUSEL_ITEM_WIDTH / 2 + CAROUSEL_ITEM_GAP / 2 ) : 0, 
+                    right: mainCarouselItems.length > 0 ? ((carouselRef.current?.clientWidth || 0)/2 - CAROUSEL_ITEM_WIDTH/2 - CAROUSEL_ITEM_GAP/2) : 0 
+                }}
+                onDragStart={() => isDraggingRef.current = true}
+                onDragEnd={handleDragEnd}
+                animate={{ x: carouselOffset }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                style={{ paddingLeft: CAROUSEL_ITEM_GAP / 2, paddingRight: CAROUSEL_ITEM_GAP / 2 }} 
+            >
+              {mainCarouselItems.map((entity, index) => renderCard(entity, false, index))}
             </motion.div>
+          )}
+          </AnimatePresence>
         </div>
       )}
-      {/* Button Bar Area - Separate from Carousel for gesture isolation */}
+
+      {/* Overlay Window for Expanded Stacks */}
+      <AnimatePresence>
+        {isOverlayOpen && (
+          <motion.div
+            key="overlay-window"
+            className="absolute inset-0 z-30 flex flex-col bg-[hsla(var(--background-hsl)/0.8)] backdrop-blur-md p-2"
+            initial={{ opacity: 0, scale: 0.8, y: 50 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 50 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+          >
+            <div className="flex-shrink-0 flex justify-between items-center p-2 border-b border-current/30 mb-2">
+              <h3 className="text-lg font-orbitron holographic-text">{overlayTitle}</h3>
+              <HolographicButton onClick={handleUpOrCollapseAction} className="!p-1.5" title="Back/Collapse">
+                <ArrowLeft className="w-5 h-5" />
+              </HolographicButton>
+            </div>
+            <div ref={overlayContentRef} className="flex-grow overflow-x-auto overflow-y-hidden flex items-center p-2 scrollbar-hide">
+              {overlayItems.map((entity, index) => renderCard(entity, true, index))}
+            </div>
+            {overlayItems.length === 0 && (
+              <p className="text-center text-muted-foreground flex-grow flex items-center justify-center">This stack is empty or contains no further sub-stacks.</p>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Bottom Button Bar - Always visible, interacts with main carousel or overlay */}
       <div className="flex-shrink-0 flex justify-center items-center space-x-2 p-2 mt-auto z-20 bg-transparent">
-        <HolographicButton onClick={() => navigateCarousel(-1)} disabled={carouselItems.length <= 1 || activeIndex === 0} className="!p-1.5 md:!p-2">
+        <HolographicButton onClick={() => navigateCarousel(-1, isOverlayOpen ? overlayItems : mainCarouselItems, isOverlayOpen ? () => {} : setActiveIndex)} disabled={(isOverlayOpen ? overlayItems.length : mainCarouselItems.length) <= 1 || (!isOverlayOpen && activeIndex === 0)} className="!p-1.5 md:!p-2">
             <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
         </HolographicButton>
-        <HolographicButton onClick={handleDownOrExpandAction} disabled={carouselItems.length === 0} className="!p-1.5 md:!p-2">
+        <HolographicButton onClick={handleDownOrExpandAction} disabled={(isOverlayOpen ? overlayItems.length : mainCarouselItems.length) === 0} className="!p-1.5 md:!p-2">
             <ChevronDown className="w-4 h-4 md:w-5 md:h-5" />
         </HolographicButton>
-        <HolographicButton onClick={handleUpOrCollapseAction} disabled={!selectedEntityId && expandedStackPath.length === 0} className="!p-1.5 md:!p-2">
+        <HolographicButton onClick={handleUpOrCollapseAction} disabled={!isOverlayOpen && !selectedEntityId} className="!p-1.5 md:!p-2">
             <ChevronUp className="w-4 h-4 md:w-5 md:h-5" />
         </HolographicButton>
-        <HolographicButton onClick={() => navigateCarousel(1)} disabled={carouselItems.length <= 1 || activeIndex === carouselItems.length - 1} className="!p-1.5 md:!p-2">
+        <HolographicButton onClick={() => navigateCarousel(1, isOverlayOpen ? overlayItems : mainCarouselItems, isOverlayOpen ? () => {} : setActiveIndex)} disabled={(isOverlayOpen ? overlayItems.length : mainCarouselItems.length) <= 1 || (!isOverlayOpen && activeIndex === (isOverlayOpen ? overlayItems.length : mainCarouselItems.length) - 1)} className="!p-1.5 md:!p-2">
             <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
         </HolographicButton>
       </div>
@@ -654,3 +557,7 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
   );
 }
 
+// Helper to generate placeholder images - replace with actual images or a robust service
+const generatePlaceholderImage = (text: string, width = 128, height = 128, bgColor = "333", textColor = "eee") => {
+    return `https://placehold.co/${width}x${height}/${bgColor}/${textColor}.png?text=${encodeURIComponent(text)}`;
+}
