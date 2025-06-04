@@ -21,19 +21,19 @@ const MAX_DISPLAY_ENTITIES = 8;
 // Types for display entities in the carousel
 interface DisplayIndividualItem {
   type: 'item';
-  id: string;
+  id: string; // This ID should be unique per instance if we need to differentiate, e.g. basic_pick_l1_instance_1
   item: GameItemBase;
-  inventoryQuantity: number;
-  currentStrength?: number;
+  inventoryQuantity: number; // This specific instance is 1, but its base item might have many
+  currentStrength?: number; // Instance-specific strength
 }
 
 interface DisplayItemStack {
   type: 'stack';
-  id: string;
-  name: string;
-  items: DisplayIndividualItem[];
-  topItem: GameItemBase;
-  count: number;
+  id: string; // e.g., stack_category_Hardware or stack_item_InfiltrationGear_basic_pick
+  name: string; // Category name or Item base name
+  items: DisplayIndividualItem[]; // All individual items this stack represents
+  topItem: GameItemBase; // The item to display visually for the stack
+  count: number; // Total quantity of items in this stack
   isCategoryStack?: boolean;
   categoryName?: ItemCategory;
 }
@@ -42,10 +42,16 @@ type CarouselDisplayEntity = DisplayIndividualItem | DisplayItemStack;
 
 const findHighestLevelItem = (items: DisplayIndividualItem[]): GameItemBase => {
   if (!items || items.length === 0) {
-    return { id:'placeholder', name:'No Item', description:'Empty stack', level:1, cost:0, scarcity:'Common', category:'Hardware', colorVar:1, dataAiHint: "placeholder item" };
+    // Fallback to a generic placeholder if items array is empty
+    return { id:'placeholder_item', name:'No Item', description:'This stack is empty.', level:1, cost:0, scarcity:'Common', category:'Hardware', colorVar:1, dataAiHint: "placeholder item" };
   }
-  return items.reduce((highest, current) => (current.item.level > highest.item.level ? current.item : highest.item), items[0].item);
+  return items.reduce((highest, current) => {
+    if (!highest || !highest.item) return current.item; // Should not happen if items are valid
+    if (!current || !current.item) return highest.item;
+    return current.item.level > highest.item.level ? current.item : highest.item;
+  }, items[0]).item; // Access .item from DisplayIndividualItem
 };
+
 
 const processInventoryForCarousel = (
   inventory: Record<string, PlayerInventoryItem>,
@@ -55,59 +61,73 @@ const processInventoryForCarousel = (
     return [];
   }
 
-  const detailedInventoryItems: DisplayIndividualItem[] = Object.values(inventory)
-    .map(invItem => {
-      const baseItem = getItemById(invItem.id);
-      if (!baseItem) return null;
-      return {
+  // 1. Create a flat list of all individual items with full details
+  const detailedInventoryItems: DisplayIndividualItem[] = Object.entries(inventory)
+    .flatMap(([itemId, invItem]) => {
+      const baseItem = getItemById(itemId);
+      if (!baseItem) return []; // Skip if base item not found
+      // For items with quantity > 1, create that many individual DisplayIndividualItem entries
+      // This is crucial for later expanding stacks of identical items
+      return Array.from({ length: invItem.quantity }, (_, index) => ({
         type: 'item' as 'item',
-        id: invItem.id,
+        // Create a unique ID for each instance, e.g., 'basic_pick_l1_instance_0'
+        id: `${itemId}_instance_${index}`, 
         item: baseItem,
-        inventoryQuantity: invItem.quantity,
-        currentStrength: invItem.currentStrength,
-      };
+        inventoryQuantity: 1, // Each instance represents quantity 1
+        currentStrength: invItem.currentStrength, // Carry over instance-specific strength
+      }));
     })
     .filter((item): item is DisplayIndividualItem => item !== null)
     .sort((a, b) => b.item.level - a.item.level || a.item.name.localeCompare(b.item.name));
 
   if (detailedInventoryItems.length === 0) return [];
 
+  // 2. Handle expansions
   if (expandedStackPath.length > 0) {
     const currentStackIdToExpand = expandedStackPath[expandedStackPath.length - 1];
 
     if (currentStackIdToExpand.startsWith('stack_category_')) {
       const category = currentStackIdToExpand.replace('stack_category_', '') as ItemCategory;
+      // Filter items for this category, then group them by base name to form item stacks
       const itemsInCategory = detailedInventoryItems.filter(di => di.item.category === category);
       const groupedByName = groupBy(itemsInCategory, (di) => di.item.name);
+      
       return Object.entries(groupedByName).map(([name, itemsInNameGroup]): DisplayItemStack => ({
         type: 'stack',
         id: `stack_item_${category}_${name.toLowerCase().replace(/\s+/g, '_')}`,
         name: name,
-        items: itemsInNameGroup,
+        items: itemsInNameGroup, // These are individual instances now
         topItem: findHighestLevelItem(itemsInNameGroup),
-        count: itemsInNameGroup.reduce((sum, i) => sum + i.inventoryQuantity, 0),
+        count: itemsInNameGroup.length, // Count is number of individual instances
         categoryName: category,
       })).sort((a,b) => a.name.localeCompare(b.name));
 
     } else if (currentStackIdToExpand.startsWith('stack_item_')) {
-      const [,, categoryPart, ...nameParts] = currentStackIdToExpand.split('_');
-      const itemName = nameParts.join(' ').replace(/\b\w/g, l => l.toUpperCase());
-      return detailedInventoryItems.filter(di => di.item.name === itemName && di.item.category === categoryPart as ItemCategory);
+      // Expanding a stack of items of the same base name (e.g., "Basic Pick")
+      // This should return the individual DisplayIndividualItem instances
+      const [,,, ...namePartsWithCategory] = currentStackIdToExpand.split('_'); // e.g. stack_item_InfiltrationGear_basic_pick
+      const category = namePartsWithCategory[0] as ItemCategory;
+      const itemName = namePartsWithCategory.slice(1).join(' ').replace(/\b\w/g, l => l.toUpperCase()); // Reconstruct item name
+
+      return detailedInventoryItems.filter(di => di.item.name === itemName && di.item.category === category);
     }
   }
 
-  if (detailedInventoryItems.length <= MAX_DISPLAY_ENTITIES) {
+  // 3. Default view (no expansion or root level) - apply grouping to meet MAX_DISPLAY_ENTITIES
+  // If total individual items are <= MAX_DISPLAY_ENTITIES, show them directly
+  if (detailedInventoryItems.length <= MAX_DISPLAY_ENTITIES && detailedInventoryItems.length > 0) {
     return detailedInventoryItems;
   }
 
+  // Group by base item name first
   const groupedByName = groupBy(detailedInventoryItems, (di) => di.item.name);
   let nameStacks: DisplayItemStack[] = Object.entries(groupedByName).map(([name, items]): DisplayItemStack => ({
     type: 'stack',
     id: `stack_item_${items[0].item.category}_${name.toLowerCase().replace(/\s+/g, '_')}`,
     name: name,
-    items: items,
+    items: items, // Contains individual DisplayIndividualItem instances
     topItem: findHighestLevelItem(items),
-    count: items.reduce((sum, i) => sum + i.inventoryQuantity, 0),
+    count: items.length, // Count is number of individual instances
     categoryName: items[0].item.category,
   }));
 
@@ -115,14 +135,15 @@ const processInventoryForCarousel = (
     return nameStacks.sort((a,b) => a.name.localeCompare(b.name));
   }
 
+  // If still too many, group by category
   const groupedByCategory = groupBy(detailedInventoryItems, (di) => di.item.category);
   return Object.entries(groupedByCategory).map(([categoryName, items]): DisplayItemStack => ({
     type: 'stack',
     id: `stack_category_${categoryName as ItemCategory}`,
     name: categoryName as ItemCategory,
-    items: items,
+    items: items, // Contains individual DisplayIndividualItem instances
     topItem: findHighestLevelItem(items),
-    count: items.reduce((sum, i) => sum + i.inventoryQuantity, 0),
+    count: items.length, // Count is number of individual instances
     isCategoryStack: true,
     categoryName: categoryName as ItemCategory,
   })).sort((a,b) => a.name.localeCompare(b.name));
@@ -145,9 +166,9 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
 
   useEffect(() => {
     setActiveIndex(0);
-    setSelectedEntityId(null); // No pre-selection
+    setSelectedEntityId(null); 
     setCarouselOffset(0);
-  }, [carouselItems.length]); // Also reset activeIndex and selection on carouselItems change
+  }, [carouselItems.length]); 
 
   const navigateCarousel = useCallback((direction: number) => {
     if (carouselItems.length === 0) return;
@@ -158,24 +179,33 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
   }, [carouselItems.length]);
 
   useEffect(() => {
-    if (carouselRef.current) {
+    if (carouselRef.current && carouselItems.length > 0) {
       const targetOffset = -activeIndex * (CAROUSEL_ITEM_WIDTH + CAROUSEL_ITEM_GAP) +
                            (carouselRef.current.clientWidth / 2 - CAROUSEL_ITEM_WIDTH / 2);
       setCarouselOffset(targetOffset);
+    } else if (carouselItems.length === 0 && carouselRef.current) {
+        setCarouselOffset(carouselRef.current.clientWidth / 2 - CAROUSEL_ITEM_WIDTH / 2);
     }
-  }, [activeIndex, carouselItems.length, carouselRef.current?.clientWidth]);
+  }, [activeIndex, carouselItems, carouselRef.current?.clientWidth]);
 
 
   const openItemActionModal = (displayItem: DisplayIndividualItem) => {
     const item = displayItem.item;
     const hasStrength = item.strength && typeof item.strength.max === 'number' && item.strength.max > 0;
-    const isRechargeable = item.type === "Rechargeable" || (item.category === 'Nexus Upgrades' && (item as any).rechargeCost > 0);
-    const currentStrength = displayItem.currentStrength ?? (hasStrength ? item.strength!.current : undefined);
-    const maxStrength = hasStrength ? item.strength!.max : undefined;
-    const canRecharge = isRechargeable && typeof currentStrength === 'number' && typeof maxStrength === 'number' && currentStrength < maxStrength;
+    const isToolRechargeable = item.category === 'Infiltration Gear' && item.type === 'Rechargeable' && typeof item.perUseCost === 'number';
+    
+    // For rechargeable tools, currentStrength might represent readiness (1=ready, 0=depleted)
+    // For locks/hardware, it's actual depletable strength.
+    let currentStrengthForModal = displayItem.currentStrength;
+    if (isToolRechargeable && currentStrengthForModal === undefined) {
+        currentStrengthForModal = item.maxStrength; // Assume new rechargeable tools are at max (ready)
+    }
+    
+    const maxStrengthForModal = hasStrength ? item.strength!.max : (isToolRechargeable && item.maxStrength ? item.maxStrength : undefined);
+    const canRechargeTool = isToolRechargeable && currentStrengthForModal === 0; // Assuming 0 means depleted for tools
 
     openTODWindow(
-      item.name,
+      `${item.name} L${item.level}`,
       <div className="p-4 font-rajdhani text-center space-y-3">
         <NextImage
             src={item.imageSrc || `https://placehold.co/128x128/000000/FFFFFF.png?text=${item.name.substring(0,3)}`}
@@ -187,15 +217,24 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
         />
         <p className="text-lg font-semibold" style={{color: `hsl(${ITEM_LEVEL_COLORS_CSS_VARS[item.level]})`}}>{item.name} - L{item.level}</p>
         <p className="text-sm text-muted-foreground">{item.description}</p>
-        {maxStrength !== undefined && typeof currentStrength === 'number' && (
+        
+        {hasStrength && typeof currentStrengthForModal === 'number' && typeof maxStrengthForModal === 'number' && !isToolRechargeable && (
           <div className="w-full max-w-xs mx-auto">
-            <Progress value={(currentStrength / maxStrength) * 100} className="h-2" style={{ '--progress-color': `hsl(${ITEM_LEVEL_COLORS_CSS_VARS[item.level]})` } as React.CSSProperties}/>
-            <p className="text-xs text-muted-foreground mt-1">{currentStrength} / {maxStrength} Strength</p>
+            <p className="text-xs text-muted-foreground mt-1">Strength:</p>
+            <Progress value={(currentStrengthForModal / maxStrengthForModal) * 100} className="h-2" style={{ '--progress-color': `hsl(${ITEM_LEVEL_COLORS_CSS_VARS[item.level]})` } as React.CSSProperties}/>
+            <p className="text-xs text-muted-foreground mt-1">{currentStrengthForModal} / {maxStrengthForModal}</p>
           </div>
         )}
+
+        {isToolRechargeable && (
+            <p className="text-sm">Status: {currentStrengthForModal !== 0 ? "Ready" : "Needs Recharge"}</p>
+        )}
+        {item.type === 'Consumable' && <p className="text-sm">Type: Consumable</p>}
+
+
         <HolographicButton onClick={() => console.log("Deploy", item.id)} className="w-full">Deploy</HolographicButton>
-        {canRecharge && (
-           <HolographicButton onClick={() => console.log("Recharge", item.id)} className="w-full">Recharge</HolographicButton>
+        {canRechargeTool && (
+           <HolographicButton onClick={() => console.log("Recharge", item.id)} className="w-full">Recharge ({item.perUseCost} ELINT)</HolographicButton>
         )}
         <HolographicButton onClick={() => console.log("Drop", item.id)} className="w-full border-destructive text-destructive hover:bg-destructive hover:text-background">Drop</HolographicButton>
       </div>,
@@ -205,57 +244,35 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
 
   const handleDownOrExpandAction = () => {
     if (carouselItems.length === 0) return;
+    const entityAtActiveIndex = carouselItems[activeIndex];
 
-    if (!selectedEntityId) {
-      // If nothing is selected, select the item at activeIndex
-      const entityToSelect = carouselItems[activeIndex];
-      if (entityToSelect) {
-        setSelectedEntityId(entityToSelect.id);
-      }
-    } else {
-      // If something is selected, try to expand it or open modal
-      const currentSelectedEntity = carouselItems.find(e => e.id === selectedEntityId);
-      if (currentSelectedEntity) {
-        if (currentSelectedEntity.type === 'stack') {
-          setExpandedStackPath(prev => [...prev, currentSelectedEntity!.id]);
-          setSelectedEntityId(null); // Deselect after expanding to allow new selection in expanded view
-          setActiveIndex(0);
-        } else if (currentSelectedEntity.type === 'item') {
-          openItemActionModal(currentSelectedEntity as DisplayIndividualItem);
-        }
+    if (selectedEntityId && entityAtActiveIndex && selectedEntityId !== entityAtActiveIndex.id) {
+      // An item is selected, but it's not the one in the center. Deselect old, select new.
+      setSelectedEntityId(entityAtActiveIndex.id);
+    } else if (entityAtActiveIndex) {
+      // Nothing selected, or the selected item IS the one in the center.
+      setSelectedEntityId(entityAtActiveIndex.id); // Ensure it's selected
+      if (entityAtActiveIndex.type === 'stack') {
+        setExpandedStackPath(prev => [...prev, entityAtActiveIndex.id]);
+        setSelectedEntityId(null); 
+        setActiveIndex(0);
+      } else if (entityAtActiveIndex.type === 'item') {
+        openItemActionModal(entityAtActiveIndex as DisplayIndividualItem);
       }
     }
   };
 
   const handleUpOrCollapseAction = () => {
-    if (selectedEntityId) {
-      const currentSelectedEntity = carouselItems.find(e => e.id === selectedEntityId);
-      // Check if current selected is the one being shown due to expandedStackPath
-      const isViewingExpandedStackContent = expandedStackPath.length > 0 && 
-                                           carouselItems.some(item => item.id === selectedEntityId); // Simplified check for demo
-
-      if (currentSelectedEntity?.type === 'stack' && expandedStackPath.includes(currentSelectedEntity.id) && expandedStackPath[expandedStackPath.length -1] !== currentSelectedEntity.id ) {
-        // If the selected item is a stack, but not the *currently expanded* stack (meaning we are viewing its children)
-        // then collapsing should go up one level in expandedStackPath.
+    if (expandedStackPath.length > 0) {
+        const parentStackId = expandedStackPath[expandedStackPath.length - 2]; // ID of the stack we are returning to
         setExpandedStackPath(prev => prev.slice(0, -1));
-        setSelectedEntityId(expandedStackPath[expandedStackPath.length -2] || null); // Select the parent stack or null
-        setActiveIndex(0);
-      } else if (expandedStackPath.length > 0) {
-        // If any stack is expanded, collapse it
-        const parentStackId = expandedStackPath[expandedStackPath.length - 2];
-        setExpandedStackPath(prev => prev.slice(0, -1));
-        setSelectedEntityId(parentStackId || null); // Select the parent stack or null
-        setActiveIndex(0);
-      } else {
-        // If no stack is expanded, just deselect the current item
-        setSelectedEntityId(null);
-      }
-    } else if (expandedStackPath.length > 0) {
-        // If nothing is selected, but a stack is expanded, collapse it.
-        const parentStackId = expandedStackPath[expandedStackPath.length - 2];
-        setExpandedStackPath(prev => prev.slice(0, -1));
-        setSelectedEntityId(parentStackId || null);
-        setActiveIndex(0);
+        setSelectedEntityId(parentStackId || null); // Select the parent stack, or null if collapsing to root
+        // Find the index of this parentStackId in the new carouselItems (after collapse)
+        const newCarouselItems = processInventoryForCarousel(playerInventory, expandedStackPath.slice(0, -1));
+        const newActiveIndex = newCarouselItems.findIndex(item => item.id === parentStackId);
+        setActiveIndex(newActiveIndex >= 0 ? newActiveIndex : 0);
+    } else if (selectedEntityId) {
+        setSelectedEntityId(null); // Just deselect if no stack is expanded
     }
   };
 
@@ -263,16 +280,14 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
     if (isDraggingRef.current) return;
 
     if (entity.id === selectedEntityId) {
-      // Tapped on already selected entity: expand if stack, open modal if item
       if (entity.type === 'stack') {
         setExpandedStackPath(prev => [...prev, entity.id]);
-        setSelectedEntityId(null); // Deselect current to allow selection within new view
-        setActiveIndex(0); // Reset index for new view
+        setSelectedEntityId(null); 
+        setActiveIndex(0); 
       } else {
         openItemActionModal(entity as DisplayIndividualItem);
       }
     } else {
-      // Tapped on a new entity: select it and set as activeIndex
       setSelectedEntityId(entity.id);
       setActiveIndex(index);
     }
@@ -288,45 +303,43 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
         newActiveIndex = info.offset.x < 0 ? Math.min(activeIndex + 1, carouselItems.length - 1)
                                       : Math.max(activeIndex - 1, 0);
     }
-    // Even if no swipe, snap to the nearest item based on final drag position
-    // Or simply recalculate based on current scroll
-    if (carouselRef.current) {
-        const currentScroll = -carouselOffset + info.offset.x;
+    
+    if (carouselRef.current && carouselItems.length > 0) {
+        // Adjust calculation for snapping based on current offset and item width + gap
+        const currentVisualOffset = parseFloat(carouselRef.current.style.transform?.match(/translateX\(([^px]+)px\)/)?.[1] || '0');
+        const finalOffset = currentVisualOffset + info.offset.x;
         const itemPlusGap = CAROUSEL_ITEM_WIDTH + CAROUSEL_ITEM_GAP;
-        // Rough calculation for nearest index
-        const closestIndex = Math.round(-currentScroll / itemPlusGap);
-        newActiveIndex = Math.max(0, Math.min(carouselItems.length -1, closestIndex));
+        const centerPoint = (carouselRef.current.clientWidth / 2) - (CAROUSEL_ITEM_WIDTH / 2);
+        
+        // Calculate which item's center is closest to the viewport's center mark after drag
+        let closestIndex = 0;
+        let minDistance = Infinity;
+
+        for (let i = 0; i < carouselItems.length; i++) {
+            const itemCenterAfterDrag = finalOffset + (i * itemPlusGap) + (CAROUSEL_ITEM_WIDTH / 2);
+            const distanceToViewportCenter = Math.abs(itemCenterAfterDrag - (carouselRef.current.clientWidth / 2));
+            if (distanceToViewportCenter < minDistance) {
+                minDistance = distanceToViewportCenter;
+                closestIndex = i;
+            }
+        }
+        newActiveIndex = Math.max(0, Math.min(carouselItems.length - 1, closestIndex));
     }
-    setActiveIndex(newActiveIndex);
+    setActiveIndex(newActiveIndex >= 0 ? newActiveIndex : 0);
   };
   
-  useEffect(() => {
-    // This effect ensures that if activeIndex changes (e.g. due to drag finishing or button press),
-    // the carousel animates to the new centered position.
-    if (carouselRef.current && carouselItems.length > 0) {
-      const targetOffset = -activeIndex * (CAROUSEL_ITEM_WIDTH + CAROUSEL_ITEM_GAP) +
-                           (carouselRef.current.clientWidth / 2 - CAROUSEL_ITEM_WIDTH / 2);
-      setCarouselOffset(targetOffset);
-    } else if (carouselItems.length === 0 && carouselRef.current) {
-        // Center if empty or reset
-        setCarouselOffset(carouselRef.current.clientWidth / 2 - CAROUSEL_ITEM_WIDTH / 2);
-    }
-  }, [activeIndex, carouselItems, carouselRef.current?.clientWidth]);
-
-
   return (
     <HolographicPanel
       className="w-full h-full flex flex-col relative overflow-hidden p-2 md:p-4"
       explicitTheme={theme}
     >
       <div className="flex-shrink-0 flex justify-between items-center mb-2 md:mb-4 px-2">
-        <h2 className="text-xl md:text-2xl font-orbitron holographic-text">
+        <h2 className="text-xl md:text-2xl font-orbitron holographic-text truncate max-w-[calc(100%-100px)]">
           {expandedStackPath.length > 0
-            ? expandedStackPath[expandedStackPath.length -1].replace('stack_category_', '').replace('stack_item_', '').replace(/_/g, ' ')
+            ? expandedStackPath[expandedStackPath.length -1].replace('stack_category_', '').replace('stack_item_', '').replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
             : "Equipment Locker"}
         </h2>
         <div className="flex items-center space-x-2">
-            {/* Layers button always calls handleUpOrCollapseAction */}
             <HolographicButton onClick={handleUpOrCollapseAction} className="!p-1.5 md:!p-2" title="Go Up / Collapse Stack / Deselect">
                 <Layers className="w-4 h-4 md:w-5 md:h-5" />
             </HolographicButton>
@@ -345,11 +358,14 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
           <p className="text-muted-foreground font-rajdhani text-lg">Inventory empty.</p>
         </div>
       ) : (
-        <div ref={carouselRef} className="flex-grow flex items-center justify-start relative overflow-hidden select-none -mx-2 md:-mx-4"> {/* Negative margin to allow cards to peek */}
+        <div ref={carouselRef} className="flex-grow flex items-center justify-start relative overflow-hidden select-none -mx-2 md:-mx-4">
             <motion.div
                 className="flex absolute h-full items-center" 
                 drag="x"
-                dragConstraints={{ left: -(carouselItems.length * (CAROUSEL_ITEM_WIDTH + CAROUSEL_ITEM_GAP) - (carouselRef.current?.clientWidth || 0) + CAROUSEL_ITEM_GAP / 2), right: CAROUSEL_ITEM_GAP / 2 }}
+                dragConstraints={{ 
+                    left: carouselItems.length > 0 ? -(carouselItems.length * (CAROUSEL_ITEM_WIDTH + CAROUSEL_ITEM_GAP) - (carouselRef.current?.clientWidth || 0) + CAROUSEL_ITEM_GAP / 2) : 0, 
+                    right: carouselItems.length > 0 ? CAROUSEL_ITEM_GAP / 2 : 0 
+                }}
                 onDragStart={() => isDraggingRef.current = true}
                 onDragEnd={handleDragEnd}
                 animate={{ x: carouselOffset }}
@@ -357,16 +373,79 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
                 style={{ paddingLeft: CAROUSEL_ITEM_GAP / 2, paddingRight: CAROUSEL_ITEM_GAP / 2 }} 
             >
             {carouselItems.map((entity, index) => {
-                const isSelected = entity.id === selectedEntityId;
+                const isActuallySelected = entity.id === selectedEntityId;
                 const itemForStyling = entity.type === 'item' ? entity.item : entity.topItem;
                 const itemColorVar = ITEM_LEVEL_COLORS_CSS_VARS[itemForStyling.level] || '--foreground';
                 const itemColor = `hsl(${itemColorVar})`;
 
-                const scale = isSelected ? 1.15 : 1; // Enlarge more when selected
-                const opacity = isSelected ? 1 : 0.75;
-                const zIndex = isSelected ? carouselItems.length +1 : carouselItems.length - Math.abs(index - activeIndex);
-                // Selected item slightly lower
-                const yOffset = isSelected ? 10 : 0;
+                const scale = isActuallySelected ? 1.15 : 1;
+                const opacity = isActuallySelected ? 1 : 0.75;
+                const zIndex = isActuallySelected ? carouselItems.length + 1 : carouselItems.length - Math.abs(index - activeIndex);
+                const yOffset = isActuallySelected ? 10 : 0;
+
+                // Content for the card
+                let cardContent;
+                if (entity.type === 'item') {
+                    const item = entity.item;
+                    const isRechargeableTool = item.category === 'Infiltration Gear' && item.type === 'Rechargeable';
+                    const isConsumableTool = item.category === 'Infiltration Gear' && (item.type === 'Consumable' || item.type === 'One-Time Use');
+                    const isHardware = item.category === 'Hardware'; // Locks, etc.
+
+                    cardContent = (
+                        <>
+                            <p className="text-xs md:text-sm font-semibold leading-tight mb-0.5" style={{ color: itemColor }}>
+                                {item.name} L{item.level}
+                            </p>
+                            {isHardware && item.strength && typeof item.strength.max === 'number' && item.strength.max > 0 && (
+                                <div className="w-full px-1 mt-1.5 flex-shrink-0">
+                                    <p className="text-[9px] text-muted-foreground">Strength</p>
+                                    <Progress value={((entity.currentStrength ?? item.strength.current) / item.strength.max) * 100} className="h-1.5" style={{ '--progress-color': itemColor } as React.CSSProperties} />
+                                </div>
+                            )}
+                            {item.category === 'Infiltration Gear' && typeof item.attackFactor === 'number' && (
+                                <div className="w-full px-1 mt-1.5 flex-shrink-0">
+                                    <p className="text-[9px] text-muted-foreground">Attack Factor</p>
+                                    <Progress value={(item.attackFactor / 100) * 100} className="h-1.5" style={{ '--progress-color': itemColor } as React.CSSProperties} />
+                                </div>
+                            )}
+                            {isRechargeableTool && (
+                                <div className="mt-1.5 text-[10px] md:text-xs text-center">
+                                    <p style={{ color: itemColor }}>Type: Rechargeable</p>
+                                    {item.perUseCost && <p className="text-muted-foreground">Cost: {item.perUseCost} ELINT</p>}
+                                </div>
+                            )}
+                            {isConsumableTool && (
+                                 <p className="mt-1.5 text-[10px] md:text-xs" style={{ color: itemColor }}>Type: {item.type}</p>
+                            )}
+                        </>
+                    );
+                } else { // entity.type === 'stack'
+                    cardContent = (
+                        <>
+                            <p className="text-xs md:text-sm font-semibold leading-tight mb-0.5" style={{ color: itemColor }}>
+                                {entity.name}
+                            </p>
+                            <p className="text-[10px] md:text-xs text-muted-foreground mb-1">(Quantity: {entity.count})</p>
+                            <p className="text-[10px] md:text-xs text-primary-foreground font-semibold">
+                                Top: Lvl {itemForStyling.level}
+                            </p>
+                            {/* Display strength bar for topItem if it's hardware */}
+                            {itemForStyling.category === 'Hardware' && itemForStyling.strength && typeof itemForStyling.strength.max === 'number' && itemForStyling.strength.max > 0 && (
+                                <div className="w-full px-1 mt-1.5 flex-shrink-0">
+                                     <p className="text-[9px] text-muted-foreground">Top Item Strength</p>
+                                    <Progress value={(itemForStyling.strength.current / itemForStyling.strength.max) * 100} className="h-1.5" style={{ '--progress-color': itemColor } as React.CSSProperties} />
+                                </div>
+                            )}
+                             {/* Display attack factor for topItem if it's infiltration gear */}
+                            {itemForStyling.category === 'Infiltration Gear' && typeof itemForStyling.attackFactor === 'number' && (
+                                <div className="w-full px-1 mt-1.5 flex-shrink-0">
+                                    <p className="text-[9px] text-muted-foreground">Top Item Attack</p>
+                                    <Progress value={(itemForStyling.attackFactor / 100) * 100} className="h-1.5" style={{ '--progress-color': itemColor } as React.CSSProperties} />
+                                </div>
+                            )}
+                        </>
+                    );
+                }
 
 
                 return (
@@ -385,7 +464,7 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
                     <div
                         className={cn(
                             "w-full h-full rounded-lg border-2 p-2.5 flex flex-col items-center justify-between text-center overflow-hidden relative transition-all duration-200",
-                            isSelected ? "shadow-2xl" : "shadow-md"
+                            isActuallySelected ? "shadow-2xl" : "shadow-md"
                         )}
                         style={{
                             borderColor: itemColor,
@@ -394,7 +473,7 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
                                 radial-gradient(circle at top left, ${itemColor}0A, transparent 70%),
                                 radial-gradient(circle at bottom right, ${itemColor}1A, transparent 60%)
                             `,
-                            boxShadow: isSelected ? `0 0 20px 0px ${itemColor}B3, inset 0 0 12px ${itemColor}50` : `0 0 8px -3px ${itemColor}90, inset 0 0 6px ${itemColor}30`,
+                            boxShadow: isActuallySelected ? `0 0 20px 0px ${itemColor}B3, inset 0 0 12px ${itemColor}50` : `0 0 8px -3px ${itemColor}90, inset 0 0 6px ${itemColor}30`,
                         }}
                     >
                         {entity.type === 'stack' && entity.isCategoryStack && (
@@ -410,10 +489,10 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
                                 {entity.name}
                             </div>
                         )}
-                        <div className="relative w-20 h-20 md:w-24 md:h-24 my-1 flex-shrink-0">
+                        <div className="relative w-full h-2/3 mb-1 flex-shrink-0">
                             <NextImage
-                                src={(entity.type === 'item' ? entity.item.tileImageSrc : entity.topItem.tileImageSrc) || `https://placehold.co/128x128/1a1a1a/FFFFFF.png?text=${itemForStyling.name.substring(0,3)}`}
-                                alt={entity.type === 'item' ? entity.item.name : entity.name}
+                                src={(itemForStyling.tileImageSrc || itemForStyling.imageSrc) || `https://placehold.co/128x128/1a1a1a/FFFFFF.png?text=${itemForStyling.name.substring(0,3)}`}
+                                alt={itemForStyling.name}
                                 layout="fill"
                                 objectFit="contain"
                                 className="drop-shadow-md"
@@ -422,32 +501,9 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
                             />
                         </div>
 
-                        <div className="flex flex-col items-center mt-1 flex-grow justify-center">
-                            <p className="text-xs md:text-sm font-semibold leading-tight mb-0.5" style={{ color: itemColor }}>
-                                {entity.name}
-                            </p>
-                            {entity.type === 'stack' && (
-                                <p className="text-[10px] md:text-xs text-muted-foreground mb-1">({entity.count} items)</p>
-                            )}
-                             <p className="text-[10px] md:text-xs text-primary-foreground font-semibold">
-                                Lvl: {itemForStyling.level}
-                            </p>
+                        <div className="flex flex-col items-center mt-auto flex-grow justify-end w-full">
+                           {cardContent}
                         </div>
-
-                        {(entity.type === 'item' && entity.item.strength && typeof entity.item.strength.max === 'number' && entity.item.strength.max > 0) ||
-                         (entity.type === 'stack' && entity.topItem.strength && typeof entity.topItem.strength.max === 'number' && entity.topItem.strength.max > 0) ? (
-                            <div className="w-full px-1 mt-1.5 flex-shrink-0">
-                            <Progress
-                                value={
-                                    entity.type === 'item'
-                                    ? (( (entity.currentStrength ?? entity.item.strength!.current) / entity.item.strength!.max!) * 100)
-                                    : ((entity.topItem.strength!.current / entity.topItem.strength!.max!) * 100)
-                                }
-                                className="h-1.5"
-                                style={{ '--progress-color': itemColor } as React.CSSProperties}
-                            />
-                            </div>
-                        ) : <div className="h-[calc(0.375rem+0.375rem)] flex-shrink-0"></div> }
                     </div>
                 </motion.div>
                 );
@@ -455,7 +511,6 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
             </motion.div>
         </div>
       )}
-      {/* Bottom Navigation/Action Bar - Separate from Carousel */}
       <div className="flex-shrink-0 flex justify-center items-center space-x-2 p-2 mt-auto z-20">
         <HolographicButton onClick={() => navigateCarousel(-1)} disabled={carouselItems.length <= 1 || activeIndex === 0} className="!p-1.5 md:!p-2">
             <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
@@ -482,5 +537,3 @@ function groupBy<T>(array: T[], keyAccessor: (item: T) => string): Record<string
     return result;
   }, {} as Record<string, T[]>);
 }
-
-    

@@ -26,7 +26,10 @@
       "inventory": {
         "basic_pick_l1": { "id": "basic_pick_l1", "quantity": 11 },
         "cypher_lock_l1": { "id": "cypher_lock_l1", "quantity": 4 },
-        "reinforced_deadbolt_l2": { "id": "reinforced_deadbolt_l2", "quantity": 2 }
+        "reinforced_deadbolt_l2": { "id": "reinforced_deadbolt_l2", "quantity": 2 },
+        "hydraulic_drill_l3": { "id": "hydraulic_drill_l3", "quantity": 3 },
+        "system_hack_l1": { "id": "system_hack_l1", "quantity": 1 },
+        "sonic_pulser_l3": { "id": "sonic_pulser_l3", "quantity": 1 }
       },
       "vault": [
         { "id": "lock_slot_0", "type": "lock", "item": null },
