@@ -11,7 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { getItemById, type GameItemBase, type ItemCategory, type ItemLevel } from '@/lib/game-items';
 import { ITEM_LEVEL_COLORS_CSS_VARS } from '@/lib/constants';
-import { Layers, MousePointerClick, ChevronLeft, ChevronRight, ShoppingCart } from 'lucide-react'; // Added ShoppingCart
+import { Layers, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ShoppingCart } from 'lucide-react';
 import NextImage from 'next/image';
 
 const CAROUSEL_ITEM_WIDTH = 160; // width of a single card in px
@@ -35,14 +35,14 @@ interface DisplayItemStack {
   topItem: GameItemBase;
   count: number;
   isCategoryStack?: boolean;
-  categoryName?: ItemCategory; // Storing the actual category name
+  categoryName?: ItemCategory;
 }
 
 type CarouselDisplayEntity = DisplayIndividualItem | DisplayItemStack;
 
 const findHighestLevelItem = (items: DisplayIndividualItem[]): GameItemBase => {
   if (!items || items.length === 0) {
-    return { id:'placeholder', name:'No Item', description:'Empty stack', level:1, cost:0, scarcity:'Common', category:'Hardware', colorVar:1, dataAiHint: "placeholder item"};
+    return { id:'placeholder', name:'No Item', description:'Empty stack', level:1, cost:0, scarcity:'Common', category:'Hardware', colorVar:1, dataAiHint: "placeholder item" };
   }
   return items.reduce((highest, current) => (current.item.level > highest.item.level ? current.item : highest.item), items[0].item);
 };
@@ -130,11 +130,12 @@ const processInventoryForCarousel = (
 
 
 export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: number }) {
-  const { playerInventory, openTODWindow, openSpyShop } = useAppContext(); // Added openSpyShop
+  const { playerInventory, openTODWindow, openSpyShop } = useAppContext();
   const { theme } = useTheme();
 
   const [expandedStackPath, setExpandedStackPath] = useState<string[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
   const [carouselOffset, setCarouselOffset] = useState(0);
 
   const carouselItems = useMemo(() => processInventoryForCarousel(playerInventory, expandedStackPath), [playerInventory, expandedStackPath]);
@@ -144,16 +145,17 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
 
   useEffect(() => {
     setActiveIndex(0);
+    setSelectedEntityId(null); // No pre-selection
     setCarouselOffset(0);
-  }, [carouselItems.length]);
+  }, [carouselItems.length]); // Also reset activeIndex and selection on carouselItems change
 
-  const navigateCarousel = (direction: number) => {
+  const navigateCarousel = useCallback((direction: number) => {
     if (carouselItems.length === 0) return;
     setActiveIndex(prev => {
       const newIndex = prev + direction;
       return Math.max(0, Math.min(carouselItems.length - 1, newIndex));
     });
-  };
+  }, [carouselItems.length]);
 
   useEffect(() => {
     if (carouselRef.current) {
@@ -163,22 +165,6 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
     }
   }, [activeIndex, carouselItems.length, carouselRef.current?.clientWidth]);
 
-
-  const handleCardTapOrSwipeDown = (entity: CarouselDisplayEntity) => {
-    if (entity.type === 'stack') {
-      setExpandedStackPath(prev => [...prev, entity.id]);
-      setActiveIndex(0); 
-    } else if (entity.type === 'item') {
-      openItemActionModal(entity);
-    }
-  };
-
-  const handleSwipeUpToCollapse = () => {
-    if (expandedStackPath.length > 0) {
-      setExpandedStackPath(prev => prev.slice(0, -1));
-      setActiveIndex(0); 
-    }
-  };
 
   const openItemActionModal = (displayItem: DisplayIndividualItem) => {
     const item = displayItem.item;
@@ -217,22 +203,116 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
     );
   };
 
+  const handleDownOrExpandAction = () => {
+    if (carouselItems.length === 0) return;
+
+    if (!selectedEntityId) {
+      // If nothing is selected, select the item at activeIndex
+      const entityToSelect = carouselItems[activeIndex];
+      if (entityToSelect) {
+        setSelectedEntityId(entityToSelect.id);
+      }
+    } else {
+      // If something is selected, try to expand it or open modal
+      const currentSelectedEntity = carouselItems.find(e => e.id === selectedEntityId);
+      if (currentSelectedEntity) {
+        if (currentSelectedEntity.type === 'stack') {
+          setExpandedStackPath(prev => [...prev, currentSelectedEntity!.id]);
+          setSelectedEntityId(null); // Deselect after expanding to allow new selection in expanded view
+          setActiveIndex(0);
+        } else if (currentSelectedEntity.type === 'item') {
+          openItemActionModal(currentSelectedEntity as DisplayIndividualItem);
+        }
+      }
+    }
+  };
+
+  const handleUpOrCollapseAction = () => {
+    if (selectedEntityId) {
+      const currentSelectedEntity = carouselItems.find(e => e.id === selectedEntityId);
+      // Check if current selected is the one being shown due to expandedStackPath
+      const isViewingExpandedStackContent = expandedStackPath.length > 0 && 
+                                           carouselItems.some(item => item.id === selectedEntityId); // Simplified check for demo
+
+      if (currentSelectedEntity?.type === 'stack' && expandedStackPath.includes(currentSelectedEntity.id) && expandedStackPath[expandedStackPath.length -1] !== currentSelectedEntity.id ) {
+        // If the selected item is a stack, but not the *currently expanded* stack (meaning we are viewing its children)
+        // then collapsing should go up one level in expandedStackPath.
+        setExpandedStackPath(prev => prev.slice(0, -1));
+        setSelectedEntityId(expandedStackPath[expandedStackPath.length -2] || null); // Select the parent stack or null
+        setActiveIndex(0);
+      } else if (expandedStackPath.length > 0) {
+        // If any stack is expanded, collapse it
+        const parentStackId = expandedStackPath[expandedStackPath.length - 2];
+        setExpandedStackPath(prev => prev.slice(0, -1));
+        setSelectedEntityId(parentStackId || null); // Select the parent stack or null
+        setActiveIndex(0);
+      } else {
+        // If no stack is expanded, just deselect the current item
+        setSelectedEntityId(null);
+      }
+    } else if (expandedStackPath.length > 0) {
+        // If nothing is selected, but a stack is expanded, collapse it.
+        const parentStackId = expandedStackPath[expandedStackPath.length - 2];
+        setExpandedStackPath(prev => prev.slice(0, -1));
+        setSelectedEntityId(parentStackId || null);
+        setActiveIndex(0);
+    }
+  };
+
+  const handleCardTap = (entity: CarouselDisplayEntity, index: number) => {
+    if (isDraggingRef.current) return;
+
+    if (entity.id === selectedEntityId) {
+      // Tapped on already selected entity: expand if stack, open modal if item
+      if (entity.type === 'stack') {
+        setExpandedStackPath(prev => [...prev, entity.id]);
+        setSelectedEntityId(null); // Deselect current to allow selection within new view
+        setActiveIndex(0); // Reset index for new view
+      } else {
+        openItemActionModal(entity as DisplayIndividualItem);
+      }
+    } else {
+      // Tapped on a new entity: select it and set as activeIndex
+      setSelectedEntityId(entity.id);
+      setActiveIndex(index);
+    }
+  };
+
   const handleDragEnd = (e: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     isDraggingRef.current = false;
     const velocityThreshold = 200;
     const offsetThreshold = CAROUSEL_ITEM_WIDTH / 3;
 
+    let newActiveIndex = activeIndex;
     if (Math.abs(info.velocity.x) > velocityThreshold || Math.abs(info.offset.x) > offsetThreshold) {
-        if (info.offset.x < 0) navigateCarousel(1); 
-        else navigateCarousel(-1); 
-    } else {
-         if (carouselRef.current) {
-            const targetOffset = -activeIndex * (CAROUSEL_ITEM_WIDTH + CAROUSEL_ITEM_GAP) +
-                                 (carouselRef.current.clientWidth / 2 - CAROUSEL_ITEM_WIDTH / 2);
-            setCarouselOffset(targetOffset);
-        }
+        newActiveIndex = info.offset.x < 0 ? Math.min(activeIndex + 1, carouselItems.length - 1)
+                                      : Math.max(activeIndex - 1, 0);
     }
+    // Even if no swipe, snap to the nearest item based on final drag position
+    // Or simply recalculate based on current scroll
+    if (carouselRef.current) {
+        const currentScroll = -carouselOffset + info.offset.x;
+        const itemPlusGap = CAROUSEL_ITEM_WIDTH + CAROUSEL_ITEM_GAP;
+        // Rough calculation for nearest index
+        const closestIndex = Math.round(-currentScroll / itemPlusGap);
+        newActiveIndex = Math.max(0, Math.min(carouselItems.length -1, closestIndex));
+    }
+    setActiveIndex(newActiveIndex);
   };
+  
+  useEffect(() => {
+    // This effect ensures that if activeIndex changes (e.g. due to drag finishing or button press),
+    // the carousel animates to the new centered position.
+    if (carouselRef.current && carouselItems.length > 0) {
+      const targetOffset = -activeIndex * (CAROUSEL_ITEM_WIDTH + CAROUSEL_ITEM_GAP) +
+                           (carouselRef.current.clientWidth / 2 - CAROUSEL_ITEM_WIDTH / 2);
+      setCarouselOffset(targetOffset);
+    } else if (carouselItems.length === 0 && carouselRef.current) {
+        // Center if empty or reset
+        setCarouselOffset(carouselRef.current.clientWidth / 2 - CAROUSEL_ITEM_WIDTH / 2);
+    }
+  }, [activeIndex, carouselItems, carouselRef.current?.clientWidth]);
+
 
   return (
     <HolographicPanel
@@ -246,18 +326,9 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
             : "Equipment Locker"}
         </h2>
         <div className="flex items-center space-x-2">
-            {expandedStackPath.length > 0 && (
-                <HolographicButton onClick={handleSwipeUpToCollapse} className="!p-1.5 md:!p-2" title="Go Up / Collapse Stack">
-                    <Layers className="w-4 h-4 md:w-5 md:h-5 transform " />
-                </HolographicButton>
-            )}
-             <HolographicButton
-                onClick={() => carouselItems.length > 0 && handleCardTapOrSwipeDown(carouselItems[activeIndex])}
-                className="!p-1.5 md:!p-2"
-                title="Select / Expand Stack"
-                disabled={carouselItems.length === 0}
-            >
-                <MousePointerClick className="w-4 h-4 md:w-5 md:h-5" />
+            {/* Layers button always calls handleUpOrCollapseAction */}
+            <HolographicButton onClick={handleUpOrCollapseAction} className="!p-1.5 md:!p-2" title="Go Up / Collapse Stack / Deselect">
+                <Layers className="w-4 h-4 md:w-5 md:h-5" />
             </HolographicButton>
             <HolographicButton
                 onClick={openSpyShop}
@@ -274,11 +345,11 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
           <p className="text-muted-foreground font-rajdhani text-lg">Inventory empty.</p>
         </div>
       ) : (
-        <div ref={carouselRef} className="flex-grow flex items-center justify-start relative overflow-hidden select-none">
+        <div ref={carouselRef} className="flex-grow flex items-center justify-start relative overflow-hidden select-none -mx-2 md:-mx-4"> {/* Negative margin to allow cards to peek */}
             <motion.div
                 className="flex absolute h-full items-center" 
                 drag="x"
-                dragConstraints={carouselRef}
+                dragConstraints={{ left: -(carouselItems.length * (CAROUSEL_ITEM_WIDTH + CAROUSEL_ITEM_GAP) - (carouselRef.current?.clientWidth || 0) + CAROUSEL_ITEM_GAP / 2), right: CAROUSEL_ITEM_GAP / 2 }}
                 onDragStart={() => isDraggingRef.current = true}
                 onDragEnd={handleDragEnd}
                 animate={{ x: carouselOffset }}
@@ -286,14 +357,17 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
                 style={{ paddingLeft: CAROUSEL_ITEM_GAP / 2, paddingRight: CAROUSEL_ITEM_GAP / 2 }} 
             >
             {carouselItems.map((entity, index) => {
-                const isActive = index === activeIndex;
+                const isSelected = entity.id === selectedEntityId;
                 const itemForStyling = entity.type === 'item' ? entity.item : entity.topItem;
                 const itemColorVar = ITEM_LEVEL_COLORS_CSS_VARS[itemForStyling.level] || '--foreground';
                 const itemColor = `hsl(${itemColorVar})`;
 
-                const scale = isActive ? 1.05 : 0.9;
-                const opacity = isActive ? 1 : 0.65;
-                const zIndex = isActive ? carouselItems.length : carouselItems.length - Math.abs(index - activeIndex);
+                const scale = isSelected ? 1.15 : 1; // Enlarge more when selected
+                const opacity = isSelected ? 1 : 0.75;
+                const zIndex = isSelected ? carouselItems.length +1 : carouselItems.length - Math.abs(index - activeIndex);
+                // Selected item slightly lower
+                const yOffset = isSelected ? 10 : 0;
+
 
                 return (
                 <motion.div
@@ -304,19 +378,14 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
                         height: CAROUSEL_ITEM_WIDTH * 1.5, 
                         marginRight: index === carouselItems.length -1 ? 0 : CAROUSEL_ITEM_GAP,
                     }}
-                    animate={{ scale, opacity, zIndex }}
+                    animate={{ scale, opacity, zIndex, y: yOffset }}
                     transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                    onTap={() => {
-                      if (!isDraggingRef.current) {
-                        if (index !== activeIndex) setActiveIndex(index);
-                        else handleCardTapOrSwipeDown(entity);
-                      }
-                    }}
+                    onTap={() => handleCardTap(entity, index)}
                 >
                     <div
                         className={cn(
                             "w-full h-full rounded-lg border-2 p-2.5 flex flex-col items-center justify-between text-center overflow-hidden relative transition-all duration-200",
-                            isActive ? "shadow-2xl" : "shadow-md"
+                            isSelected ? "shadow-2xl" : "shadow-md"
                         )}
                         style={{
                             borderColor: itemColor,
@@ -325,7 +394,7 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
                                 radial-gradient(circle at top left, ${itemColor}0A, transparent 70%),
                                 radial-gradient(circle at bottom right, ${itemColor}1A, transparent 60%)
                             `,
-                            boxShadow: isActive ? `0 0 20px 0px ${itemColor}B3, inset 0 0 12px ${itemColor}50` : `0 0 8px -3px ${itemColor}90, inset 0 0 6px ${itemColor}30`,
+                            boxShadow: isSelected ? `0 0 20px 0px ${itemColor}B3, inset 0 0 12px ${itemColor}50` : `0 0 8px -3px ${itemColor}90, inset 0 0 6px ${itemColor}30`,
                         }}
                     >
                         {entity.type === 'stack' && entity.isCategoryStack && (
@@ -386,16 +455,21 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
             </motion.div>
         </div>
       )}
-       {carouselItems.length > 1 && (
-         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-2 z-20">
-            <HolographicButton onClick={() => navigateCarousel(-1)} disabled={activeIndex === 0} className="!p-1.5 md:!p-2">
-                <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
-            </HolographicButton>
-            <HolographicButton onClick={() => navigateCarousel(1)} disabled={activeIndex === carouselItems.length - 1} className="!p-1.5 md:!p-2">
-                <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
-            </HolographicButton>
-         </div>
-       )}
+      {/* Bottom Navigation/Action Bar - Separate from Carousel */}
+      <div className="flex-shrink-0 flex justify-center items-center space-x-2 p-2 mt-auto z-20">
+        <HolographicButton onClick={() => navigateCarousel(-1)} disabled={carouselItems.length <= 1 || activeIndex === 0} className="!p-1.5 md:!p-2">
+            <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
+        </HolographicButton>
+        <HolographicButton onClick={handleDownOrExpandAction} disabled={carouselItems.length === 0} className="!p-1.5 md:!p-2">
+            <ChevronDown className="w-4 h-4 md:w-5 md:h-5" />
+        </HolographicButton>
+        <HolographicButton onClick={handleUpOrCollapseAction} disabled={!selectedEntityId && expandedStackPath.length === 0} className="!p-1.5 md:!p-2">
+            <ChevronUp className="w-4 h-4 md:w-5 md:h-5" />
+        </HolographicButton>
+        <HolographicButton onClick={() => navigateCarousel(1)} disabled={carouselItems.length <= 1 || activeIndex === carouselItems.length - 1} className="!p-1.5 md:!p-2">
+            <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
+        </HolographicButton>
+      </div>
     </HolographicPanel>
   );
 }
@@ -408,3 +482,5 @@ function groupBy<T>(array: T[], keyAccessor: (item: T) => string): Record<string
     return result;
   }, {} as Record<string, T[]>);
 }
+
+    
