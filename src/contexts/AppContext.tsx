@@ -122,7 +122,8 @@ interface AppContextType {
   openInventoryTOD: (context: AppContextType['todInventoryContext']) => void;
   closeInventoryTOD: () => void;
   playerInfo: Player | null;
-  // FIXED_DEV_PI_ID: string; // No longer explicitly in context type, imported directly
+  isScrollLockActive: boolean; // New state for TOD scroll lock
+  setIsScrollLockActive: (locked: boolean) => void; // New setter
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -161,11 +162,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [_isShopAuthenticated, _setIsShopAuthenticated] = useState(false);
   const [_todInventoryContext, _setTodInventoryContext] = useState<AppContextType['todInventoryContext']>(null);
   const [_pendingPiId, _setPendingPiId] = useState<string | null>(null);
+  const [_isScrollLockActive, _setIsScrollLockActive] = useState(false); // New state for scroll lock
 
   const { theme: currentGlobalTheme, themeVersion } = useTheme();
-
-  // Order of useCallback definitions:
-  // Define functions with fewer dependencies first.
 
   const addMessage = useCallback((message: Omit<GameMessage, 'id' | 'timestamp'>) => {
     _setMessages(prev => {
@@ -179,12 +178,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const combinedMessages = [...pinnedMessages, ...newMessagesList];
       return combinedMessages.slice(0, 50);
     });
-  }, []); // Stable: _setMessages is stable
+  }, []);
 
   const closeTODWindow = useCallback(() => {
     _setIsTODWindowOpen(false);
     _setTODWindowContent(null);
-  }, [_setIsTODWindowOpen, _setTODWindowContent]); // Stable: setters are stable
+  }, []);
 
   const openTODWindow = useCallback((title: string, content: ReactNode, options: TODWindowOptions = {}) => {
     _setTODWindowTitle(title);
@@ -198,7 +197,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         themeVersion: versionToUseForWindow
     });
     _setIsTODWindowOpen(true);
-  }, [currentGlobalTheme, themeVersion, _setTODWindowTitle, _setTODWindowContent, _setTODWindowOptions, _setIsTODWindowOpen]);
+  }, [currentGlobalTheme, themeVersion]);
 
   const attemptLoginWithPiId = useCallback(async (piId: string) => {
     _setIsLoading(true);
@@ -226,10 +225,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addMessage({type: 'system', text: 'New operative detected. Proceed to faction alignment.'});
     }
     _setIsLoading(false);
-  }, [
-    _setCurrentPlayer, _setOnboardingStep, _setIsLoading, _setPendingPiId, 
-    openTODWindow, addMessage, currentGlobalTheme, themeVersion // addMessage is stable
-  ]);
+  }, [openTODWindow, addMessage, currentGlobalTheme, themeVersion]);
 
   const handleAuthentication = useCallback(async (piIdToAuth: string, chosenFaction: Faction) => {
     _setIsLoading(true);
@@ -260,10 +256,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
      _setOnboardingStep(nextOnboardingStep);
     _setIsLoading(false);
-  }, [
-    _setCurrentPlayer, _setOnboardingStep, _setIsLoading, _setPendingPiId, 
-    openTODWindow, currentGlobalTheme, themeVersion // openTODWindow depends on theme
-  ]);
+  }, [openTODWindow, currentGlobalTheme, themeVersion]);
   
   useEffect(() => {
     initializePlayerData();
@@ -280,12 +273,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       _setIsLoading(true);
       const lastPlayerId = typeof window !== "undefined" ? localStorage.getItem('lastPlayerId') : null;
       if (lastPlayerId) {
-        // Instead of calling attemptLoginWithPiId directly which might use addMessage too early,
-        // replicate its logic but ensure addMessage is only called *after* player state is set.
         const player = await getPlayer(lastPlayerId);
         if (player) {
-          _setCurrentPlayer(player); // Set player state first
-          // Now it's safer to call functions that might use addMessage indirectly
+          _setCurrentPlayer(player);
           if (player.faction === 'Observer') {
             _setOnboardingStep('tod');
           } else if (player.spyName) {
@@ -293,13 +283,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
           } else {
              _setOnboardingStep('codenameInput');
              const factionThemeForCodename = player.faction === 'Cyphers' ? 'cyphers' : player.faction === 'Shadows' ? 'shadows' : currentGlobalTheme;
-             openTODWindow( // This uses currentGlobalTheme, themeVersion
+             openTODWindow(
               "Agent Codename",
               <CodenameInput explicitTheme={factionThemeForCodename} />,
               { showCloseButton: false, explicitTheme: factionThemeForCodename, themeVersion }
             );
           }
-          // addMessage({type: 'system', text: `Session restored for Agent ${player.spyName || lastPlayerId.substring(0,8)}.`}); // Example message
         } else {
           if (typeof window !== "undefined") localStorage.removeItem('lastPlayerId');
           _setOnboardingStep('welcome');
@@ -310,9 +299,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       _setIsLoading(false);
     };
     loadLastPlayer();
-  // Dependencies: openTODWindow, currentGlobalTheme, themeVersion are for openTODWindow call.
-  // addMessage is not directly called here anymore to avoid early init issues.
-  // attemptLoginWithPiId is not called here.
   }, [openTODWindow, currentGlobalTheme, themeVersion]);
 
 
@@ -348,7 +334,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (typeof window !== "undefined") localStorage.removeItem('lastPlayerId');
     _setOnboardingStep('welcome');
     _setIsLoading(false);
-  }, [_setCurrentPlayer, _setOnboardingStep, _setIsLoading]);
+  }, []);
 
   const updatePlayerInventoryItemStrength = useCallback(async (itemId: string, newStrength: number) => {
     if (_currentPlayer) {
@@ -471,7 +457,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       _setCurrentPlayer(result);
       addMessage({ text: itemIdToDeploy && itemBeingDeployed ? `Deployed ${itemBeingDeployed.name} L${itemBeingDeployed.level} to vault.` : `Cleared vault slot.`, type: 'system' });
     }
-  }, [_currentPlayer, addMessage, _setCurrentPlayer]);
+  }, [_currentPlayer, addMessage]);
 
   const addXp = useCallback(async (amount: number) => {
     if (_currentPlayer) {
@@ -488,15 +474,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
                         : currentGlobalTheme || 'terminal-green';
     openTODWindow(
       context?.title || "Inventory",
-      <div>Inventory Browser for {context?.category} - {context?.title}</div>,
+      <div>Inventory Browser for {context?.category} - {context?.title}</div>, // Placeholder, will be replaced by InventoryBrowserInTOD
       { explicitTheme: resolvedTheme, themeVersion: themeVersion, showCloseButton: true }
     );
-  }, [_currentPlayer, currentGlobalTheme, themeVersion, openTODWindow, _setTodInventoryContext]);
+  }, [_currentPlayer, currentGlobalTheme, themeVersion, openTODWindow]);
 
   const closeInventoryTOD = useCallback(() => {
     _setTodInventoryContext(null);
     closeTODWindow();
-  }, [closeTODWindow, _setTodInventoryContext]);
+  }, [closeTODWindow]);
 
   const playerInfoForShop = useMemo(() => {
     if (!_currentPlayer) return null;
@@ -505,7 +491,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       spyName: _currentPlayer.spyName,
       faction: _currentPlayer.faction,
       stats: { level: _currentPlayer.stats.level, elintReserves: _currentPlayer.stats.elintReserves },
-    } as Player;
+    } as Player; // Cast needed if Player type expects more stats for shop specifically
   }, [_currentPlayer]);
 
   const contextValue = useMemo(() => ({
@@ -558,6 +544,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     openInventoryTOD,
     closeInventoryTOD,
     playerInfo: playerInfoForShop,
+    isScrollLockActive: _isScrollLockActive,
+    setIsScrollLockActive: _setIsScrollLockActive,
   }), [
     _currentPlayer, _isLoading, _isPiBrowser, _onboardingStep, _messages, _dailyTeamCode, _pendingPiId,
     _isTODWindowOpen, _todWindowTitle, _todWindowContent, _todWindowOptions,
@@ -565,8 +553,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     playerInfoForShop, addMessage, openTODWindow, closeTODWindow, attemptLoginWithPiId, handleAuthentication,
     setFactionAppContext, setPlayerSpyNameAppContext, updatePlayerStatsAppContext, addXp, logout,
     updatePlayerInventoryItemStrength, spendElint, purchaseItem, addItemToInventory, removeItemFromInventory,
-    deployItemToVault, openInventoryTOD, closeInventoryTOD,
-    _setOnboardingStep, _setIsLoading, _setIsSpyShopActive, _setShopSearchTerm, _setIsShopAuthenticated
+    deployItemToVault, openInventoryTOD, closeInventoryTOD, _setOnboardingStep, _setIsLoading,
+    _setIsSpyShopActive, _setShopSearchTerm, _setIsShopAuthenticated,
+    _isScrollLockActive, _setIsScrollLockActive // Add new scroll lock states
   ]);
 
   return (
@@ -584,5 +573,4 @@ export function useAppContext() {
   return context;
 }
 
-// Export FIXED_DEV_PI_ID if WelcomeScreen needs to import it directly
 export { FIXED_DEV_PI_ID };

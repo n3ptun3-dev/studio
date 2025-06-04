@@ -36,12 +36,12 @@ export default function HomePage() {
   const appContext = useAppContext();
   const {
     onboardingStep,
-    faction, // This faction is from AppContext and should be the source of truth
+    faction, 
     playerSpyName,
     playerStats,
     addMessage,
     setIsLoading,
-    isLoading: isAppLoading, // isLoading from AppContext
+    isLoading: isAppLoading, 
     isTODWindowOpen,
     todWindowTitle,
     todWindowContent,
@@ -50,22 +50,17 @@ export default function HomePage() {
     isSpyShopActive,
     todInventoryContext,
     closeInventoryTOD,
-    openTODWindow, // Make sure this is used consistently
+    openTODWindow, 
+    isScrollLockActive, // Get scroll lock state from AppContext
   } = appContext;
 
-  const { theme: currentThemeContextTheme, themeVersion } = useTheme(); // Theme from ThemeContext
+  const { theme: currentThemeContextTheme, themeVersion } = useTheme(); 
 
   const todContainerRef = useRef<HTMLDivElement>(null);
   const [parallaxOffset, setParallaxOffset] = useState(0);
   const [isClientMounted, setIsClientMounted] = useState(false);
   const initialScrollSetRef = useRef(false);
   const [playBootAnimation, setPlayBootAnimation] = useState(false);
-
-  // console.log('HomePage rendering, isTODWindowOpen:', isTODWindowOpen);
-  // console.log('HomePage rendering. AppContext faction for TODWindow key:', faction);
-  // console.log('HomePage rendering. Current ThemeContext theme for TODWindow key:', currentThemeContextTheme);
-  // console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key:', themeVersion);
-
 
   useEffect(() => {
     setIsClientMounted(true);
@@ -94,25 +89,23 @@ export default function HomePage() {
         type: 'system',
         isPinned: true,
       });
-      setIsLoading(false); // Ensure loading stops for observer
+      setIsLoading(false); 
     } else if (isNewPlayer && playerSpyName) {
       addMessage({
         text: `Welcome, Agent ${playerSpyName}. HQ guidance protocol initiated. Familiarize yourself with the Tactical Overlay Device. Your first objective: explore your Agent PAD.`,
         type: 'hq',
         isPinned: true,
       });
-       setIsLoading(false); // Ensure loading stops
-    } else if (playerSpyName) { // Existing, named player
+       setIsLoading(false); 
+    } else if (playerSpyName) { 
       // AI Welcome Message Disabled
       addMessage({
         text: `Agent ${playerSpyName}, welcome back. Standard operational parameters active. HQ awaits your report.`,
         type: 'hq',
         isPinned: true,
       });
-       setIsLoading(false); // Ensure loading stops
+       setIsLoading(false); 
     } else {
-       // This case might be hit if playerSpyName is null but it's not an Observer or strictly a new player
-       // e.g. if they are stuck at codename input.
        setIsLoading(false); 
     }
   }, [onboardingStep, isClientMounted, playerSpyName, faction, playerStats, addMessage, setIsLoading, isAppLoading, isTODWindowOpen, playBootAnimation]);
@@ -128,6 +121,8 @@ export default function HomePage() {
   ], [parallaxOffset]);
 
   const handleScroll = useCallback(() => {
+    if (isScrollLockActive) return; // Do not handle scroll if lock is active
+
     if (todContainerRef.current) {
       const currentScrollLeft = todContainerRef.current.scrollLeft;
       const clientWidth = todContainerRef.current.clientWidth;
@@ -143,7 +138,7 @@ export default function HomePage() {
         todContainerRef.current.scrollLeft = totalContentWidthForLooping + currentScrollLeft;
       }
     }
-  }, [sectionComponents.length]); // Removed parallaxOffset
+  }, [sectionComponents.length, isScrollLockActive]); // Add isScrollLockActive to dependencies
 
   useEffect(() => {
     const container = todContainerRef.current;
@@ -151,25 +146,36 @@ export default function HomePage() {
       const setInitialScroll = () => {
         if (todContainerRef.current && todContainerRef.current.clientWidth > 0 && !initialScrollSetRef.current) {
           const sectionWidth = todContainerRef.current.clientWidth;
-          const targetSectionIndex = 1; // AgentSection is at index 1
+          const targetSectionIndex = 1; 
           const initialScrollPosition = sectionWidth * targetSectionIndex;
           todContainerRef.current.scrollLeft = initialScrollPosition;
           setParallaxOffset(initialScrollPosition); 
           initialScrollSetRef.current = true;
-          // console.log(`[HomePage] Initial scroll set to: ${initialScrollPosition} for section index ${targetSectionIndex}. Container width: ${sectionWidth}`);
         }
       };
       
       requestAnimationFrame(setInitialScroll);
 
-      container.addEventListener('scroll', handleScroll, { passive: true });
+      // Conditionally add/remove scroll listener based on isScrollLockActive
+      // The passive option is important. If we need to call preventDefault() inside handleScroll,
+      // we cannot use { passive: true }. However, for performance, it's generally good.
+      // Since EquipmentLockerSection will manage its own preventDefault, this can remain passive.
+      const scrollListenerOptions = { passive: true };
+      
+      if (!isScrollLockActive) {
+        container.addEventListener('scroll', handleScroll, scrollListenerOptions);
+      } else {
+        // If scroll lock becomes active, remove the listener to prevent TOD scrolling
+        container.removeEventListener('scroll', handleScroll);
+      }
+      
       return () => {
         if (container) {
           container.removeEventListener('scroll', handleScroll);
         }
       };
     }
-  }, [onboardingStep, isAppLoading, isClientMounted, playBootAnimation, handleScroll]); 
+  }, [onboardingStep, isAppLoading, isClientMounted, playBootAnimation, handleScroll, isScrollLockActive]); // Add isScrollLockActive to dependencies
 
   const renderOnboarding = () => {
     switch (onboardingStep) {
@@ -177,11 +183,9 @@ export default function HomePage() {
         return <WelcomeScreen />;
       case 'factionChoice':
         return <FactionChoiceScreen />;
-      // 'codenameInput' is now handled via TODWindow opened by AppContext.
       case 'fingerprint':
         return <FingerprintScannerScreen />;
       default: 
-         // If stuck in a non-TOD, non-fingerprint, non-welcome, non-factionChoice state, show loading
         return <div className="animate-pulse text-2xl font-orbitron holographic-text text-center">LOADING SYSTEM DATA...</div>;
     }
   };
@@ -205,7 +209,7 @@ export default function HomePage() {
             isOpen={isTODWindowOpen && !todInventoryContext}
             onClose={closeTODWindow}
             title={todWindowTitle}
-            explicitTheme={currentThemeContextTheme} // Use theme from ThemeContext
+            explicitTheme={currentThemeContextTheme} 
             themeVersion={themeVersion}
             showCloseButton={todWindowOptions.showCloseButton}
           >
@@ -235,12 +239,6 @@ export default function HomePage() {
     );
   }
   
-  // console.log('HomePage rendering. AppContext faction for TODWindow key (TOD view):', faction);
-  // console.log('HomePage rendering. Current ThemeContext theme for TODWindow key (TOD view):', currentThemeContextTheme);
-  // console.log('HomePage rendering. Current ThemeContext themeVersion for TODWindow key (TOD view):', themeVersion);
-  // console.log('HomePage rendering. TODWindow props: explicitTheme=', todWindowOptions.explicitTheme || currentThemeContextTheme, 'key=', `${faction}-${todWindowOptions.explicitTheme || currentThemeContextTheme}-${todWindowOptions.themeVersion || themeVersion}-tod-${isTODWindowOpen}-${todInventoryContext ? 'inv-open' : 'inv-closed'}`);
-
-
   return (
     <main className="relative h-screen w-screen overflow-hidden"> 
       <ParallaxBackground />
