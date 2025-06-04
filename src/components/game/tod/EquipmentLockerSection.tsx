@@ -6,7 +6,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { AnimatePresence, motion, PanInfo } from 'framer-motion';
 import { useAppContext, type PlayerInventoryItem } from '@/contexts/AppContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { HolographicButton } from '@/components/game/shared/HolographicPanel'; // HolographicPanel removed as it's not used directly here for the root
+import { HolographicButton } from '@/components/game/shared/HolographicPanel';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { getItemById, type GameItemBase, type ItemCategory, type ItemLevel, ITEM_LEVELS } from '@/lib/game-items';
@@ -14,10 +14,10 @@ import { ITEM_LEVEL_COLORS_CSS_VARS, XP_THRESHOLDS } from '@/lib/constants';
 import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ShoppingCart, ArrowLeft, XCircle, Layers } from 'lucide-react';
 import NextImage from 'next/image';
 
-const CAROUSEL_ITEM_WIDTH = 160;
-const CAROUSEL_ITEM_GAP = 20;
-const OVERLAY_CHILD_ITEM_WIDTH = 130;
-const OVERLAY_CHILD_ITEM_GAP = 15;
+const CAROUSEL_ITEM_WIDTH = 160; // px
+const CAROUSEL_ITEM_GAP = 20; // px
+const OVERLAY_CHILD_ITEM_WIDTH = 130; // px
+const OVERLAY_CHILD_ITEM_GAP = 15; // px
 const MAX_DISPLAY_ENTITIES_MAIN_CAROUSEL = 8;
 
 const FALLBACK_GAME_ITEM: GameItemBase = {
@@ -56,6 +56,8 @@ interface DisplayItemStack {
   count: number;
   isCategoryStack?: boolean;
   categoryName?: ItemCategory;
+  isExpanded?: boolean;
+  childrenToDisplay?: CarouselDisplayEntity[];
 }
 
 type CarouselDisplayEntity = DisplayIndividualItem | DisplayItemStack;
@@ -93,7 +95,7 @@ const processInventoryForCarousel = (
       }
       return Array.from({ length: invItem.quantity }, (_, index) => ({
         type: 'item' as 'item',
-        id: `${itemId}_instance_${index}`, // Unique ID for each instance
+        id: `${itemId}_instance_${index}`,
         item: baseItem,
         inventoryQuantity: 1,
         currentStrength: invItem.currentStrength,
@@ -124,12 +126,17 @@ const processInventoryForCarousel = (
 
     } else if (deepestStackId.startsWith('stack_item_')) {
       const parentStackIdParts = deepestStackId.split('_');
-      if (parentStackIdParts.length < 4) return [];
-      const categoryFromId = parentStackIdParts[2] as ItemCategory;
-      const baseNameFromIdParts = parentStackIdParts.slice(3);
-      const baseNameFromId = baseNameFromIdParts.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
+      if (parentStackIdParts.length < 3) return []; // e.g. stack_item_Hardware_basic_pick -> needs at least 'stack', 'item', 'Category', 'NamePart1'
       
-      return allDetailedInventoryItems.filter(di => di.item.name === baseNameFromId && di.item.category === categoryFromId);
+      const categoryFromId = parentStackIdParts[2] as ItemCategory;
+      const baseNameParts = parentStackIdParts.slice(3);
+      // Reconstruct base name: join parts, then capitalize each word in the reconstructed name
+      // This assumes names like "Basic Pick" become "basic_pick"
+      const reconstructedBaseName = baseNameParts.join(' ').replace(/\b\w/g, char => char.toUpperCase());
+
+      return allDetailedInventoryItems.filter(di => {
+        return di.item.name === reconstructedBaseName && di.item.category === categoryFromId;
+      });
     }
     return [];
   } else {
@@ -184,30 +191,30 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
   const [activeIndex, setActiveIndex] = useState(0);
   const [carouselOffset, setCarouselOffset] = useState(0);
   
-  const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
-  const [expandedStackPath, setExpandedStackPath] = useState<string[]>([]);
+  const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null); // ID of item whose children are shown in overlay
+  const [expandedStackPath, setExpandedStackPath] = useState<string[]>([]); // Path to currently expanded stack for overlay
   
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
   const [overlayItems, setOverlayItems] = useState<CarouselDisplayEntity[]>([]);
-  // overlayTitle is not used for display, but can be kept for logic if needed later
-  // const [overlayTitle, setOverlayTitle] = useState(''); 
+  // const [overlayTitle, setOverlayTitle] = useState(''); // Not currently used for display
 
   const mainCarouselContainerRef = useRef<HTMLDivElement>(null);
+  const mainCarouselRef = useRef<HTMLDivElement>(null); // Ref for the draggable motion.div
   const mainCarouselSnapshotRef = useRef<{ activeIndex: number; offset: number } | null>(null);
   
   const [isMouseOverCarousel, setIsMouseOverCarousel] = useState(false);
   const isMouseOverCarouselRef = useRef(isMouseOverCarousel);
-  const lastCarouselInteractionTimeRef = useRef<number>(0);
+  const carouselInteractedTimestampRef = useRef<number>(0);
 
 
   useEffect(() => {
     isMouseOverCarouselRef.current = isMouseOverCarousel;
-    setIsScrollLockActive(isMouseOverCarousel);
-  }, [isMouseOverCarousel, setIsScrollLockActive]);
+    appContext.setIsScrollLockActive(isMouseOverCarousel);
+  }, [isMouseOverCarousel, appContext]);
 
   const navigateCarousel = useCallback((direction: number) => {
     if (mainCarouselItems.length === 0) return;
-    lastCarouselInteractionTimeRef.current = Date.now(); // Mark interaction
+    carouselInteractedTimestampRef.current = Date.now();
     setActiveIndex(prev => {
       const newIndex = prev + direction;
       return Math.max(0, Math.min(mainCarouselItems.length - 1, newIndex));
@@ -224,43 +231,46 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
   }, [playerInventory]);
 
   useEffect(() => {
-    if (mainCarouselContainerRef.current && mainCarouselItems.length > 0 && !isOverlayOpen) {
+    if (mainCarouselRef.current && mainCarouselItems.length > 0 && !isOverlayOpen) {
       const itemWidth = CAROUSEL_ITEM_WIDTH;
       const totalWidthBeforeActive = activeIndex * (itemWidth + CAROUSEL_ITEM_GAP);
-      const targetOffset = -totalWidthBeforeActive + (mainCarouselContainerRef.current.clientWidth / 2 - itemWidth / 2);
+      const viewportWidth = mainCarouselContainerRef.current?.clientWidth || window.innerWidth;
+      const targetOffset = -totalWidthBeforeActive + (viewportWidth / 2 - itemWidth / 2);
       setCarouselOffset(targetOffset);
     } else if (mainCarouselItems.length === 0 && mainCarouselContainerRef.current) {
-      setCarouselOffset(mainCarouselContainerRef.current.clientWidth / 2 - CAROUSEL_ITEM_WIDTH / 2);
+      const viewportWidth = mainCarouselContainerRef.current?.clientWidth || window.innerWidth;
+      setCarouselOffset(viewportWidth / 2 - CAROUSEL_ITEM_WIDTH / 2);
     }
-  }, [activeIndex, mainCarouselItems, isOverlayOpen]); // Removed mainCarouselContainerRef.current?.clientWidth from deps as it can cause loops
+  }, [activeIndex, mainCarouselItems, isOverlayOpen]);
 
-  const debouncedSnapAfterScroll = useCallback(
-    debounce(() => {
-      // Only snap if mouse is currently over carousel OR a very recent carousel interaction occurred
-      if (isMouseOverCarouselRef.current || (Date.now() - lastCarouselInteractionTimeRef.current < 300)) {
-          if (mainCarouselContainerRef.current && mainCarouselItems.length > 0 && !isOverlayOpen) {
-              const viewportCenter = mainCarouselContainerRef.current.clientWidth / 2;
-              let closestIndex = 0;
-              let minDistance = Infinity;
+  const snapToNearestItemAfterScroll = useCallback(() => {
+    if (!isMouseOverCarouselRef.current && (Date.now() - carouselInteractedTimestampRef.current > 300)) {
+      return; 
+    }
+    if (mainCarouselRef.current && mainCarouselItems.length > 0 && !isOverlayOpen) {
+      const viewportCenter = (mainCarouselContainerRef.current?.clientWidth || window.innerWidth) / 2;
+      let closestIndex = 0;
+      let minDistance = Infinity;
 
-              for (let i = 0; i < mainCarouselItems.length; i++) {
-                  const itemCenterInViewport = carouselOffset + (i * (CAROUSEL_ITEM_WIDTH + CAROUSEL_ITEM_GAP)) + (CAROUSEL_ITEM_WIDTH / 2);
-                  const distanceToViewportCenter = Math.abs(itemCenterInViewport - viewportCenter);
+      for (let i = 0; i < mainCarouselItems.length; i++) {
+        const itemCenterInViewport = carouselOffset + (i * (CAROUSEL_ITEM_WIDTH + CAROUSEL_ITEM_GAP)) + (CAROUSEL_ITEM_WIDTH / 2);
+        const distanceToViewportCenter = Math.abs(itemCenterInViewport - viewportCenter);
 
-                  if (distanceToViewportCenter < minDistance) {
-                      minDistance = distanceToViewportCenter;
-                      closestIndex = i;
-                  }
-              }
-              setActiveIndex(closestIndex);
-          }
+        if (distanceToViewportCenter < minDistance) {
+          minDistance = distanceToViewportCenter;
+          closestIndex = i;
+        }
       }
-    }, 150),
-    [carouselOffset, mainCarouselItems, isOverlayOpen] // Dependencies for the debounced function itself
-  );
+      setActiveIndex(closestIndex);
+    }
+  }, [carouselOffset, mainCarouselItems, isOverlayOpen]);
+
+  const debouncedSnapAfterScroll = useCallback(debounce(snapToNearestItemAfterScroll, 150), [snapToNearestItemAfterScroll]);
 
   useEffect(() => {
-    debouncedSnapAfterScroll();
+    if (isMouseOverCarouselRef.current || (Date.now() - carouselInteractedTimestampRef.current < 300)) {
+      debouncedSnapAfterScroll();
+    }
   }, [carouselOffset, debouncedSnapAfterScroll]);
 
 
@@ -317,21 +327,14 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
       setExpandedStackPath(newPath);
       const newOverlayDisplayItems = processInventoryForCarousel(playerInventory, newPath);
       setOverlayItems(newOverlayDisplayItems);
+      setSelectedEntityId(entity.id);
     } else if (entity.type === 'item') {
       openItemActionModal(entity as DisplayIndividualItem);
     }
   }, [expandedStackPath, playerInventory, openItemActionModal]);
-
-  const handleMainCarouselCardTap = useCallback((entity: CarouselDisplayEntity, index: number) => {
-    lastCarouselInteractionTimeRef.current = Date.now();
-    if (activeIndex !== index) {
-      setActiveIndex(index);
-    } else { // If already selected, tapping again can trigger action (like "Down" button)
-      handleDownOrExpandAction();
-    }
-  }, [activeIndex, handleDownOrExpandAction]);
-
+  
   const handleDownOrExpandAction = useCallback(() => {
+    carouselInteractedTimestampRef.current = Date.now();
     if (isOverlayOpen) {
       if (overlayItems.length > 0 && overlayItems[0]) {
         handleEntityInteractionInOverlay(overlayItems[0]);
@@ -346,7 +349,7 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
     setSelectedEntityId(entityAtActiveIndex.id);
 
     if (entityAtActiveIndex.type === 'stack') {
-      if (mainCarouselContainerRef.current) {
+      if (mainCarouselRef.current) { // Use mainCarouselRef, not mainCarouselContainerRef for snapshotting offset if it was the draggable one
         mainCarouselSnapshotRef.current = { activeIndex, offset: carouselOffset };
       }
       const newExpandedPath = [entityAtActiveIndex.id];
@@ -359,14 +362,22 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
     }
   }, [isOverlayOpen, overlayItems, mainCarouselItems, activeIndex, playerInventory, carouselOffset, handleEntityInteractionInOverlay, openItemActionModal]);
   
-  const findEntityByIdRecursive = (items: CarouselDisplayEntity[], id: string): CarouselDisplayEntity | undefined => {
-    for (const item of items) {
-      if (item.id === id) return item;
-    }
-    return undefined;
-  };
+  // This useEffect was causing the "Cannot access before initialization" error.
+  // It's intended to trigger expansion if a card is tapped and it's a stack.
+  // The primary way to trigger expansion should now be the "Down" button.
+  // Tapping a card focuses it (sets activeIndex).
+  // useEffect(() => {
+  //   if (selectedEntityId && mainCarouselItems[activeIndex]?.id === selectedEntityId && mainCarouselItems[activeIndex]?.type === 'stack' && !isOverlayOpen) {
+  //     // This condition might be too aggressive or needs to be tied to a specific user action like a second tap.
+  //     // For now, let's rely on the Down button for expansion.
+  //     // If we want tap-to-expand, this needs careful handling to avoid loops or premature expansion.
+  //     // One option: add a state like `awaitingSecondTapForExpansion`
+  //   }
+  // }, [activeIndex, selectedEntityId, mainCarouselItems, isOverlayOpen, handleDownOrExpandAction]);
+
 
   const handleUpOrCollapseAction = useCallback(() => {
+    carouselInteractedTimestampRef.current = Date.now();
     if (isOverlayOpen) {
       const newPath = expandedStackPath.slice(0, -1);
       setExpandedStackPath(newPath);
@@ -376,21 +387,38 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
         if (mainCarouselSnapshotRef.current) {
           const restoredActiveIndex = mainCarouselSnapshotRef.current.activeIndex;
           const validRestoredIndex = Math.max(0, Math.min(mainCarouselItems.length - 1, restoredActiveIndex));
-          setActiveIndex(validRestoredIndex);
+          setActiveIndex(validRestoredIndex); // This will trigger the useEffect for carouselOffset
+          // Ensure carouselOffset is also restored if needed, or let useEffect handle it.
+          // setCarouselOffset(mainCarouselSnapshotRef.current.offset); // Potentially restore offset directly
           mainCarouselSnapshotRef.current = null;
         } else {
-           setActiveIndex(mainCarouselItems.length > 0 ? 0 : 0);
+           setActiveIndex(mainCarouselItems.length > 0 ? Math.floor(mainCarouselItems.length / 2) : 0);
         }
         setSelectedEntityId(null); 
       } else {
         const newOverlayDisplayItems = processInventoryForCarousel(playerInventory, newPath);
         setOverlayItems(newOverlayDisplayItems);
-        setSelectedEntityId(newPath[newPath.length - 1]);
+        setSelectedEntityId(newPath[newPath.length - 1]); // Update selected ID to the new parent stack
       }
     } else {
-        // If overlay is not open, "Up" does nothing on main carousel for now
+      // If overlay is not open, "Up" could potentially deselect the current item
+      // setActiveIndex(Math.floor(mainCarouselItems.length / 2)); // Or some other logic
+      // setSelectedEntityId(null);
     }
   }, [isOverlayOpen, expandedStackPath, playerInventory, mainCarouselItems]);
+
+  const handleMainCarouselCardTap = useCallback((entity: CarouselDisplayEntity, index: number) => {
+    carouselInteractedTimestampRef.current = Date.now();
+    if (activeIndex !== index) {
+      setActiveIndex(index);
+      setSelectedEntityId(entity.id); // Select on tap
+    } else { // If already selected (centered), tapping again could trigger action
+      // This is where a "double tap" or "tap on already selected to expand" logic could go
+      // For now, let's keep it simple: tap centers, down button expands/acts.
+      // If we want tap to expand:
+      // handleDownOrExpandAction();
+    }
+  }, [activeIndex]);
 
 
   const handleWheelScroll = useCallback((event: React.WheelEvent) => {
@@ -398,15 +426,15 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
 
     event.preventDefault();
     event.stopPropagation();
-    lastCarouselInteractionTimeRef.current = Date.now(); // Mark interaction
+    carouselInteractedTimestampRef.current = Date.now();
 
     setCarouselOffset(prevOffset => {
-        const newOffset = prevOffset - event.deltaX; // Use deltaX for horizontal scroll
+        const newOffset = prevOffset - event.deltaX;
+        const itemTotalSize = CAROUSEL_ITEM_WIDTH + CAROUSEL_ITEM_GAP;
         const maxOffset = 0; 
-        const minOffset = -(mainCarouselItems.length * (CAROUSEL_ITEM_WIDTH + CAROUSEL_ITEM_GAP) - mainCarouselContainerRef.current!.clientWidth + CAROUSEL_ITEM_GAP);
+        const minOffset = -(mainCarouselItems.length * itemTotalSize - mainCarouselContainerRef.current!.clientWidth + CAROUSEL_ITEM_WIDTH - CAROUSEL_ITEM_GAP);
         return Math.max(minOffset, Math.min(maxOffset, newOffset));
     });
-    // Debounced snap will be called by the useEffect watching carouselOffset
   }, [mainCarouselItems, isOverlayOpen]);
 
 
@@ -423,9 +451,7 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
     const isVisuallySelected = !isOverlayOpen && indexInCurrentView === activeIndex;
     
     const itemLevelForColor = itemForStyling.level || 1;
-    // Correctly get the CSS variable name like 'var(--level-X-color)'
     const itemColorCssVar = ITEM_LEVEL_COLORS_CSS_VARS[itemLevelForColor as ItemLevel] || ITEM_LEVEL_COLORS_CSS_VARS[1];
-    // Get the Tailwind background class like 'bg-level-1/10'
     const bgClass = LEVEL_TO_BG_CLASS[itemLevelForColor as ItemLevel] || 'bg-muted/10';
 
     const scale = isVisuallySelected ? 1.15 : 1;
@@ -434,7 +460,7 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
     const zIndexVal = isVisuallySelected ? 20 : (isOverlayChild ? 15 : (indexInCurrentView === activeIndex ? 10 : 5));
 
     const cardStyle: React.CSSProperties = {
-      borderColor: itemColorCssVar, // This should be 'var(--level-X-color)'
+      borderColor: itemColorCssVar,
       borderWidth: '2px',
       borderStyle: 'solid',
       boxShadow: isVisuallySelected ? `0 0 20px 0px ${itemColorCssVar}, inset 0 0 12px ${itemColorCssVar}`
@@ -444,8 +470,9 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
     
     const cardClasses = cn(
       "flex-shrink-0 origin-center cursor-pointer rounded-lg p-2 flex flex-col items-center justify-start text-center overflow-hidden relative transition-all duration-200 aspect-[3/4]",
-      bgClass, // Apply the level-themed background with opacity
+      bgClass,
       isVisuallySelected ? "shadow-2xl" : "shadow-md"
+      // Removed backdrop-blur-sm
     );
 
     return (
@@ -516,14 +543,13 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden p-4 md:p-6 max-w-4xl mx-auto w-full">
-      {/* Main Panel for Equipment Locker - This will be the transparent one */}
+    <div className="flex flex-col h-full overflow-hidden p-4 md:p-6">
       <div
         className={cn(
-          "w-full h-full flex flex-col relative overflow-hidden rounded-lg",
-          "bg-slate-800/30" // Example: slightly darker semi-transparent background for main panel
+          "w-full h-full max-w-4xl mx-auto flex flex-col relative overflow-hidden rounded-lg",
+           "bg-slate-900/70" // Test with a more opaque, non-variable background
+          // "bg-background/80" // Reverted from test
         )}
-        // explicitTheme={theme} // Not a HolographicPanel anymore
       >
         <div className="flex-shrink-0 flex justify-between items-center p-3 md:p-4 border-b border-current/20">
           <h2 className="text-xl md:text-2xl font-orbitron text-foreground holographic-text truncate max-w-[calc(100%-100px)]">
@@ -546,6 +572,7 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
           <AnimatePresence>
             {!isOverlayOpen && mainCarouselItems.length > 0 && (
               <motion.div
+                ref={mainCarouselRef} // Attach ref here
                 key="main-carousel-draggable"
                 className="flex absolute h-full items-center"
                 animate={{ x: carouselOffset }}
@@ -576,7 +603,7 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
               <div className="relative w-full max-w-3xl flex flex-col items-center">
                   <HolographicButton 
                       onClick={handleUpOrCollapseAction} 
-                      className="!p-1.5 mb-2 z-10 self-center bg-background/50 hover:bg-background/70" // Positioned above items
+                      className="!p-1.5 mb-2 z-10 self-center hover:bg-background/70"
                       title="Back/Collapse"
                       explicitTheme={theme}
                   >
@@ -584,7 +611,7 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
                   </HolographicButton>
                   <div 
                       className="flex overflow-x-auto overflow-y-hidden items-center p-2 scrollbar-hide -mx-2 justify-start w-full"
-                      style={{minHeight: `${OVERLAY_CHILD_ITEM_WIDTH * 1.33 + 30}px`}} // Ensure enough height for cards + button
+                      style={{minHeight: `${OVERLAY_CHILD_ITEM_WIDTH * 1.33 + 30}px`}}
                   >
                       {overlayItems.length > 0 ? 
                           overlayItems.map((entity, index) => renderCard(entity, true, index))
@@ -629,4 +656,3 @@ function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
 
   return debounced as (...args: Parameters<F>) => ReturnType<F>;
 }
-
