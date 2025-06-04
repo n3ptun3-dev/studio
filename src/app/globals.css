@@ -175,15 +175,15 @@
     --ring: hsl(var(--ring-hsl));
 
     /* Item Level Colors HSL (globally available for item rarity etc.) */
-    --level-1-color-hsl: 0 100% 50%;
-    --level-2-color-hsl: 30 100% 50%;
-    --level-3-color-hsl: 50 100% 50%;
-    --level-3-text-color-hsl: 0 0% 0%;
-    --level-4-color-hsl: 120 70% 40%;
-    --level-5-color-hsl: 220 100% 50%;
-    --level-6-color-hsl: 260 100% 55%;
-    --level-7-color-hsl: 280 100% 55%;
-    --level-8-color-hsl: 320 100% 50%;
+    --level-1-color-hsl: 220 10% 40%;  /* Grey (Cool Grey/Blueish) */
+    --level-2-color-hsl: 120 60% 45%;  /* Green */
+    --level-3-color-hsl: 55 100% 50%;  /* Yellow */
+    --level-3-text-color-hsl: 0 0% 0%; /* Black text for yellow bg */
+    --level-4-color-hsl: 30 100% 50%;  /* Orange */
+    --level-5-color-hsl: 270 60% 55%;  /* Purple */
+    --level-6-color-hsl: 0 100% 50%;   /* Red */
+    --level-7-color-hsl: 180 100% 50%; /* Cyan */
+    --level-8-color-hsl: 300 100% 50%; /* Magenta */
 
     --level-1-color: hsl(var(--level-1-color-hsl));
     --level-2-color: hsl(var(--level-2-color-hsl));

@@ -3,7 +3,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { AnimatePresence, motion, PanInfo } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useAppContext, type PlayerInventoryItem } from '@/contexts/AppContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { HolographicButton } from '@/components/game/shared/HolographicPanel';
@@ -28,15 +28,16 @@ const FALLBACK_GAME_ITEM: GameItemBase = {
   dataAiHint: "error placeholder"
 };
 
+// Mapping item levels to Tailwind background classes with 30% opacity
 const LEVEL_TO_BG_CLASS: Record<ItemLevel, string> = {
-  1: 'bg-level-1/10',
-  2: 'bg-level-2/10',
-  3: 'bg-level-3/10',
-  4: 'bg-level-4/10',
-  5: 'bg-level-5/10',
-  6: 'bg-level-6/10',
-  7: 'bg-level-7/10',
-  8: 'bg-level-8/10',
+  1: 'bg-level-1/30',
+  2: 'bg-level-2/30',
+  3: 'bg-level-3/30',
+  4: 'bg-level-4/30',
+  5: 'bg-level-5/30',
+  6: 'bg-level-6/30',
+  7: 'bg-level-7/30',
+  8: 'bg-level-8/30',
 };
 
 interface DisplayIndividualItem {
@@ -67,11 +68,14 @@ const findHighestLevelItem = (items: DisplayIndividualItem[]): GameItemBase => {
   const validItems = items.filter(di => di && di.item);
   if (validItems.length === 0) return FALLBACK_GAME_ITEM;
 
+  // Accumulator 'highestItemSoFar' is GameItemBase.
+  // 'currentDisplayItem.item' is also GameItemBase.
   return validItems.reduce((highestItemSoFar, currentDisplayItem) => {
     if (!currentDisplayItem || !currentDisplayItem.item) return highestItemSoFar;
     return currentDisplayItem.item.level > highestItemSoFar.level ? currentDisplayItem.item : highestItemSoFar;
   }, validItems[0]?.item || FALLBACK_GAME_ITEM);
 };
+
 
 function groupBy<T>(array: T[], keyAccessor: (item: T) => string): Record<string, T[]> {
   return array.reduce((result, currentValue) => {
@@ -95,13 +99,13 @@ const processInventoryForCarousel = (
       }
       return Array.from({ length: invItem.quantity }, (_, index) => ({
         type: 'item' as 'item',
-        id: `${itemId}_instance_${index}`,
+        id: `${itemId}_instance_${index}`, // Unique ID for each instance
         item: baseItem,
-        inventoryQuantity: 1,
+        inventoryQuantity: 1, // Each instance is 1 for display purposes
         currentStrength: invItem.currentStrength,
       }));
     })
-    .filter((item): item is DisplayIndividualItem => !!item && !!item.item)
+    .filter((item): item is DisplayIndividualItem => !!item && !!item.item) // Ensure item and item.item are valid
     .sort((a, b) => b.item.level - a.item.level || a.item.name.localeCompare(b.item.name));
 
   if (allDetailedInventoryItems.length === 0) return [];
@@ -126,26 +130,24 @@ const processInventoryForCarousel = (
 
     } else if (deepestStackId.startsWith('stack_item_')) {
       const parentStackIdParts = deepestStackId.split('_');
-      if (parentStackIdParts.length < 3) return []; // e.g. stack_item_Hardware_basic_pick -> needs at least 'stack', 'item', 'Category', 'NamePart1'
+      if (parentStackIdParts.length < 4) return [];
       
       const categoryFromId = parentStackIdParts[2] as ItemCategory;
-      const baseNameParts = parentStackIdParts.slice(3);
-      // Reconstruct base name: join parts, then capitalize each word in the reconstructed name
-      // This assumes names like "Basic Pick" become "basic_pick"
-      const reconstructedBaseName = baseNameParts.join(' ').replace(/\b\w/g, char => char.toUpperCase());
-
+      const baseNameFromId = parentStackIdParts.slice(3).join(' ').replace(/\b\w/g, char => char.toUpperCase());
+      
+      // Return all individual instances of items that match the base name and category
       return allDetailedInventoryItems.filter(di => {
-        return di.item.name === reconstructedBaseName && di.item.category === categoryFromId;
+        return di.item.name === baseNameFromId && di.item.category === categoryFromId;
       });
     }
-    return [];
-  } else {
+    return []; // Should not be reached if path logic is correct
+  } else { // Root level of the carousel
     const groupedByNameForRoot = groupBy(allDetailedInventoryItems, (di) => di.item.name);
     const rootEntitiesByName: CarouselDisplayEntity[] = [];
 
     Object.entries(groupedByNameForRoot).forEach(([name, items]) => {
       if (items.length === 1 && items[0]) {
-        rootEntitiesByName.push(items[0]);
+        rootEntitiesByName.push(items[0]); // Push the single DisplayIndividualItem
       } else if (items.length > 0 && items[0]?.item) {
         rootEntitiesByName.push({
           type: 'stack',
@@ -159,6 +161,7 @@ const processInventoryForCarousel = (
       }
     });
 
+    // If total unique item names are few, show them directly. Otherwise, group by category.
     if (rootEntitiesByName.length <= MAX_DISPLAY_ENTITIES_MAIN_CAROUSEL && rootEntitiesByName.length > 0) {
       return rootEntitiesByName.sort((a, b) => {
         const nameA = a.type === 'item' ? (a.item?.name || '') : a.name;
@@ -167,6 +170,7 @@ const processInventoryForCarousel = (
       });
     }
     
+    // Group by category if too many unique items for root display
     const groupedByCategory = groupBy(allDetailedInventoryItems, (di) => di.item.category);
     return Object.entries(groupedByCategory).map(([categoryName, items]): DisplayItemStack => ({
       type: 'stack',
@@ -191,26 +195,33 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
   const [activeIndex, setActiveIndex] = useState(0);
   const [carouselOffset, setCarouselOffset] = useState(0);
   
-  const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null); // ID of item whose children are shown in overlay
-  const [expandedStackPath, setExpandedStackPath] = useState<string[]>([]); // Path to currently expanded stack for overlay
+  const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
+  const [expandedStackPath, setExpandedStackPath] = useState<string[]>([]);
   
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
   const [overlayItems, setOverlayItems] = useState<CarouselDisplayEntity[]>([]);
-  // const [overlayTitle, setOverlayTitle] = useState(''); // Not currently used for display
-
+  const [overlayTitle, setOverlayTitle] = useState('');
+  
   const mainCarouselContainerRef = useRef<HTMLDivElement>(null);
-  const mainCarouselRef = useRef<HTMLDivElement>(null); // Ref for the draggable motion.div
+  const mainCarouselRef = useRef<HTMLDivElement>(null);
   const mainCarouselSnapshotRef = useRef<{ activeIndex: number; offset: number } | null>(null);
   
   const [isMouseOverCarousel, setIsMouseOverCarousel] = useState(false);
   const isMouseOverCarouselRef = useRef(isMouseOverCarousel);
   const carouselInteractedTimestampRef = useRef<number>(0);
 
-
   useEffect(() => {
     isMouseOverCarouselRef.current = isMouseOverCarousel;
-    appContext.setIsScrollLockActive(isMouseOverCarousel);
-  }, [isMouseOverCarousel, appContext]);
+  }, [isMouseOverCarousel]);
+
+  const handleMouseEnterCarousel = () => {
+    setIsMouseOverCarousel(true);
+    setIsScrollLockActive(true);
+  };
+  const handleMouseLeaveCarousel = () => {
+    setIsMouseOverCarousel(false);
+    setIsScrollLockActive(false);
+  };
 
   const navigateCarousel = useCallback((direction: number) => {
     if (mainCarouselItems.length === 0) return;
@@ -220,6 +231,48 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
       return Math.max(0, Math.min(mainCarouselItems.length - 1, newIndex));
     });
   }, [mainCarouselItems.length]);
+
+  const handleDownOrExpandAction = useCallback(() => {
+    carouselInteractedTimestampRef.current = Date.now();
+    if (isOverlayOpen) {
+      if (overlayItems.length > 0 && overlayItems[0]) {
+        // This is where we'd handle click on an item WITHIN the overlay
+        const firstItemInOverlay = overlayItems[0];
+        if (firstItemInOverlay.type === 'stack') {
+          const newPath = [...expandedStackPath, firstItemInOverlay.id];
+          setExpandedStackPath(newPath);
+          const newOverlayDisplayItems = processInventoryForCarousel(playerInventory, newPath);
+          setOverlayItems(newOverlayDisplayItems);
+          setSelectedEntityId(firstItemInOverlay.id);
+          setOverlayTitle(firstItemInOverlay.name);
+        } else if (firstItemInOverlay.type === 'item') {
+          openItemActionModal(firstItemInOverlay as DisplayIndividualItem);
+        }
+      }
+      return;
+    }
+  
+    if (mainCarouselItems.length === 0 || activeIndex < 0 || activeIndex >= mainCarouselItems.length) return;
+    const entityAtActiveIndex = mainCarouselItems[activeIndex];
+    if (!entityAtActiveIndex) return;
+    
+    if (entityAtActiveIndex.type === 'stack') {
+      if (mainCarouselRef.current) { // Ensure ref is current
+        mainCarouselSnapshotRef.current = { activeIndex, offset: carouselOffset };
+      }
+      const newExpandedPath = [entityAtActiveIndex.id];
+      setExpandedStackPath(newExpandedPath);
+      setSelectedEntityId(entityAtActiveIndex.id);
+      const newOverlayDisplayItems = processInventoryForCarousel(playerInventory, newExpandedPath);
+      setOverlayItems(newOverlayDisplayItems);
+      setOverlayTitle(entityAtActiveIndex.name);
+      setIsOverlayOpen(true);
+    } else if (entityAtActiveIndex.type === 'item') {
+      setSelectedEntityId(entityAtActiveIndex.id);
+      openItemActionModal(entityAtActiveIndex as DisplayIndividualItem);
+    }
+  }, [isOverlayOpen, overlayItems, mainCarouselItems, activeIndex, playerInventory, carouselOffset, expandedStackPath]);
+
 
   useEffect(() => {
     const newMainItems = processInventoryForCarousel(playerInventory, []);
@@ -235,41 +288,50 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
       const itemWidth = CAROUSEL_ITEM_WIDTH;
       const totalWidthBeforeActive = activeIndex * (itemWidth + CAROUSEL_ITEM_GAP);
       const viewportWidth = mainCarouselContainerRef.current?.clientWidth || window.innerWidth;
+      // Calculate the target offset to center the active item
       const targetOffset = -totalWidthBeforeActive + (viewportWidth / 2 - itemWidth / 2);
       setCarouselOffset(targetOffset);
     } else if (mainCarouselItems.length === 0 && mainCarouselContainerRef.current) {
+      // Center the placeholder area if no items
       const viewportWidth = mainCarouselContainerRef.current?.clientWidth || window.innerWidth;
       setCarouselOffset(viewportWidth / 2 - CAROUSEL_ITEM_WIDTH / 2);
     }
-  }, [activeIndex, mainCarouselItems, isOverlayOpen]);
+  }, [activeIndex, mainCarouselItems, isOverlayOpen]); // Removed carouselOffset dependency
 
   const snapToNearestItemAfterScroll = useCallback(() => {
-    if (!isMouseOverCarouselRef.current && (Date.now() - carouselInteractedTimestampRef.current > 300)) {
-      return; 
+    if (!isMouseOverCarouselRef.current || mainCarouselItems.length === 0 || isOverlayOpen) {
+      return;
     }
-    if (mainCarouselRef.current && mainCarouselItems.length > 0 && !isOverlayOpen) {
-      const viewportCenter = (mainCarouselContainerRef.current?.clientWidth || window.innerWidth) / 2;
+    // Only snap if a carousel interaction happened recently.
+    if (Date.now() - carouselInteractedTimestampRef.current >= 300) { // Shorter threshold for responsiveness
+      return;
+    }
+  
+    if (mainCarouselContainerRef.current && mainCarouselItems.length > 0) {
+      const viewportCenter = mainCarouselContainerRef.current.clientWidth / 2;
       let closestIndex = 0;
       let minDistance = Infinity;
-
+  
       for (let i = 0; i < mainCarouselItems.length; i++) {
         const itemCenterInViewport = carouselOffset + (i * (CAROUSEL_ITEM_WIDTH + CAROUSEL_ITEM_GAP)) + (CAROUSEL_ITEM_WIDTH / 2);
         const distanceToViewportCenter = Math.abs(itemCenterInViewport - viewportCenter);
-
+  
         if (distanceToViewportCenter < minDistance) {
           minDistance = distanceToViewportCenter;
           closestIndex = i;
         }
       }
-      setActiveIndex(closestIndex);
+      if (closestIndex !== activeIndex) {
+        setActiveIndex(closestIndex);
+      }
     }
-  }, [carouselOffset, mainCarouselItems, isOverlayOpen]);
+  }, [carouselOffset, mainCarouselItems, isOverlayOpen, activeIndex]); // Keep activeIndex here
 
   const debouncedSnapAfterScroll = useCallback(debounce(snapToNearestItemAfterScroll, 150), [snapToNearestItemAfterScroll]);
 
   useEffect(() => {
-    if (isMouseOverCarouselRef.current || (Date.now() - carouselInteractedTimestampRef.current < 300)) {
-      debouncedSnapAfterScroll();
+    if (isMouseOverCarouselRef.current && (Date.now() - carouselInteractedTimestampRef.current < 300)) {
+       debouncedSnapAfterScroll();
     }
   }, [carouselOffset, debouncedSnapAfterScroll]);
 
@@ -289,28 +351,28 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
           className="mx-auto rounded-md mb-2 object-contain bg-black/20 p-1"
           data-ai-hint={`${item.category} icon large`} unoptimized
         />
-        <p className="text-lg font-semibold" style={{ color: `hsl(${itemColorModalVar})` }}>{item.name} - L{item.level}</p>
+        <p className="text-lg font-semibold" style={{ color: itemColorModalVar }}>{item.name} - L{item.level}</p>
         <p className="text-sm text-muted-foreground">{item.description}</p>
         {item.category === 'Hardware' && item.strength && typeof item.strength.current === 'number' && typeof item.strength.max === 'number' && (
           <div className="w-full max-w-xs mx-auto">
             <p className="text-xs text-muted-foreground mt-1">Strength:</p>
-            <Progress value={((item.strength.current ?? item.strength.max) / item.strength.max) * 100} className="h-2 [&>div]:bg-[var(--progress-color)]" style={{ '--progress-color': `hsl(${itemColorModalVar})` } as React.CSSProperties} />
+            <Progress value={((item.strength.current ?? item.strength.max) / item.strength.max) * 100} className="h-2 [&>div]:bg-[var(--progress-color)]" style={{ '--progress-color': itemColorModalVar } as React.CSSProperties} />
             <p className="text-xs text-muted-foreground mt-1">{item.strength.current ?? item.strength.max} / {item.strength.max}</p>
           </div>
         )}
         {item.category === 'Infiltration Gear' && typeof item.attackFactor === 'number' && (
              <div className="w-full max-w-xs mx-auto">
               <p className="text-xs text-muted-foreground mt-1">Attack Factor:</p>
-              <Progress value={(item.attackFactor / 100) * 100} className="h-1.5 [&>div]:bg-[var(--progress-color)]" style={{ '--progress-color': `hsl(${itemColorModalVar})` } as React.CSSProperties} />
+              <Progress value={(item.attackFactor / 100) * 100} className="h-1.5 [&>div]:bg-[var(--progress-color)]" style={{ '--progress-color': itemColorModalVar } as React.CSSProperties} />
              </div>
         )}
         {item.type === 'Rechargeable' && (
           <>
-            <p className="text-sm" style={{ color: `hsl(${itemColorModalVar})` }}>Type: Rechargeable</p>
+            <p className="text-sm" style={{ color: itemColorModalVar }}>Type: Rechargeable</p>
             {item.perUseCost && <p className="text-sm text-muted-foreground">Recharge Cost: {item.perUseCost} ELINT</p>}
           </>
         )}
-        {(item.type === 'Consumable' || item.type === 'One-Time Use') && <p className="text-sm" style={{ color: `hsl(${itemColorModalVar})` }}>Type: {item.type}</p>}
+        {(item.type === 'Consumable' || item.type === 'One-Time Use') && <p className="text-sm" style={{ color: itemColorModalVar }}>Type: {item.type}</p>}
         <HolographicButton onClick={() => console.log("Deploy", item.id)} className="w-full">Deploy</HolographicButton>
         {item.type === 'Rechargeable' && (
           <HolographicButton onClick={() => console.log("Recharge", item.id)} className="w-full">Recharge ({item.perUseCost || 'N/A'} ELINT)</HolographicButton>
@@ -322,75 +384,34 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
   };
 
   const handleEntityInteractionInOverlay = useCallback((entity: CarouselDisplayEntity) => {
+    carouselInteractedTimestampRef.current = Date.now(); // Register interaction
     if (entity.type === 'stack') {
       const newPath = [...expandedStackPath, entity.id];
       setExpandedStackPath(newPath);
       const newOverlayDisplayItems = processInventoryForCarousel(playerInventory, newPath);
       setOverlayItems(newOverlayDisplayItems);
       setSelectedEntityId(entity.id);
+      setOverlayTitle(entity.name);
     } else if (entity.type === 'item') {
       openItemActionModal(entity as DisplayIndividualItem);
     }
   }, [expandedStackPath, playerInventory, openItemActionModal]);
   
-  const handleDownOrExpandAction = useCallback(() => {
-    carouselInteractedTimestampRef.current = Date.now();
-    if (isOverlayOpen) {
-      if (overlayItems.length > 0 && overlayItems[0]) {
-        handleEntityInteractionInOverlay(overlayItems[0]);
-      }
-      return;
-    }
-
-    if (mainCarouselItems.length === 0 || activeIndex < 0 || activeIndex >= mainCarouselItems.length) return;
-    const entityAtActiveIndex = mainCarouselItems[activeIndex];
-    if (!entityAtActiveIndex) return;
-    
-    setSelectedEntityId(entityAtActiveIndex.id);
-
-    if (entityAtActiveIndex.type === 'stack') {
-      if (mainCarouselRef.current) { // Use mainCarouselRef, not mainCarouselContainerRef for snapshotting offset if it was the draggable one
-        mainCarouselSnapshotRef.current = { activeIndex, offset: carouselOffset };
-      }
-      const newExpandedPath = [entityAtActiveIndex.id];
-      setExpandedStackPath(newExpandedPath);
-      const newOverlayDisplayItems = processInventoryForCarousel(playerInventory, newExpandedPath);
-      setOverlayItems(newOverlayDisplayItems);
-      setIsOverlayOpen(true);
-    } else if (entityAtActiveIndex.type === 'item') {
-      openItemActionModal(entityAtActiveIndex as DisplayIndividualItem);
-    }
-  }, [isOverlayOpen, overlayItems, mainCarouselItems, activeIndex, playerInventory, carouselOffset, handleEntityInteractionInOverlay, openItemActionModal]);
-  
-  // This useEffect was causing the "Cannot access before initialization" error.
-  // It's intended to trigger expansion if a card is tapped and it's a stack.
-  // The primary way to trigger expansion should now be the "Down" button.
-  // Tapping a card focuses it (sets activeIndex).
-  // useEffect(() => {
-  //   if (selectedEntityId && mainCarouselItems[activeIndex]?.id === selectedEntityId && mainCarouselItems[activeIndex]?.type === 'stack' && !isOverlayOpen) {
-  //     // This condition might be too aggressive or needs to be tied to a specific user action like a second tap.
-  //     // For now, let's rely on the Down button for expansion.
-  //     // If we want tap-to-expand, this needs careful handling to avoid loops or premature expansion.
-  //     // One option: add a state like `awaitingSecondTapForExpansion`
-  //   }
-  // }, [activeIndex, selectedEntityId, mainCarouselItems, isOverlayOpen, handleDownOrExpandAction]);
-
-
   const handleUpOrCollapseAction = useCallback(() => {
-    carouselInteractedTimestampRef.current = Date.now();
+    carouselInteractedTimestampRef.current = Date.now(); // Register interaction
     if (isOverlayOpen) {
       const newPath = expandedStackPath.slice(0, -1);
       setExpandedStackPath(newPath);
 
       if (newPath.length === 0) {
         setIsOverlayOpen(false);
+        setOverlayTitle(''); // Clear title when closing overlay
         if (mainCarouselSnapshotRef.current) {
           const restoredActiveIndex = mainCarouselSnapshotRef.current.activeIndex;
+          // Ensure restored index is valid
           const validRestoredIndex = Math.max(0, Math.min(mainCarouselItems.length - 1, restoredActiveIndex));
-          setActiveIndex(validRestoredIndex); // This will trigger the useEffect for carouselOffset
-          // Ensure carouselOffset is also restored if needed, or let useEffect handle it.
-          // setCarouselOffset(mainCarouselSnapshotRef.current.offset); // Potentially restore offset directly
-          mainCarouselSnapshotRef.current = null;
+          setActiveIndex(validRestoredIndex);
+          mainCarouselSnapshotRef.current = null; // Clear snapshot
         } else {
            setActiveIndex(mainCarouselItems.length > 0 ? Math.floor(mainCarouselItems.length / 2) : 0);
         }
@@ -398,12 +419,10 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
       } else {
         const newOverlayDisplayItems = processInventoryForCarousel(playerInventory, newPath);
         setOverlayItems(newOverlayDisplayItems);
-        setSelectedEntityId(newPath[newPath.length - 1]); // Update selected ID to the new parent stack
+        const newSelectedEntity = findEntityByIdRecursive(mainCarouselItems, newPath[newPath.length - 1]);
+        setSelectedEntityId(newPath[newPath.length - 1]);
+        setOverlayTitle(newSelectedEntity?.name || '');
       }
-    } else {
-      // If overlay is not open, "Up" could potentially deselect the current item
-      // setActiveIndex(Math.floor(mainCarouselItems.length / 2)); // Or some other logic
-      // setSelectedEntityId(null);
     }
   }, [isOverlayOpen, expandedStackPath, playerInventory, mainCarouselItems]);
 
@@ -411,32 +430,44 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
     carouselInteractedTimestampRef.current = Date.now();
     if (activeIndex !== index) {
       setActiveIndex(index);
-      setSelectedEntityId(entity.id); // Select on tap
-    } else { // If already selected (centered), tapping again could trigger action
-      // This is where a "double tap" or "tap on already selected to expand" logic could go
-      // For now, let's keep it simple: tap centers, down button expands/acts.
-      // If we want tap to expand:
-      // handleDownOrExpandAction();
+    } else { 
+      handleDownOrExpandAction();
     }
-  }, [activeIndex]);
+  }, [activeIndex, handleDownOrExpandAction]);
 
 
   const handleWheelScroll = useCallback((event: React.WheelEvent) => {
-    if (!isMouseOverCarouselRef.current || !mainCarouselContainerRef.current || mainCarouselItems.length === 0 || isOverlayOpen) return;
-
-    event.preventDefault();
-    event.stopPropagation();
-    carouselInteractedTimestampRef.current = Date.now();
-
+    if (!isMouseOverCarouselRef.current || !mainCarouselContainerRef.current || mainCarouselItems.length === 0 || isOverlayOpen) {
+      return; // Do not scroll carousel if mouse not over, or no items, or overlay is open
+    }
+  
+    event.preventDefault(); // Prevent page scroll
+    event.stopPropagation(); // Stop event from bubbling further
+    carouselInteractedTimestampRef.current = Date.now(); // Record interaction
+  
     setCarouselOffset(prevOffset => {
-        const newOffset = prevOffset - event.deltaX;
+        const newOffset = prevOffset - event.deltaX; // Use deltaX for horizontal scroll
         const itemTotalSize = CAROUSEL_ITEM_WIDTH + CAROUSEL_ITEM_GAP;
-        const maxOffset = 0; 
-        const minOffset = -(mainCarouselItems.length * itemTotalSize - mainCarouselContainerRef.current!.clientWidth + CAROUSEL_ITEM_WIDTH - CAROUSEL_ITEM_GAP);
+        const maxOffset = 0; // Rightmost scroll limit
+        // Correct calculation for minOffset (leftmost scroll limit)
+        const minOffset = -( (mainCarouselItems.length * itemTotalSize) - (mainCarouselContainerRef.current?.clientWidth || 0) + CAROUSEL_ITEM_GAP);
+
+        // Ensure newOffset is clamped within bounds
         return Math.max(minOffset, Math.min(maxOffset, newOffset));
     });
-  }, [mainCarouselItems, isOverlayOpen]);
+  }, [mainCarouselItems, isOverlayOpen]); // Dependencies
 
+
+  const findEntityByIdRecursive = (entities: CarouselDisplayEntity[], id: string): CarouselDisplayEntity | null => {
+    for (const entity of entities) {
+      if (entity.id === id) return entity;
+      if (entity.type === 'stack' && entity.childrenToDisplay) {
+        const foundInChildren = findEntityByIdRecursive(entity.childrenToDisplay, id);
+        if (foundInChildren) return foundInChildren;
+      }
+    }
+    return null;
+  };
 
   const renderCard = (entity: CarouselDisplayEntity | undefined, isOverlayChild: boolean, indexInCurrentView?: number) => {
     if (!entity) return null;
@@ -452,7 +483,7 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
     
     const itemLevelForColor = itemForStyling.level || 1;
     const itemColorCssVar = ITEM_LEVEL_COLORS_CSS_VARS[itemLevelForColor as ItemLevel] || ITEM_LEVEL_COLORS_CSS_VARS[1];
-    const bgClass = LEVEL_TO_BG_CLASS[itemLevelForColor as ItemLevel] || 'bg-muted/10';
+    const bgClass = LEVEL_TO_BG_CLASS[itemLevelForColor as ItemLevel] || 'bg-muted/30';
 
     const scale = isVisuallySelected ? 1.15 : 1;
     const opacity = isVisuallySelected ? 1 : 0.75;
@@ -472,7 +503,6 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
       "flex-shrink-0 origin-center cursor-pointer rounded-lg p-2 flex flex-col items-center justify-start text-center overflow-hidden relative transition-all duration-200 aspect-[3/4]",
       bgClass,
       isVisuallySelected ? "shadow-2xl" : "shadow-md"
-      // Removed backdrop-blur-sm
     );
 
     return (
@@ -546,9 +576,8 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
     <div className="flex flex-col h-full overflow-hidden p-4 md:p-6">
       <div
         className={cn(
-          "w-full h-full max-w-4xl mx-auto flex flex-col relative overflow-hidden rounded-lg",
-           "bg-slate-900/70" // Test with a more opaque, non-variable background
-          // "bg-background/80" // Reverted from test
+          "holographic-panel w-full h-full max-w-4xl mx-auto flex flex-col relative overflow-hidden",
+          `theme-${theme}`
         )}
       >
         <div className="flex-shrink-0 flex justify-between items-center p-3 md:p-4 border-b border-current/20">
@@ -566,18 +595,18 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
           ref={mainCarouselContainerRef} 
           className="flex-grow flex items-center justify-start relative overflow-hidden select-none -mx-2 md:-mx-4"
           onWheel={handleWheelScroll}
-          onMouseEnter={() => setIsMouseOverCarousel(true)}
-          onMouseLeave={() => setIsMouseOverCarousel(false)}
+          onMouseEnter={handleMouseEnterCarousel}
+          onMouseLeave={handleMouseLeaveCarousel}
         >
           <AnimatePresence>
             {!isOverlayOpen && mainCarouselItems.length > 0 && (
               <motion.div
-                ref={mainCarouselRef} // Attach ref here
+                ref={mainCarouselRef}
                 key="main-carousel-draggable"
-                className="flex absolute h-full items-center"
+                className="flex absolute h-full items-center" // Ensure this div can host absolutely positioned children correctly
                 animate={{ x: carouselOffset }}
                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                style={{ paddingLeft: CAROUSEL_ITEM_GAP / 2, paddingRight: CAROUSEL_ITEM_GAP / 2, touchAction: 'pan-y' }} 
+                style={{ paddingLeft: CAROUSEL_ITEM_GAP / 2, paddingRight: CAROUSEL_ITEM_GAP / 2, touchAction: 'pan-y' }} // Added touchAction
               >
                 {mainCarouselItems.map((entity, index) => renderCard(entity, false, index))}
               </motion.div>
@@ -594,35 +623,34 @@ export function EquipmentLockerSection({ parallaxOffset }: { parallaxOffset: num
           {isOverlayOpen && (
             <motion.div
               key="overlay-window"
-              className="absolute inset-0 z-30 flex flex-col items-center justify-center p-0" // Transparent bg, borderless
+              className="absolute inset-0 z-30 flex flex-col items-center justify-start pt-6 bg-transparent" // pt-6 for spacing from top
               initial={{ opacity: 0, scale: 0.85 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.85, transition: { duration: 0.2 } }}
               transition={{ duration: 0.25, ease: "circOut" }}
             >
-              <div className="relative w-full max-w-3xl flex flex-col items-center">
-                  <HolographicButton 
-                      onClick={handleUpOrCollapseAction} 
-                      className="!p-1.5 mb-2 z-10 self-center hover:bg-background/70"
-                      title="Back/Collapse"
-                      explicitTheme={theme}
-                  >
-                      <ArrowLeft className="w-5 h-5" />
-                  </HolographicButton>
-                  <div 
-                      className="flex overflow-x-auto overflow-y-hidden items-center p-2 scrollbar-hide -mx-2 justify-start w-full"
-                      style={{minHeight: `${OVERLAY_CHILD_ITEM_WIDTH * 1.33 + 30}px`}}
-                  >
-                      {overlayItems.length > 0 ? 
-                          overlayItems.map((entity, index) => renderCard(entity, true, index))
-                          : <p className="text-muted-foreground font-rajdhani self-center mx-auto">No items to display.</p>
-                      }
-                  </div>
+              <HolographicButton 
+                  onClick={handleUpOrCollapseAction} 
+                  className="!p-1.5 mb-4 z-10 self-center hover:bg-background/70" // Increased margin-bottom
+                  title="Back/Collapse"
+                  explicitTheme={theme}
+              >
+                  <ArrowLeft className="w-5 h-5" />
+              </HolographicButton>
+              <div 
+                  className="flex overflow-x-auto overflow-y-hidden items-center p-2 scrollbar-hide -mx-2 justify-start w-full"
+                  style={{minHeight: `${OVERLAY_CHILD_ITEM_WIDTH * 1.33 + 30}px`}} // Ensure enough height for items
+              >
+                  {overlayItems.length > 0 ? 
+                      overlayItems.map((entity, index) => renderCard(entity, true, index))
+                      : <p className="text-muted-foreground font-rajdhani self-center mx-auto">No items to display in this stack.</p>
+                  }
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
+        {/* Bottom Navigation Controls for Main Carousel */}
         <div className="flex-shrink-0 flex justify-center items-center space-x-2 p-4 mt-auto z-20"> 
           <HolographicButton onClick={() => navigateCarousel(-1)} disabled={isOverlayOpen || activeIndex === 0 || mainCarouselItems.length <=1} className="!p-1.5 md:!p-2" explicitTheme={theme}>
             <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
@@ -655,4 +683,16 @@ function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
   };
 
   return debounced as (...args: Parameters<F>) => ReturnType<F>;
+}
+
+// Helper to find an entity by ID, useful for restoring overlay title (optional)
+function findEntityByIdRecursive(entities: CarouselDisplayEntity[], id: string): CarouselDisplayEntity | null {
+  for (const entity of entities) {
+    if (entity.id === id) return entity;
+    if (entity.type === 'stack' && entity.items) { // Check 'items' as children source for stacks
+      const foundInChildren = findEntityByIdRecursive(entity.items as CarouselDisplayEntity[], id); // Risky cast, ensure items can be DisplayEntity
+      if (foundInChildren) return foundInChildren;
+    }
+  }
+  return null;
 }

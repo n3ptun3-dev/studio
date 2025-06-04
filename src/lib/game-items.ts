@@ -76,7 +76,7 @@ export type ItemCategory =
   | 'Hardware' 
   | 'Lock Fortifiers' 
   | 'Nexus Upgrades' 
-  | 'Infiltration Gear' // Changed from 'Entry Tools'
+  | 'Infiltration Gear'
   | 'Assault Tech' 
   | 'Aesthetic Schemes';
 
@@ -117,10 +117,8 @@ export interface LockFortifierItem extends GameItemBase {
   minigameInfluence?: string;
 }
 
-// EntryToolItem interface is no longer directly used in the main categories, but kept for completeness if needed elsewhere.
-// Renamed to InfiltrationGearItem for consistency
-export interface InfiltrationGearItem extends GameItemBase { // Renamed from EntryToolItem
-  category: 'Infiltration Gear'; // Changed from 'Entry Tools'
+export interface InfiltrationGearItem extends GameItemBase {
+  category: 'Infiltration Gear';
   attackFactor: number;
   type?: 'Rechargeable' | 'Consumable' | 'Not Applicable';
   perUseCost?: number;
@@ -445,7 +443,7 @@ export const AESTHETIC_SCHEME_ITEMS: AestheticSchemeItem[] = [
 export const ALL_ITEMS_BY_CATEGORY: Record<ItemCategory, GameItemBase[]> = {
   'Hardware': HARDWARE_ITEMS,
   'Lock Fortifiers': LOCK_FORTIFIER_ITEMS,
-  'Infiltration Gear': INFILTRATION_GEAR_ITEMS, // Changed from ENTRY_TOOL_ITEMS
+  'Infiltration Gear': INFILTRATION_GEAR_ITEMS,
   'Nexus Upgrades': NEXUS_UPGRADE_ITEMS,
   'Assault Tech': ASSAULT_TECH_ITEMS,
   'Aesthetic Schemes': AESTHETIC_SCHEME_ITEMS,
@@ -546,8 +544,8 @@ export const SHOP_CATEGORIES: ProductCategory[] = [
     ]
   },
   {
-    id: 'infiltrationGear', // Changed from Entry Tools
-    name: 'Infiltration Gear', // Changed from Entry Tools
+    id: 'infiltrationGear', 
+    name: 'Infiltration Gear', 
     iconImageSrc: '/spyshop/icons/icon_infiltration.png',
     itemSubCategories: [
       {
@@ -556,7 +554,6 @@ export const SHOP_CATEGORIES: ProductCategory[] = [
           'Basic Pick', 'Hydraulic Drill', 'Code Injector', 'Sonic Pulser',
           'Bio-Scanner Override', 'Temporal Dephaser', 'Quantum Dephaser', 'Universal Key',
         ].map(baseName => {
-          // Use INFILTRATION_GEAR_ITEMS as the source array, which was previously ENTRY_TOOL_ITEMS
           const l1Item = INFILTRATION_GEAR_ITEMS.find(item => item.name === baseName && item.level === 1); 
           return createItemTile('Infiltration Gear', baseName, l1Item?.tileImageSrc || l1Item?.imageSrc);
         }).filter(Boolean) as ItemTile[]
