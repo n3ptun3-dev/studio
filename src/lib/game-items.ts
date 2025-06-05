@@ -267,8 +267,10 @@ export const HARDWARE_ITEMS: HardwareItem[] = [
   ),
     ...generateItemLevels<'Hardware'>(
     'sonic_pulse_lock', 'Sonic Pulse Lock',
-    { category: 'Hardware', description: 'Needs specific frequencies, standard hits less effective.', strength: {current: 100, max:100}, resistance: {current: 40, max:40}, minigameEffect: "The time allowed for each entry is significantly reduced, scaling with the lock's level. The base time allowed per sequence is 20 seconds minus the lock level (e.g., L1 equals 19 seconds, L8 equals 12 seconds).", dataAiHint: "sound lock",  tileImageSrc: "/spyshop/tiles/sonic_pulse_lock_250x250.jpg", imageSrc: "/spyshop/items/StdCypherLock_L1.png" },
-    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 400, 3200), strength: {current: calculateScaledValue(l, 100, 800), max: calculateScaledValue(l, 100, 800)}, scarcity: 'Uncommon' }))
+    { category: 'Hardware', description: 'Needs specific frequencies, standard hits less effective.', strength: {current: 100, max:100}, resistance: {current: 40, max:40}, minigameEffect: "The time allowed for each entry is significantly reduced, scaling with the lock's level. The base time allowed per sequence is 20 seconds minus the lock level (e.g., L1 equals 19 seconds, L8 equals 12 seconds).", dataAiHint: "sound lock",
+    tileImageSrc: "/spyshop/tiles/sonic_pulse_lock_250x250.jpg"},
+    ITEM_LEVELS.map(l => ({ cost: calculateScaledValue(l, 400, 3200), strength: {current: calculateScaledValue(l, 100, 800), max: calculateScaledValue(l, 100, 800)}, scarcity: 'Uncommon',
+    imageSrc: `/spyshop/items/sonic_pulse_lock_l${l}.jpg` }))
   ),
   ...generateItemLevels<'Hardware'>(
     'plasma_conduit_lock', 'Plasma Conduit Lock',

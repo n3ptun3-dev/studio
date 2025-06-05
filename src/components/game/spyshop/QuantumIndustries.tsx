@@ -271,6 +271,7 @@ export function QuantumIndustries() {
             <p className="text-slate-300 text-lg max-w-md mx-auto">
               Quantum Industries provides elite tools for the discerning operative.
             </p>
+            <br></br>
             <p className="text-slate-300 text-lg max-w-md mx-auto">
               Select a category below to explore our arsenal.
             </p>
