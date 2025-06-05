@@ -22,7 +22,7 @@ interface InventoryBrowserInTODProps {
 const getItemById = (itemId: string): GameItemBase | undefined => {
   // THIS IS A PLACEHOLDER. Replace with your actual game item data.
   const dummyItems: Record<string, GameItemBase> = {
-    'basic_pick_l1': { id: 'basic_pick_l1', name: 'Basic Pick L1', description: 'A basic pick.', category: 'tool', cost: 100 },
+    'pick_l1': { id: 'pick_l1', name: 'Pick L1', description: 'A basic lock pick.', category: 'tool', cost: 100 },
     'cypher_lock_l1': { id: 'cypher_lock_l1', name: 'Cypher Lock L1', description: 'A standard lock.', category: 'lock', maxStrength: 100, cost: 200 },
     'security_camera_l1': { id: 'security_camera_l1', name: 'Security Camera L1', description: 'Detects.', category: 'sensor', maxStrength: 1, cost: 50 },
     'theme_cyphers': { id: 'theme_cyphers', name: 'Cyphers Theme', description: 'Changes UI.', category: 'theme', cost: 0 },

@@ -340,8 +340,8 @@ export const LOCK_FORTIFIER_ITEMS: LockFortifierItem[] = [
 
 export const INFILTRATION_GEAR_ITEMS: InfiltrationGearItem[] = [ // Renamed from ENTRY_TOOL_ITEMS
   ...generateItemLevels<'InfiltrationGear'>( // Changed category here
-    'basic_pick', 'Basic Pick',
-    { category: 'Infiltration Gear', description: 'Your standard tool. Effective against basic locks, struggles against advanced defenses.', attackFactor: 12.5, type: 'Not Applicable', minigameEffect: "Reduces the 'Correct Entries Required'.", levelScalingNote: "Reduces the number of 'Correct Entries Required' by 1 per level.", lockTypeEffectiveness: { idealCounterAgainst: ["Cypher Lock"], poorMatchPenaltyAgainst: ["Reinforced Deadbolt"]}, strengthPerEntryClarification: "The Basic Pick's Attack Factor functions as its 'strength per entry.' Each level of the pick has a corresponding Attack Factor, scaling from 12.5 at Level 1 to 100 at Level 8. This Attack Factor is used in the formula to determine how much the lock's strength is reduced per successful entry.", lockFortifierEffectsDefinition: "Not applicable to this tool.", dataAiHint: "lock pick", tileImageSrc: "/spyshop/tiles/BasicPick.png", imageSrc: "/spyshop/items/BasicPick_L1.png"},
+    'pick', 'Pick',
+    { category: 'Infiltration Gear', description: 'Your standard tool. Effective against basic locks, struggles against advanced defenses.', attackFactor: 12.5, type: 'Not Applicable', minigameEffect: "Reduces the 'Correct Entries Required'.", levelScalingNote: "Reduces the number of 'Correct Entries Required' by 1 per level.", lockTypeEffectiveness: { idealCounterAgainst: ["Cypher Lock"], poorMatchPenaltyAgainst: ["Reinforced Deadbolt"]}, strengthPerEntryClarification: "The Pick's Attack Factor functions as its 'strength per entry.' Each level of the pick has a corresponding Attack Factor, scaling from 12.5 at Level 1 to 100 at Level 8. This Attack Factor is used in the formula to determine how much the lock's strength is reduced per successful entry.", lockFortifierEffectsDefinition: "Not applicable to this tool.", dataAiHint: "lock pick", tileImageSrc: "/spyshop/tiles/Pick.png", imageSrc: "/spyshop/items/Pick_L1.png"},
     ITEM_LEVELS.map(l => ({ cost: l === 1 ? 0 : calculateScaledValue(l, 200, 800, 2, 8), attackFactor: calculateScaledValue(l, 12.5, 100), scarcity: 'Common' }))
   ),
   // New Infiltration Gear Items
@@ -553,7 +553,7 @@ export const SHOP_CATEGORIES: ProductCategory[] = [
       {
         name: 'All Infiltration Gear',
         items: [
-          'Basic Pick', 'Hydraulic Drill', 'Code Injector', 'Sonic Pulser',
+          'Pick', 'Hydraulic Drill', 'Code Injector', 'Sonic Pulser',
           'Bio-Scanner Override', 'Temporal Dephaser', 'Quantum Dephaser', 'Universal Key',
         ].map(baseName => {
           const l1Item = INFILTRATION_GEAR_ITEMS.find(item => item.name === baseName && item.level === 1); 
@@ -600,7 +600,7 @@ export const SHOP_CATEGORIES: ProductCategory[] = [
 
 // PlayerInventoryItem and VaultSlot interfaces (can also be in AppContext.tsx if preferred for centralization)
 export interface PlayerInventoryItem {
-  id: string; // Corresponds to GameItemBase id (e.g., 'basic_pick_l1')
+  id: string; // Corresponds to GameItemBase id (e.g., 'pick_l1')
   quantity: number;
   currentStrength?: number; // For items like locks
   // Any other instance-specific data for an item in inventory
