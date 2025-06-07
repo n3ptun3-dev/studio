@@ -8,7 +8,7 @@ import { GeistMono } from 'geist/font/mono';
 import './globals.css';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AppProvider } from '@/contexts/AppContext';
-// import { ThemeUpdater } from '@/components/theme-updater'; // Still commented out as planned
+import { ThemeUpdater } from '@/components/theme-updater';
 import { Toaster } from "@/components/ui/toaster";
 import { SpyShopSectionWrapper } from '@/components/game/spyshop/SpyShopSectionWrapper';
 import { SpyShopFadeOverlay } from '@/components/game/spyshop/SpyShopFadeOverlay';
@@ -53,7 +53,7 @@ export default function RootLayout({
       >
         <ThemeProvider attribute="class" defaultTheme="terminal-green" enableSystem>
           <AppProvider>
-            {/* <ThemeUpdater /> */}
+            <ThemeUpdater />
             <Toaster />
 
             <div className="relative h-screen w-screen overflow-hidden">

@@ -1,3 +1,4 @@
+
 {
   "players": [
     {
@@ -5,17 +6,40 @@
       "spyName": "N3PTUN3",
       "faction": "Cyphers",
       "stats": {
-        "strength": 10,
-        "stealth": 12,
-        "hacking": 8
+        "xp": 150,
+        "level": 2,
+        "elintReserves": 2500,
+        "elintTransferred": 1200,
+        "successfulVaultInfiltrations": 5,
+        "successfulLockInfiltrations": 12,
+        "elintObtainedTotal": 5000,
+        "elintObtainedCycle": 300,
+        "elintLostTotal": 500,
+        "elintLostCycle": 50,
+        "elintGeneratedTotal": 1000,
+        "elintGeneratedCycle": 100,
+        "elintTransferredToHQCyle": 200,
+        "successfulInterferences": 3,
+        "elintSpentSpyShop": 750,
+        "hasPlacedFirstLock": true
       },
-      "inventory": [
-        { "itemId": "item_stealth_suit", "quantity": 1, "stats": { "stealthBoost": 5 } },
-        { "itemId": "item_hacking_tool", "quantity": 2, "stats": { "hackingBoost": 3 } }
-      ],
+      "inventory": {
+        "pick_l1": { "id": "pick_l1", "quantity": 11 },
+        "cypher_lock_l1": { "id": "cypher_lock_l1", "quantity": 4 },
+        "reinforced_deadbolt_l2": { "id": "reinforced_deadbolt_l2", "quantity": 2 },
+        "hydraulic_drill_l3": { "id": "hydraulic_drill_l3", "quantity": 3 },
+        "system_hack_l1": { "id": "system_hack_l1", "quantity": 1 },
+        "sonic_pulser_l3": { "id": "sonic_pulser_l3", "quantity": 1 }
+      },
       "vault": [
-        { "slotId": "vault_slot_1", "deployedItem": null },
-        { "slotId": "vault_slot_2", "deployedItem": null }
+        { "id": "lock_slot_0", "type": "lock", "item": null },
+        { "id": "lock_slot_1", "type": "lock", "item": null },
+        { "id": "lock_slot_2", "type": "lock", "item": null },
+        { "id": "lock_slot_3", "type": "lock", "item": null },
+        { "id": "upgrade_slot_0", "type": "upgrade", "item": null },
+        { "id": "upgrade_slot_1", "type": "upgrade", "item": null },
+        { "id": "upgrade_slot_2", "type": "upgrade", "item": null },
+        { "id": "upgrade_slot_3", "type": "upgrade", "item": null }
       ]
     }
   ],
@@ -28,40 +52,8 @@
   "messages": [],
   "dailyTeamCodes": {
     "Cyphers": "CYPHERCODE123",
-    "Shadows": "SHADOWCODE456"
+    "Shadows": "SHADOWCODE456",
+    "Observer": "OBSERVERCODE789"
   }
 }
-{
-    "players": [
-      {
-        "id": "mock_pi_id_12345",
-        "spyName": "Agent 007",
-        "faction": "Shadows",
-        "stats": {
-          "strength": 10,
-          "stealth": 12,
-          "hacking": 8
-        },
-        "inventory": [
-          { "itemId": "item_stealth_suit", "quantity": 1, "stats": { "stealthBoost": 5 } },
-          { "itemId": "item_hacking_tool", "quantity": 2, "stats": { "hackingBoost": 3 } }
-        ],
-        "vault": [
-          { "slotId": "vault_slot_1", "deployedItem": null },
-          { "slotId": "vault_slot_2", "deployedItem": null }
-        ]
-      }
-    ],
-    "items": [
-      { "itemId": "item_stealth_suit", "name": "Stealth Suit", "description": "Increases stealth.", "stats": { "stealthBoost": 5 }, "price": 100 },
-      { "itemId": "item_hacking_tool", "name": "Hacking Tool", "description": "Helps with hacking.", "stats": { "hackingBoost": 3 }, "price": 75 },
-      { "itemId": "item_strength_boost", "name": "Strength Boost", "description": "Temporarily increases strength.", "stats": { "strengthBoost": 7 }, "price": 50 }
-    ],
-    "droppedItems": [],
-    "messages": [],
-    "dailyTeamCodes": {
-      "Cyphers": "CYPHERCODE123",
-      "Shadows": "SHADOWCODE456"
-    }
-  }
-  
+

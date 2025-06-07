@@ -2,85 +2,110 @@
 
 "use client";
 import { useState } from 'react';
-import { useAppContext, type GameItemBase, type ItemCategory } from '@/contexts/AppContext'; // Added GameItemBase and ItemCategory types
+import { useAppContext, type GameItemBase, type ItemCategory, type VaultSlot } from '@/contexts/AppContext';
 import { HolographicPanel, HolographicButton, HolographicInput } from '@/components/game/shared/HolographicPanel';
-import { ShieldCheck, ShieldOff, ShieldAlert, Edit3, Lock, Unlock } from 'lucide-react';
+import { ShieldCheck, ShieldOff, ShieldAlert, Edit3, Lock, Unlock, Sigma } from 'lucide-react'; // Added Sigma for ELINT
 import { cn } from '@/lib/utils';
+import { useTheme } from '@/contexts/ThemeContext'; // Import useTheme
+import { getItemById } from '@/lib/game-items'; // Ensure getItemById is imported
 
 interface SectionProps {
   parallaxOffset: number;
 }
 
-const MAX_SLOTS = 8; // 4 Lock, 4 Vault-Wide
+const MAX_LOCK_SLOTS = 4;
+const MAX_UPGRADE_SLOTS = 4;
 
 export function VaultSection({ parallaxOffset }: SectionProps) {
-  const { faction, playerSpyName, openInventoryTOD, closeInventoryTOD } = useAppContext(); // ADDED openInventoryTOD and closeInventoryTOD
-  const [vaultTitle, setVaultTitle] = useState("[UNCLASSIFIED]");
+  const { 
+    faction, 
+    playerSpyName, 
+    openInventoryTOD, 
+    closeInventoryTOD, 
+    playerVault, // Get playerVault from context
+    deployItemToVault, // Get deployItemToVault from context
+    playerStats 
+  } = useAppContext();
+  const { theme: currentGlobalTheme } = useTheme(); // Get current theme
+
+  const [vaultTitle, setVaultTitle] = useState(playerSpyName ? `${playerSpyName}'s Vault` : "[UNCLASSIFIED]");
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState(vaultTitle);
 
-  // Placeholder for vault slots and their items
-  // In a real app, this would come from player state
-  const [slots, setSlots] = useState(Array(MAX_SLOTS).fill(null).map((_, i) => ({
-    id: i,
-    type: i < 4 ? 'lock' : 'upgrade', // First 4 are locks, next 4 are upgrades
-    item: null, // e.g., { name: "Cypher Lock Lvl 3", level: 3, colorVar: "--level-3-color" }
-  })));
+  // Vault slots are now derived from AppContext.playerVault
+  const lockSlots = playerVault.filter(slot => slot.type === 'lock').slice(0, MAX_LOCK_SLOTS);
+  const upgradeSlots = playerVault.filter(slot => slot.type === 'upgrade').slice(0, MAX_UPGRADE_SLOTS);
 
-  const isSecure = slots.some(slot => slot.type === 'lock' && slot.item !== null);
+  // Ensure we always have the correct number of visual slots, even if playerVault has fewer
+  const displayLockSlots: VaultSlot[] = Array(MAX_LOCK_SLOTS).fill(null).map((_, i) => {
+    return lockSlots[i] || { id: `lock_slot_${i}`, type: 'lock', item: null };
+  });
+  const displayUpgradeSlots: VaultSlot[] = Array(MAX_UPGRADE_SLOTS).fill(null).map((_, i) => {
+    return upgradeSlots[i] || { id: `upgrade_slot_${i}`, type: 'upgrade', item: null };
+  });
+
+
+  const isSecure = displayLockSlots.some(slot => slot.item !== null);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTempTitle(e.target.value);
   };
 
   const saveVaultTitle = () => {
-    // TODO: Add offensive word filter
     setVaultTitle(tempTitle);
     setIsEditingTitle(false);
+    // TODO: Persist vaultTitle with player data if this feature is desired long-term
   };
 
-  // NEW: Handler for when a vault slot is clicked
-  const handleSlotClick = (slotId: number, slotType: 'lock' | 'upgrade') => {
+  const handleSlotClick = (slot: VaultSlot) => {
     let categoryToOpen: ItemCategory | undefined;
-    let title = '';
-    let purpose: 'equip_lock' | 'equip_nexus' | 'infiltrate_lock' | undefined;
+    let todTitle = '';
+    let purpose: 'equip_lock' | 'equip_nexus' | undefined;
 
-    if (slotType === 'lock') {
-      categoryToOpen = 'lock'; // Assuming 'lock' is an ItemCategory for lock items
-      title = `Equip Lock Slot ${slotId + 1}`;
+    // Determine category based on slot type
+    if (slot.type === 'lock') {
+      // For lock slots, we want to show items from 'Hardware' (which are locks)
+      // AND 'Lock Fortifiers'
+      // This requires a special handling or a combined category view if your InventoryBrowserInTOD supports it.
+      // For now, let's assume we might need to refine this or the InventoryBrowser.
+      // Opening 'Hardware' for now as it contains actual locks.
+      categoryToOpen = 'Hardware'; // Or a new combined category if needed
+      todTitle = `Equip Lock Slot ${parseInt(slot.id.split('_')[2]) + 1}`;
       purpose = 'equip_lock';
-    } else if (slotType === 'upgrade') {
-      categoryToOpen = 'vault_upgrade'; // Assuming 'vault_upgrade' for vault-wide items
-      title = `Equip Vault Upgrade Slot ${slotId + 1 - 4}`; // Adjust for upgrade slot numbering
-      purpose = 'equip_nexus'; // Example purpose for vault-wide upgrades
+    } else if (slot.type === 'upgrade') {
+      categoryToOpen = 'Nexus Upgrades';
+      todTitle = `Equip Vault Upgrade Slot ${parseInt(slot.id.split('_')[2]) + 1}`;
+      purpose = 'equip_nexus';
     }
 
     if (categoryToOpen) {
       openInventoryTOD({
         category: categoryToOpen,
-        title: title,
+        title: todTitle,
         purpose: purpose,
-        onItemSelect: (item: GameItemBase) => {
-          console.log(`Agent ${playerSpyName} selected ${item.name} for ${slotType} slot ${slotId}`);
-          // TODO: Implement logic to equip the item to the specific slot
-          // This would involve updating the 'slots' state or sending an update to global player state
-          setSlots(prevSlots => prevSlots.map(s =>
-            s.id === slotId ? { ...s, item: { name: item.name, level: 1, colorVar: '--level-1-color' } } : s // Placeholder: Set item details
-          ));
-          closeInventoryTOD(); // Close the inventory TOD after selection
+        onItemSelect: async (item: GameItemBase) => {
+          console.log(`Agent ${playerSpyName} selected ${item.name} for ${slot.type} slot ${slot.id}`);
+          await deployItemToVault(slot.id, item.id);
+          closeInventoryTOD();
         }
       });
     } else {
-      console.warn(`No inventory category defined for slot type: ${slotType}`);
+      console.warn(`No inventory category defined for slot type: ${slot.type}`);
     }
   };
 
+  const handleClearSlot = async (slotId: string) => {
+    await deployItemToVault(slotId, null); // Pass null to clear the item
+  };
 
   const centralHexagonColor = faction === 'Cyphers' ? 'hsl(var(--primary-hsl))' : faction === 'Shadows' ? 'hsl(var(--primary-hsl))' : 'hsl(var(--muted-hsl))';
 
   return (
     <div className="flex flex-col items-center justify-center p-4 md:p-6 h-full">
-      <HolographicPanel className="w-full h-full max-w-4xl flex flex-col items-center relative">
+      <HolographicPanel 
+        className="w-full h-full max-w-4xl flex flex-col items-center relative"
+        explicitTheme={currentGlobalTheme} // Ensure panel is themed
+      >
         <div className="text-center mb-2 mt-2">
           {isEditingTitle ? (
             <div className="flex items-center gap-2">
@@ -90,16 +115,17 @@ export function VaultSection({ parallaxOffset }: SectionProps) {
                 onChange={handleTitleChange}
                 maxLength={30}
                 className="text-lg"
+                explicitTheme={currentGlobalTheme}
               />
-              <HolographicButton onClick={saveVaultTitle} className="p-2">Save</HolographicButton>
+              <HolographicButton onClick={saveVaultTitle} className="p-2" explicitTheme={currentGlobalTheme}>Save</HolographicButton>
             </div>
           ) : (
             <div className="flex items-center gap-2 cursor-pointer group" onClick={() => { setTempTitle(vaultTitle); setIsEditingTitle(true); }}>
               <h2 className="text-2xl font-orbitron holographic-text group-hover:text-accent transition-colors">{vaultTitle}</h2>
-              <Edit3 className="w-4 h-4 text-muted-foreground group-hover:text-accent transition-colors" />
+              <Edit3 className="w-4 h-4 text-muted-foreground group-hover:text-accent transition-colors icon-glow" />
             </div>
           )}
-           <p className="text-xs text-muted-foreground">Vault Owner: {playerSpyName || "Current User"}</p>
+           <p className="text-xs text-muted-foreground">Owner: {playerSpyName || "Current User"}</p>
         </div>
 
         <div className={cn(
@@ -110,7 +136,7 @@ export function VaultSection({ parallaxOffset }: SectionProps) {
             STATUS: {isSecure ? "SECURE" : "NOT SECURED"}
         </div>
 
-        {/* Central Hexagon Core & Slots */}
+        {/* Central Hexagon Core & Slots & ELINT Display */}
         <div className="relative flex-grow w-full flex items-center justify-center aspect-square max-h-[70vh] max-w-[70vh]">
           {/* Central Hexagon */}
           <svg viewBox="0 0 100 100" className="absolute w-1/2 h-1/2 animate-spin-slow opacity-70" style={{ animationDuration: '20s'}}>
@@ -118,56 +144,81 @@ export function VaultSection({ parallaxOffset }: SectionProps) {
               points="50,5 95,27.5 95,72.5 50,95 5,72.5 5,27.5"
               stroke={centralHexagonColor}
               strokeWidth="2"
-              fill="hsla(var(--background-hsl), 0.3)"
-              className="icon-glow"
+              fill="hsla(var(--background-hsl), 0.3)" // Use theme background with opacity
+              className="icon-glow" // Assuming icon-glow uses current color for drop shadow
               style={{ filter: `drop-shadow(0 0 5px ${centralHexagonColor})`}}
             />
           </svg>
+          
+          {/* ELINT Display */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
+            <Sigma className="w-8 h-8 md:w-10 md:h-10 text-primary icon-glow opacity-60 mb-1" />
+            <p className="text-3xl md:text-4xl font-digital7 font-bold holographic-text text-primary leading-none">
+              {(playerStats.elintReserves ?? 0).toLocaleString()}
+            </p>
+            <p className="text-sm text-muted-foreground font-rajdhani uppercase tracking-wider">ELINT</p>
+          </div>
 
-          {/* Gadget Slots */}
-          {slots.map((slot, index) => {
-            const angle = (index / MAX_SLOTS) * 360 - 90; // -90 to start at top
-            const radius = '38%'; // Adjust as needed for placement around hexagon
+
+          {/* Combined Slots Logic */}
+          {[...displayLockSlots, ...displayUpgradeSlots].map((slot, index) => {
+            const totalSlots = MAX_LOCK_SLOTS + MAX_UPGRADE_SLOTS;
+            const angle = (index / totalSlots) * 360 - 90; // -90 to start at top
+            const radius = '38%'; 
             const x = `calc(50% + ${radius} * ${Math.cos(angle * Math.PI / 180)})`;
             const y = `calc(50% + ${radius} * ${Math.sin(angle * Math.PI / 180)})`;
-            const itemColor = slot.item ? `hsl(var(${slot.item.colorVar}))` : 'hsl(var(--muted-hsl))';
+            
+            const itemDetails = slot.item ? getItemById(slot.item.id) : null;
+            const itemColor = itemDetails && itemDetails.colorVar ? `hsl(var(${itemDetails.colorVar}))` : 'hsl(var(--muted-hsl))';
+            const canClear = slot.item !== null;
 
             return (
               <div
                 key={slot.id}
-                className="absolute w-16 h-16 md:w-20 md:h-20 rounded-md border-2 cursor-pointer transition-all hover:scale-110 hover:shadow-lg"
+                className={cn(
+                  "absolute w-16 h-16 md:w-20 md:h-20 rounded-md border-2 cursor-pointer transition-all hover:scale-110 hover:shadow-lg",
+                  "flex flex-col items-center justify-center text-center" // For item name and clear button
+                )}
                 style={{
                   left: x,
                   top: y,
                   transform: 'translate(-50%, -50%)',
                   borderColor: itemColor,
                   boxShadow: slot.item ? `0 0 10px ${itemColor}, inset 0 0 5px ${itemColor}` : `0 0 5px ${itemColor}`,
-                  backgroundColor: `hsla(var(--background-hsl), 0.5)`, // CHANGED TO BACKTICKS
+                  backgroundColor: `hsla(var(--card-hsl), 0.7)`, 
                 }}
-                onClick={() => handleSlotClick(slot.id, slot.type)}
+                onClick={() => handleSlotClick(slot)}
               >
-                <div className="w-full h-full flex items-center justify-center">
-                  {slot.item ? (
-                    <span className="text-xs font-bold" style={{color: itemColor }}>{slot.item.name.substring(0,3)}{slot.item.level}</span>
-                  ) : slot.type === 'lock' ? (
-                    <Unlock className="w-6 h-6 md:w-8 md:h-8" style={{color: itemColor}}/>
-                  ) : (
-                      <ShieldOff className="w-6 h-6 md:w-8 md:h-8" style={{color: itemColor}}/>
-                  )}
-                </div>
-                {/* TODO: Add smaller preview for fortifiers if item in slot is a lock and fortified */}
+                {slot.item && itemDetails ? (
+                  <>
+                    <img src={itemDetails.imageSrc || '/placeholder-icon.png'} alt={itemDetails.name} className="w-8 h-8 md:w-10 md:h-10 object-contain mb-0.5" />
+                    <p className="text-[10px] leading-tight font-semibold" style={{ color: itemColor }}>
+                      {itemDetails.name.substring(0,10)}{itemDetails.name.length > 10 ? '...' : ''} L{itemDetails.level}
+                    </p>
+                    {/* Clear button - only if item is equipped */}
+                    <HolographicButton
+                        onClick={(e) => {
+                            e.stopPropagation(); // Prevent slot click from firing
+                            handleClearSlot(slot.id);
+                        }}
+                        className="!p-0.5 !text-[8px] !h-auto !absolute -top-1 -right-1 !bg-destructive/70 hover:!bg-destructive !border-destructive"
+                        explicitTheme={currentGlobalTheme}
+                        title={`Remove ${itemDetails.name}`}
+                    >
+                        X
+                    </HolographicButton>
+                  </>
+                ) : slot.type === 'lock' ? (
+                  <Unlock className="w-6 h-6 md:w-8 md:h-8 icon-glow" style={{color: itemColor}}/>
+                ) : (
+                  <ShieldOff className="w-6 h-6 md:w-8 md:h-8 icon-glow" style={{color: itemColor}}/>
+                )}
               </div>
             );
           })}
         </div>
-        <p className="text-xs text-muted-foreground mt-auto mb-1">Vault Level: X (Display user's vault level)</p>
+        {/* Removed the "Vault Level: X" text from here */}
       </HolographicPanel>
     </div>
   );
 }
-
-// Add a CSS animation for slow spin if not already in tailwind.config.js
-// @keyframes spin-slow { to { transform: rotate(360deg); } }
-// .animate-spin-slow { animation: spin-slow 20s linear infinite; }
-// In tailwind.config.ts animations: 'spin-slow': 'spin 20s linear infinite',
-// This is already present in the thought process, so I'll assume it will be added to tailwind.config.ts or use existing 'spin' with custom duration.
