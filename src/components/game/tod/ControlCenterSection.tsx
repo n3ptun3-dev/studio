@@ -1,3 +1,4 @@
+// src/components/game/tod/ControlCenterSection.tsx
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
@@ -492,3 +493,4 @@ export default function ControlCenterSection({ parallaxOffset }: SectionProps) {
       </div>
   </div>
   );
+}
