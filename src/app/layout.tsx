@@ -49,7 +49,7 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body
         className={`${geistSans.className} ${geistSans.variable} ${geistMono.className} ${geistMono.variable} ${orbitron.variable} ${exo2.variable} ${rajdhani.variable} antialiased bg-background text-foreground`}
-        suppressHydrationWarning={true} // <-- ADD THIS LINE!
+        suppressHydrationWarning={true}
       >
         <ThemeProvider attribute="class" defaultTheme="terminal-green" enableSystem>
           <AppProvider>
