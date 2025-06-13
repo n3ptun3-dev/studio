@@ -29,7 +29,6 @@ const MOCK_LOCKER_ITEMS: GameItemBase[] = [
   getItemById('biometric_seal_l5')!, // Locks can also be displayed here if relevant
   getItemById('temporal_dephaser_l6')!,
   getItemById('quantum_dephaser_l7')!,
-  getItemById('universal_key_l8')!,
 ].filter(Boolean); // Filter out any undefined if getItemById fails
 
 const itemWidth = 1.5;
@@ -44,9 +43,10 @@ interface CarouselItemProps {
   totalItems: number;
   carouselRadius: number;
   onItemClick: (item: GameItemBase, mesh: THREE.Mesh) => void;
+  hasDragged: boolean; // Add this prop
 }
 
-function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick }: CarouselItemProps) {
+function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick, hasDragged }: CarouselItemProps) {
   const meshRef = useRef<THREE.Mesh>(null!);
   const textureLoader = new THREE.TextureLoader();
   const [texture, setTexture] = useState<THREE.Texture | null>(null);
@@ -55,28 +55,18 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick
     if (itemData.imageSrc) {
       textureLoader.load(
         itemData.imageSrc,
-        // On load callback
         (loadedTexture) => {
           setTexture(loadedTexture);
-          // Set userData here after texture loads and meshRef is current
           if (meshRef.current) {
-            // Ensure meshRef.current is treated as a THREE.Mesh for TypeScript,
-            // then ensure userData is an object before assigning
-            const mesh = meshRef.current as THREE.Mesh;
-            if (!mesh.userData) {
-              mesh.userData = {};
-            }
-            // Now, assign directly. TypeScript should know userData is an object.
-            mesh.userData.name = itemData.name;
-            mesh.userData.imageUrl = itemData.imageSrc;
+            // Ensure userData exists or create it
+            meshRef.current.userData = meshRef.current.userData || {};
+            // Assign the data
+            meshRef.current.userData.itemData = itemData;
           }
         },
-        // On progress callback (optional)
         undefined,
-        // On error callback
         (error) => {
           console.error(`Failed to load texture for ${itemData.name}:`, error);
-          // Fallback to the generic Spi vs Spi icon
           textureLoader.load(
             '/Spi vs Spi icon.png',
             (fallbackTexture) => {
@@ -98,7 +88,6 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick
         }
       );
     } else {
-        // If imageSrc is not defined, load the default fallback icon
         textureLoader.load(
           '/Spi vs Spi icon.png',
           (fallbackTexture) => {
@@ -120,34 +109,38 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick
     }
   }, [itemData.imageSrc, textureLoader, itemData.name]);
 
-
-  // Calculate initial position on the carousel circle
   const angle = (index / totalItems) * Math.PI * 2;
   const x = carouselRadius * Math.sin(angle);
   const z = carouselRadius * Math.cos(angle);
 
-  // Position and make item face the center
   useLayoutEffect(() => {
     if (meshRef.current) {
       meshRef.current.position.set(x, 0, z);
-      // Ensure lookAt is called with a new Vector3 to avoid modifying the original
       meshRef.current?.lookAt(new THREE.Vector3(0, 0, 0)); 
-      meshRef.current.rotation.y += Math.PI; // Correct for plane orientation if needed
+      meshRef.current.rotation.y += Math.PI; 
     }
   }, [x, z]);
 
   return (
     <mesh
       ref={meshRef}
-      onClick={() => onItemClick(itemData, meshRef.current)}
-      castShadow
-      receiveShadow
+      onClick={() => { // Modify onClick 
+        if (!hasDragged) { // Only trigger onClick if no drag occurred 
+          onItemClick(itemData, meshRef.current!); 
+        } 
+      }}
+      castShadow 
+      receiveShadow 
     >
       <planeGeometry args={[itemWidth, itemHeight]} />
-      {texture && <meshBasicMaterial map={texture} side={THREE.DoubleSide} transparent={true} />}
-      {!texture && <meshBasicMaterial color="gray" />} {/* Placeholder if texture not loaded */}
+      {texture ? (
+        <meshBasicMaterial map={texture} />
+      ) : (
+        <meshBasicMaterial color="grey" />
+      )}
     </mesh>
   );
+
 }
 
 
@@ -158,59 +151,90 @@ function EquipmentCarousel({ itemsData, onItemClick }: { itemsData: GameItemBase
 
   const groupRotationRef = useRef(0); // Stores the current rotation for continuity
 
-  const [isDragging, setIsDragging] = useState(false); // Correctly using useState
-  const [previousClientX, setPreviousClientX] = useState(0); // Correctly using useState
-  const [autoRotate, setAutoRotate] = useState(true); // Correctly using useState
+  const [isDragging, setIsDragging] = useState(false); 
+  const [previousClientX, setPreviousClientX] = useState(0); 
+  const [autoRotate, setAutoRotate] = useState(true); 
 
-  // Handle pointer down (mouse/touch start) - using ThreeEvent
-  const onPointerDown = useCallback((event: ThreeEvent<PointerEvent>) => {
-    // Check if it's a click on an item or on the background
-    // If it's a background click, start dragging
-    // event.object refers to the Three.js object that was clicked
-    if (event.object === group.current) { 
-        setIsDragging(true); // Correct way to update state
-        setAutoRotate(false); // Correct way to update state
-        setPreviousClientX(event.clientX || 0); // Correct way to update state
-        const canvasElement = document.getElementById('locker-carousel-canvas');
-        if (canvasElement) canvasElement.style.cursor = 'grabbing';
-    }
-  }, []); // Dependencies are fine here
+  const hasDragged = useRef(false); // Add a ref to track if a drag has occurred 
+  const canvasRef = useRef<HTMLCanvasElement>(null); // Add a ref for the canvas element 
 
-  // Handle pointer move (mouse/touch move) - using ThreeEvent
-  const onPointerMove = useCallback((event: ThreeEvent<PointerEvent>) => {
-    if (!isDragging) return;
-    const deltaX = (event.clientX || 0) - previousClientX;
-    if (group.current) {
-      group.current.rotation.y += deltaX * 0.005; // Adjust sensitivity
-      groupRotationRef.current = group.current.rotation.y; // Keep the ref updated
-      invalidate(); // Request re-render only if dragging
-    }
-    setPreviousClientX(event.clientX || 0); // Correct way to update state
-  }, [isDragging, previousClientX, invalidate]); // Added previousClientX to dependencies
+  const handleCanvasPointerMove = useCallback((event: PointerEvent) => { 
+    if (!isDragging) return; 
+    const deltaX = (event.clientX || 0) - previousClientX; 
 
-  // Handle pointer up (mouse/touch end) - using ThreeEvent
-  const onPointerUp = useCallback((event: ThreeEvent<PointerEvent>) => { 
-    setIsDragging(false); // Correct way to update state
-    setAutoRotate(true); // Correct way to update state
-    const canvasElement = document.getElementById('locker-carousel-canvas');
-    if (canvasElement) canvasElement.style.cursor = 'grab';
-  }, []); // Dependencies are fine here
+    if (Math.abs(deltaX) > 1) { // Consider it a drag if moved more than 1 pixel 
+      hasDragged.current = true; 
+    } 
 
-  // Animation loop with useFrame
+    if (group.current) { 
+      group.current.rotation.y += deltaX * 0.005; 
+      groupRotationRef.current = group.current.rotation.y; 
+      invalidate(); 
+    } 
+    setPreviousClientX(event.clientX || 0); 
+  }, [isDragging, previousClientX, invalidate, group]); // Added group to dependency array - good practice
+
+
+  const handleCanvasPointerUp = useCallback(() => { 
+    setIsDragging(false); 
+    setAutoRotate(true); 
+    const canvasElement = document.getElementById('locker-carousel-canvas'); 
+    if (canvasElement) canvasElement.style.cursor = 'grab'; 
+
+    // Remove event listeners from the canvas when dragging ends 
+    if (canvasRef.current) { 
+        canvasRef.current.removeEventListener('pointermove', handleCanvasPointerMove); 
+        canvasRef.current.removeEventListener('pointerup', handleCanvasPointerUp); 
+    } 
+
+  }, [setIsDragging, setAutoRotate, handleCanvasPointerMove]); // ADDED handleCanvasPointerMove here
+
+
+  const onPointerDown = useCallback((event: ThreeEvent<PointerEvent>) => { 
+    // Keep this on the group to start drag when clicking on an item 
+    setIsDragging(true); 
+    setAutoRotate(false); 
+    setPreviousClientX(event.clientX || 0); 
+    hasDragged.current = false; // Reset drag flag on pointer down 
+    const canvasElement = document.getElementById('locker-carousel-canvas'); 
+    if (canvasElement) canvasElement.style.cursor = 'grabbing'; 
+
+    // Add event listeners to the canvas when dragging starts 
+    if (canvasRef.current) { 
+        canvasRef.current.addEventListener('pointermove', handleCanvasPointerMove); 
+        canvasRef.current.addEventListener('pointerup', handleCanvasPointerUp); 
+    } 
+
+  }, [setIsDragging, setAutoRotate, setPreviousClientX, handleCanvasPointerMove, handleCanvasPointerUp]); 
+
+
+  useEffect(() => { 
+    const canvasElement = document.getElementById('locker-carousel-canvas'); 
+    if (canvasElement instanceof HTMLCanvasElement) { 
+        canvasRef.current = canvasElement; 
+    } 
+
+    // Cleanup: remove event listeners when component unmounts 
+    return () => { 
+        if (canvasRef.current) { 
+            canvasRef.current.removeEventListener('pointermove', handleCanvasPointerMove); 
+            canvasRef.current.removeEventListener('pointerup', handleCanvasPointerUp); 
+        } 
+    }; 
+  }, [handleCanvasPointerMove, handleCanvasPointerUp]); // ADDED handleCanvasPointerUp here
+
   useFrame(() => {
     if (group.current && autoRotate && !isDragging) {
       group.current.rotation.y += rotationSpeed;
-      groupRotationRef.current = group.current.rotation.y; // Keep the ref updated
-      invalidate(); // Request re-render only if auto-rotating
+      groupRotationRef.current = group.current.rotation.y; 
+      invalidate(); 
     }
 
-    // Determine the currently front-facing item for display title
-    let currentFrontItem: THREE.Object3D | null = null; // Explicitly type as THREE.Object3D
+    let currentFrontItem: THREE.Object3D | null = null; 
     let smallestZ = Infinity;
 
     if (group.current) {
         group.current.children.forEach(item => {
-            // Explicitly cast 'item' to THREE.Object3D here to help TypeScript
             const threeObject = item as THREE.Object3D; 
             const worldPosition = new THREE.Vector3();
             threeObject.getWorldPosition(worldPosition);
@@ -219,51 +243,40 @@ function EquipmentCarousel({ itemsData, onItemClick }: { itemsData: GameItemBase
 
             if (worldPosition.z < smallestZ) {
                 smallestZ = worldPosition.z;
-                currentFrontItem = threeObject; // Assign the explicitly typed object
+                currentFrontItem = threeObject; 
             }
         });
     }
 
-    // Update the item name display in the DOM (passed via onItemClick or a direct prop)
     if (currentFrontItem) { 
-        // Forcefully assert the type of currentFrontItem and its userData for access
-        // This is safe now because we ensure userData exists and has these properties in CarouselItem
         const typedItem = currentFrontItem as THREE.Object3D & { userData: { name?: string; imageUrl?: string } };
         if (typedItem.userData.name) { 
-             // You'll need a way to pass this name up to the parent component (EquipmentLockerSection)
-             // For now, we'll just log it or you can update a state variable in EquipmentLockerSection
-             // via a prop function.
-             // console.log("Front Item:", typedItem.userData.name);
         }
     }
   });
 
-  return (
-    <group
-        ref={group}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerLeave={() => { // Ensure dragging stops if pointer leaves the canvas area
-            if (isDragging) { 
-                setIsDragging(false); // Correct way to update state
-                setAutoRotate(true); // Correct way to update state
-                const canvasElement = document.getElementById('locker-carousel-canvas');
-                if (canvasElement) canvasElement.style.cursor = 'grab';
-            }
-        }}>
+  return ( 
+    <group 
+        ref={group} 
+        onPointerDown={onPointerDown} // Keep onPointerDown here 
+        // Remove other pointer events from the group 
+        // onPointerMove={onPointerMove} 
+        // onPointerUp={onPointerUp} 
+        // onPointerLeave={() => { ... }} 
+    > 
       {itemsData.map((item, index) => (
-        <CarouselItem
-          key={item.id}
-          itemData={item}
-          index={index}
-          totalItems={itemsData.length}
-          carouselRadius={carouselRadius}
-          onItemClick={onItemClick}
-        />
-      ))}
-    </group>
-  );
+        <CarouselItem 
+          key={item.id} 
+          itemData={item} 
+          index={index} 
+          totalItems={itemsData.length} 
+          carouselRadius={carouselRadius} 
+          onItemClick={onItemClick} // Keep onItemClick prop 
+          hasDragged={hasDragged.current} // Pass hasDragged ref value 
+        /> 
+      ))} 
+    </group> 
+  ); 
 }
 
 
@@ -273,7 +286,6 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
 
   const handleItemClick = useCallback((item: GameItemBase, mesh: THREE.Mesh) => {
     setSelectedItem(item);
-    // Open a TOD window with item details
     openTODWindow(
       item.title || item.name,
       <div className="font-rajdhani p-4 text-center">
@@ -283,19 +295,17 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
         {item.strength && <p className="text-sm text-gray-400">Strength: {item.strength.current}</p>}
         {item.resistance && <p className="text-sm text-gray-400">Resistance: {item.resistance.current}</p>}
         {item.minigameEffect && <p className="text-sm text-gray-400">Effect: {item.minigameEffect}</p>}
-        {/* Add more details as needed */}
         <HolographicButton onClick={closeTODWindow} className="mt-4">Close</HolographicButton>
       </div>,
-      { showCloseButton: true } // Ensure it has a close button
+      { showCloseButton: true } 
     );
   }, [openTODWindow, closeTODWindow]);
 
-  // Adjust canvas container styles to be more flexible and responsive
   const canvasContainerStyle: React.CSSProperties = {
     position: 'relative',
-    width: '100%', // Take full width of parent
-    maxWidth: '600px', // Max width for desktop
-    height: '400px', // Fixed height for carousel
+    width: '100%', 
+    maxWidth: '600px', 
+    height: '400px', 
     margin: '0 auto',
     borderRadius: '1rem',
     overflow: 'hidden',
@@ -303,24 +313,37 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
     cursor: 'grab',
   };
 
+
   return (
     <div className="flex flex-col p-3 md:p-4 h-full overflow-hidden space-y-3 md:space-y-4 max-w-4xl mx-auto">
       <div className="flex-none flex items-center justify-center pt-6">
-        <h2 className="text-2xl font-orbitron holographic-text">Equipment Locker</h2>
+        <h2 className="text-2xl font-orbitron holographic-text" 
+        >Equipment Locker</h2> 
       </div>
+
       <div className="flex-grow flex flex-col items-center justify-center min-h-0">
         <HolographicPanel className="w-full h-full max-h-[500px] flex flex-col items-center justify-center p-4">
           <h3 className="text-xl font-bold text-emerald-400 mb-4">Your Gear</h3>
+          
           <div id="locker-carousel-container" style={canvasContainerStyle}>
             <Canvas
-              id="locker-carousel-canvas" // Ensure unique ID for this canvas
+              id="locker-carousel-canvas" 
               camera={{ position: [0, 0, carouselRadius * 1.5], fov: 75 }}
               shadows
             >
-              {/* No whitespace or newlines between these JSX elements */}
-              <><ambientLight intensity={0.7} /><pointLight position={[10, 10, 10]} intensity={0.5} castShadow /><pointLight position={[-10, -10, -10]} intensity={0.3} /><EquipmentCarousel itemsData={MOCK_LOCKER_ITEMS} onItemClick={handleItemClick} /><Resizer /></>
+              <><ambientLight intensity={0.7} />
+                <pointLight position={[10, 10, 10]} intensity={0.5} castShadow />
+                {/* UNCOMMENTED: EquipmentCarousel to test its effect */}
+ <EquipmentCarousel itemsData={MOCK_LOCKER_ITEMS} onItemClick={handleItemClick} />
+
+                {/* Remaining components are still commented out */}
+                {/* <pointLight position={[-10, -10, -10]} intensity={0.3} /> */}
+                 <Resizer /> 
+                {/* <OrbitControls enableZoom={false} enablePan={false} enableRotate={true} /> */}
+              </>
             </Canvas>
           </div>
+
           <p className="text-center text-gray-300 mt-4">
             Drag the carousel to view your formidable arsenal. Click an item for details!
           </p>
@@ -348,7 +371,6 @@ function Resizer() {
     };
 
     window.addEventListener('resize', handleResize);
-    // Initial resize call
     handleResize();
 
     return () => window.removeEventListener('resize', handleResize);
