@@ -1,4 +1,3 @@
-
 // src/app/page.tsx
 
 "use client";
@@ -16,7 +15,7 @@ import { EquipmentLockerSection } from '@/components/game/tod/EquipmentLockerSec
 import { VaultSection } from '@/components/game/tod/VaultSection';
 import { ScannerSection } from '@/components/game/tod/ScannerSection';
 import { TODWindow } from '@/components/game/shared/TODWindow';
-import { InventoryBrowserInTOD } from '@/components/game/inventory/InventoryBrowserInTOD';
+import { InventoryBrowserInTOD } from '@/components/game/inventory/InventoryBrowserInTOD'; // Fixed: Changed '=>' to 'from'
 // import { generateWelcomeMessage, type WelcomeMessageInput } from '@/ai/flows/welcome-message'; // AI Disabled
 import { cn } from '@/lib/utils';
 import { CodenameInput } from '@/components/game/onboarding/CodenameInput';
@@ -120,62 +119,69 @@ export default function HomePage() {
     <AgentSection key="agent-clone-end" parallaxOffset={parallaxOffset} />,
   ], [parallaxOffset]);
 
-  const handleScroll = useCallback(() => {
-    if (isScrollLockActive) return; // Do not handle scroll if lock is active
+  const handleScroll = useCallback(() => {  
+    // Keep this logic for parallax and looping even when not actively scrolling  
+    // The overflow style will prevent the actual scroll movement  
+    if (todContainerRef.current) {  
+      const currentScrollLeft = todContainerRef.current.scrollLeft;  
+      const clientWidth = todContainerRef.current.clientWidth;  
+      if (clientWidth === 0) return;  
+      setParallaxOffset(currentScrollLeft);  
 
-    if (todContainerRef.current) {
-      const currentScrollLeft = todContainerRef.current.scrollLeft;
-      const clientWidth = todContainerRef.current.clientWidth;
-      if (clientWidth === 0) return;
-      setParallaxOffset(currentScrollLeft);
+      const totalContentWidthForLooping = (sectionComponents.length - 2) * clientWidth;  
+      const maxPossibleScrollLeft = (sectionComponents.length - 1) * clientWidth;  
 
-      const totalContentWidthForLooping = (sectionComponents.length - 2) * clientWidth; 
-      const maxPossibleScrollLeft = (sectionComponents.length - 1) * clientWidth;
+      if (currentScrollLeft >= maxPossibleScrollLeft - 5) {  
+        todContainerRef.current.scrollLeft = clientWidth + (currentScrollLeft - maxPossibleScrollLeft);  
+      } else if (currentScrollLeft <= 5) {  
+        todContainerRef.current.scrollLeft = totalContentWidthForLooping + currentScrollLeft;  
+      }  
+    }  
+  }, [sectionComponents.length]); // Removed isScrollLockActive from dependencies  
 
-      if (currentScrollLeft >= maxPossibleScrollLeft - 5) { 
-        todContainerRef.current.scrollLeft = clientWidth + (currentScrollLeft - maxPossibleScrollLeft);
-      } else if (currentScrollLeft <= 5) { 
-        todContainerRef.current.scrollLeft = totalContentWidthForLooping + currentScrollLeft;
-      }
-    }
-  }, [sectionComponents.length, isScrollLockActive]); // Add isScrollLockActive to dependencies
 
-  useEffect(() => {
-    const container = todContainerRef.current;
-    if (onboardingStep === 'tod' && !isAppLoading && isClientMounted && playBootAnimation && container) {
-      const setInitialScroll = () => {
-        if (todContainerRef.current && todContainerRef.current.clientWidth > 0 && !initialScrollSetRef.current) {
-          const sectionWidth = todContainerRef.current.clientWidth;
-          const targetSectionIndex = 1; 
-          const initialScrollPosition = sectionWidth * targetSectionIndex;
-          todContainerRef.current.scrollLeft = initialScrollPosition;
-          setParallaxOffset(initialScrollPosition); 
-          initialScrollSetRef.current = true;
-        }
-      };
-      
-      requestAnimationFrame(setInitialScroll);
+  useEffect(() => {  
+    const container = todContainerRef.current;  
+    if (onboardingStep === 'tod' && !isAppLoading && isClientMounted && playBootAnimation && container) {  
+      const setInitialScroll = () => {  
+        if (todContainerRef.current && todContainerRef.current.clientWidth > 0 && !initialScrollSetRef.current) {  
+          const sectionWidth = todContainerRef.current.clientWidth;  
+          const targetSectionIndex = 1;  
+          const initialScrollPosition = sectionWidth * targetSectionIndex;  
+          todContainerRef.current.scrollLeft = initialScrollPosition;  
+          setParallaxOffset(initialScrollPosition);  
+          initialScrollSetRef.current = true;  
+        }  
+      };  
+  
+      requestAnimationFrame(setInitialScroll);  
+  
+      // Always add the scroll listener, its execution is controlled by isScrollLockActive  
+      const scrollListenerOptions = { passive: true };  
+      container.addEventListener('scroll', handleScroll, scrollListenerOptions);  
 
-      // Conditionally add/remove scroll listener based on isScrollLockActive
-      // The passive option is important. If we need to call preventDefault() inside handleScroll,
-      // we cannot use { passive: true }. However, for performance, it's generally good.
-      // Since EquipmentLockerSection will manage its own preventDefault, this can remain passive.
-      const scrollListenerOptions = { passive: true };
-      
-      if (!isScrollLockActive) {
-        container.addEventListener('scroll', handleScroll, scrollListenerOptions);
-      } else {
-        // If scroll lock becomes active, remove the listener to prevent TOD scrolling
-        container.removeEventListener('scroll', handleScroll);
-      }
-      
-      return () => {
-        if (container) {
-          container.removeEventListener('scroll', handleScroll);
-        }
-      };
-    }
-  }, [onboardingStep, isAppLoading, isClientMounted, playBootAnimation, handleScroll, isScrollLockActive]); // Add isScrollLockActive to dependencies
+
+      // Cleanup: remove scroll listener  
+      return () => {  
+        if (container) {  
+          container.removeEventListener('scroll', handleScroll);  
+        }  
+      };  
+    }  
+  }, [onboardingStep, isAppLoading, isClientMounted, playBootAnimation, handleScroll]); // Removed isScrollLockActive from dependencies  
+
+
+  // New useEffect to control overflow based on isScrollLockActive  
+  useEffect(() => {  
+      const container = todContainerRef.current;  
+      if (container) {  
+          if (isScrollLockActive) {  
+              container.style.overflow = 'hidden'; // Disable scrolling  
+          } else {  
+              container.style.overflow = 'auto'; // Enable scrolling  
+          }  
+      }  
+  }, [isScrollLockActive]); // Dependency on isScrollLockActive  
 
   const renderOnboarding = () => {
     switch (onboardingStep) {
@@ -278,6 +284,8 @@ export default function HomePage() {
           className={cn(
             "tod-scroll-container absolute inset-0 z-10 scrollbar-hide",
             "animate-slide-up-from-bottom"
+            // Removed conditional pointer-events-none class
+            // { 'pointer-events-none': isScrollLockActive }
           )}
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
@@ -320,4 +328,3 @@ export default function HomePage() {
     </main>
   );
 }
-

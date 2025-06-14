@@ -542,3 +542,6 @@
   75% { transform: translateY(-10px) translateX(5px); }
   100% { transform: translateY(0) translateX(0); }
 }
+.pointer-events-none {
+  pointer-events: none;
+}

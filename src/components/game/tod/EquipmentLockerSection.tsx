@@ -43,10 +43,10 @@ interface CarouselItemProps {
   totalItems: number;
   carouselRadius: number;
   onItemClick: (item: GameItemBase, mesh: THREE.Mesh) => void;
-  hasDragged: boolean; // Add this prop
+  // hasDragged prop is removed as per instructions
 }
 
-function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick, hasDragged }: CarouselItemProps) {
+function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick }: CarouselItemProps) {
   const meshRef = useRef<THREE.Mesh>(null!);
   const textureLoader = new THREE.TextureLoader();
   const [texture, setTexture] = useState<THREE.Texture | null>(null);
@@ -82,7 +82,7 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick
             },
             undefined,
             (fallbackError) => {
-              console.error('Failed to load fallback texture:', fallbackError);
+              console.error('Failed to load fallback texture (no imageSrc provided):', fallbackError);
             }
           );
         }
@@ -124,10 +124,11 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick
   return (
     <mesh
       ref={meshRef}
-      onClick={() => { // Modify onClick 
-        if (!hasDragged) { // Only trigger onClick if no drag occurred 
-          onItemClick(itemData, meshRef.current!); 
-        } 
+      onClick={(event) => { // Keep event parameter
+        // No drag check here, relying on parent's pointerup to stop propagation for drags
+        console.log("CarouselItem onClick: Triggered");
+        onItemClick(itemData, meshRef.current!); // Always call onItemClick
+
       }}
       castShadow 
       receiveShadow 
@@ -147,87 +148,283 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick
 // Main Carousel Scene Component
 function EquipmentCarousel({ itemsData, onItemClick }: { itemsData: GameItemBase[], onItemClick: (item: GameItemBase, mesh: THREE.Mesh) => void }) {
   const group = useRef<THREE.Group>(null!);
-  const { camera, invalidate } = useThree();
+  const { camera, invalidate, gl } = useThree();
 
   const groupRotationRef = useRef(0); // Stores the current rotation for continuity
 
-  const [isDragging, setIsDragging] = useState(false); 
-  const [previousClientX, setPreviousClientX] = useState(0); 
-  const [autoRotate, setAutoRotate] = useState(true); 
+  // Create refs for state variables to avoid stale closures
+  const isDraggingRef = useRef(false);
+  const previousClientXRef = useRef(0);
+  const autoRotateRef = useRef(true);
+  const pointerDownTimeRef = useRef(0); // Ref to store pointerdown timestamp
+
+  // Create a ref for the Raycaster
+  const raycaster = useRef(new THREE.Raycaster());
+  // Create a ref for the mouse position (will store normalized device coordinates)
+  const mouse = useRef(new THREE.Vector2());
+  // Ref to track which type of listeners were added
+  const activeListenerTypeRef = useRef<'pointer' | 'touch' | null>(null);
+
+
+  // Keep state variables for rendering and other effects
+  const [isDragging, setIsDragging] = useState(false);
+  const [previousClientX, setPreviousClientX] = useState(0);
+  const [autoRotate, setAutoRotate] = useState(true);
+
+  // Get the scroll lock state from AppContext
+  const { isScrollLockActive, setIsScrollLockActive } = useAppContext();
 
   const hasDragged = useRef(false); // Add a ref to track if a drag has occurred 
-  const canvasRef = useRef<HTMLCanvasElement>(null); // Add a ref for the canvas element 
 
-  const handleCanvasPointerMove = useCallback((event: PointerEvent) => { 
-    if (!isDragging) return; 
-    const deltaX = (event.clientX || 0) - previousClientX; 
-
-    if (Math.abs(deltaX) > 1) { // Consider it a drag if moved more than 1 pixel 
-      hasDragged.current = true; 
-    } 
-
-    if (group.current) { 
-      group.current.rotation.y += deltaX * 0.005; 
-      groupRotationRef.current = group.current.rotation.y; 
-      invalidate(); 
-    } 
-    setPreviousClientX(event.clientX || 0); 
-  }, [isDragging, previousClientX, invalidate, group]); // Added group to dependency array - good practice
-
-
-  const handleCanvasPointerUp = useCallback(() => { 
-    setIsDragging(false); 
-    setAutoRotate(true); 
-    const canvasElement = document.getElementById('locker-carousel-canvas'); 
-    if (canvasElement) canvasElement.style.cursor = 'grab'; 
-
-    // Remove event listeners from the canvas when dragging ends 
-    if (canvasRef.current) { 
-        canvasRef.current.removeEventListener('pointermove', handleCanvasPointerMove); 
-        canvasRef.current.removeEventListener('pointerup', handleCanvasPointerUp); 
-    } 
-
-  }, [setIsDragging, setAutoRotate, handleCanvasPointerMove]); // ADDED handleCanvasPointerMove here
+  // handleCanvasPointerMove uses refs (for both mouse and touch)
+  // Accept PointerEvent or TouchEvent
+  const handleCanvasPointerMove = useCallback((event: PointerEvent | TouchEvent) => {
+    // Use the correct clientX based on event type
+    let clientX = 0;
+    if (event.type === 'touchmove') { // Check if it's a TouchEvent specifically
+        const touchEvent = event as TouchEvent;
+        if (touchEvent.touches && touchEvent.touches.length > 0) {
+            clientX = touchEvent.touches[0].clientX || 0;
+        } else {
+            console.warn("touchmove event with no touches found");
+            return; // Exit if no touch points found
+        }
+    } else { // Handle PointerEvent (mouse or other pointer types)
+        const pointerEvent = event as PointerEvent;
+        clientX = pointerEvent.clientX || 0;
+    }
 
 
-  const onPointerDown = useCallback((event: ThreeEvent<PointerEvent>) => { 
-    // Keep this on the group to start drag when clicking on an item 
-    setIsDragging(true); 
-    setAutoRotate(false); 
-    setPreviousClientX(event.clientX || 0); 
-    hasDragged.current = false; // Reset drag flag on pointer down 
-    const canvasElement = document.getElementById('locker-carousel-canvas'); 
-    if (canvasElement) canvasElement.style.cursor = 'grabbing'; 
+    console.log("handleCanvasPointerMove triggered (window)", { clientX, isDragging: isDraggingRef.current, eventType: event.type });
+    if (!isDraggingRef.current) { // Use ref
+        console.log("handleCanvasPointerMove (window): Not dragging, returning");
+        return;
+    }
 
-    // Add event listeners to the canvas when dragging starts 
-    if (canvasRef.current) { 
-        canvasRef.current.addEventListener('pointermove', handleCanvasPointerMove); 
-        canvasRef.current.addEventListener('pointerup', handleCanvasPointerUp); 
-    } 
-
-  }, [setIsDragging, setAutoRotate, setPreviousClientX, handleCanvasPointerMove, handleCanvasPointerUp]); 
+    // Prevent default touch behaviors that might trigger scrolling
+    // Keep preventDefault here for touch events
+    // Only prevent default if cancelable and it's a touch event
+    if (event.cancelable) { // Only prevent default if cancelable
+        event.preventDefault();
+    }
+    event.stopPropagation(); // Stop propagation
 
 
-  useEffect(() => { 
-    const canvasElement = document.getElementById('locker-carousel-canvas'); 
-    if (canvasElement instanceof HTMLCanvasElement) { 
-        canvasRef.current = canvasElement; 
-    } 
+    const deltaX = clientX - previousClientXRef.current; // Use ref
+    console.log("handleCanvasPointerMove (window): deltaX", deltaX);
 
-    // Cleanup: remove event listeners when component unmounts 
-    return () => { 
-        if (canvasRef.current) { 
-            canvasRef.current.removeEventListener('pointermove', handleCanvasPointerMove); 
-            canvasRef.current.removeEventListener('pointerup', handleCanvasPointerUp); 
-        } 
-    }; 
-  }, [handleCanvasPointerMove, handleCanvasPointerUp]); // ADDED handleCanvasPointerUp here
+    if (Math.abs(deltaX) > 1) {
+        hasDragged.current = true;
+        console.log("handleCanvasPointerMove (window): hasDragged set to true");
+    }
+
+    if (group.current) {
+      console.log("handleCanvasPointerMove (window): Updating rotation");
+      group.current.rotation.y += deltaX * 0.005;
+      groupRotationRef.current = group.current.rotation.y;
+      invalidate();
+      console.log("handleCanvasPointerMove (window): New rotation", group.current.rotation.y);
+    } else {
+        console.log("handleCanvasPointerMove (window): group.current is null");
+    }
+    previousClientXRef.current = clientX; // Update ref immediately
+    console.log("handleCanvasPointerMove (window): previousClientX updated (ref)", previousClientXRef.current);
+  }, [invalidate, group]); // Dependencies only include values that don't cause staleness
+
+
+  // handleCanvasPointerUp uses refs and refined drag detection (for both mouse and touch)
+  // Accept PointerEvent or TouchEvent
+  const handleCanvasPointerUp = useCallback((event: PointerEvent | TouchEvent) => { // Accept both PointerEvent and TouchEvent
+    console.log("handleCanvasPointerUp triggered (window)", { eventType: event.type });
+
+    // Refined drag detection: check distance moved and time elapsed
+    // Use the correct clientX based on event type for the final position
+    let finalClientX = 0;
+    let clientY = 0; // Also need clientY for raycasting
+    if (event.type === 'touchend' || event.type === 'touchcancel') { // Check if it's a TouchendEvent specifically
+        const touchEvent = event as TouchEvent;
+        // Use changedTouches for the end position in touchend
+        if (touchEvent.changedTouches && touchEvent.changedTouches.length > 0) {
+            finalClientX = touchEvent.changedTouches[0].clientX || 0;
+            clientY = touchEvent.changedTouches[0].clientY || 0;
+        } else {
+            console.warn("touchend event with no changedTouches found");
+            // If no changedTouches, use the last known position from previousClientXRef
+            finalClientX = previousClientXRef.current;
+            // We don't have a reliable final Y for raycasting in this case
+            // This might affect click detection in the edges, but is a fallback
+            clientY = 0; // Fallback Y
+        }
+    } else { // Handle PointerEvent (mouse or other pointer types)
+        const pointerEvent = event as PointerEvent;
+        finalClientX = pointerEvent.clientX || 0;
+        clientY = pointerEvent.clientY || 0;
+    }
+
+
+    const dragDistance = Math.abs(finalClientX - previousClientXRef.current); // Use ref for start, finalClientX for end
+    const dragDuration = performance.now() - pointerDownTimeRef.current;
+
+    const isClick = dragDistance < 10 && dragDuration < 300; // Adjusted thresholds
+
+
+    setIsDragging(false);
+    isDraggingRef.current = false; // Update ref immediately
+    setAutoRotate(true);
+    autoRotateRef.current = true; // Update ref immediately;
+
+    // Release scroll lock
+    setIsScrollLockActive(false);
+
+
+    const canvasElement = document.getElementById('locker-carousel-canvas');
+    if (canvasElement) canvasElement.style.cursor = 'grab';
+
+
+    // Remove event listeners from the window (remove both pointer and touch based on activeListenerTypeRef)
+    if (activeListenerTypeRef.current === 'touch') {
+        console.log("handleCanvasPointerUp (window): Removing touchmove and touchend listeners from window");
+        window.removeEventListener('touchmove', handleCanvasPointerMove as EventListener);
+        window.removeEventListener('touchend', handleCanvasPointerUp as EventListener);
+    } else if (activeListenerTypeRef.current === 'pointer') {
+        console.log("handleCanvasPointerUp (window): Removing pointermove and pointerup listeners from window");
+        window.removeEventListener('pointermove', handleCanvasPointerMove as EventListener);
+        window.removeEventListener('pointerup', handleCanvasPointerUp as EventListener);
+    }
+    activeListenerTypeRef.current = null; // Reset the active listener type
+
+
+    // If it was a click, manually trigger onItemClick
+    if (isClick) {
+        console.log("handleCanvasPointerUp (window): Detected click, attempting to trigger onItemClick via raycast");
+
+        // Perform raycast at the click position
+        const canvasBounds = gl.domElement.getBoundingClientRect();
+        mouse.current.x = ((finalClientX - canvasBounds.left) / canvasBounds.width) * 2 - 1;
+        mouse.current.y = -((clientY - canvasBounds.top) / canvasBounds.height) * 2 + 1;
+
+        raycaster.current.setFromCamera(mouse.current, camera);
+
+        // Find intersected objects in the group (CarouselItems)
+        const intersects = raycaster.current.intersectObjects(group.current ? group.current.children : []);
+
+        if (intersects.length > 0) {
+            // Find the closest intersected mesh that is a CarouselItem
+            const intersectedMesh = intersects.find(intersect =>
+                intersect.object instanceof THREE.Mesh && intersect.object.userData && intersect.object.userData.itemData
+            )?.object as THREE.Mesh | undefined;
+
+            if (intersectedMesh && intersectedMesh.userData && intersectedMesh.userData.itemData) {
+                console.log("handleCanvasPointerUp (window): Intersected with item", intersectedMesh.userData.itemData.name);
+                // Trigger the onItemClick callback with the item data
+                onItemClick(intersectedMesh.userData.itemData, intersectedMesh);
+            } else {
+                console.log("handleCanvasPointerUp (window): Intersected with mesh, but not a CarouselItem or missing itemData");
+            }
+        } else {
+            console.log("handleCanvasPointerUp (window): No intersection detected at click position");
+        }
+
+
+    } else {
+        // It was a drag, prevent any potential R3F click event from firing
+        console.log("handleCanvasPointerUp (window): Detected drag, stopping propagation");
+        event.stopPropagation();
+        if (event.nativeEvent && typeof event.nativeEvent.stopImmediatePropagation === 'function') {
+            event.nativeEvent.stopImmediatePropagation();
+        }
+    }
+
+
+  }, [setIsDragging, setAutoRotate, handleCanvasPointerMove, setIsScrollLockActive, onItemClick, camera, gl, group, raycaster, mouse]); // Added dependencies for raycasting
+
+
+  // New handleCanvasPointerDown for the canvas (for both mouse and touch)
+  // Accept PointerEvent or TouchEvent
+  const handleCanvasPointerDown = useCallback((event: PointerEvent | TouchEvent) => { // Accept both PointerEvent and TouchEvent
+    // Determine clientX based on event type
+    let clientX = 0;
+    let isTouchEvent = false;
+    if (event.type === 'touchstart') { // Check if it's a TouchEvent specifically
+        isTouchEvent = true;
+        const touchEvent = event as TouchEvent;
+        if (touchEvent.touches && touchEvent.touches.length > 0) {
+            clientX = touchEvent.touches[0].clientX || 0;
+        } else {
+            console.warn("touchstart event with no touches found");
+            return; // Exit if no touch points found on touchstart
+        }
+    } else { // Handle PointerEvent (mouse or other pointer types)
+        const pointerEvent = event as PointerEvent;
+        clientX = pointerEvent.clientX || 0;
+        // Check if it's a primary button click for mouse events
+        if (pointerEvent.button !== 0 && pointerEvent.pointerType === 'mouse') {
+            return; // Ignore non-left mouse clicks
+        }
+    }
+
+
+    console.log("handleCanvasPointerDown triggered (canvas)", { clientX, eventType: event.type, pointerType: (event as PointerEvent).pointerType });
+
+
+    // Update state and refs
+    setIsDragging(true);
+    isDraggingRef.current = true; // Update ref immediately
+    setAutoRotate(false);
+    autoRotateRef.current = false; // Update ref immediately
+
+    // Activate scroll lock
+    setIsScrollLockActive(true);
+
+    setPreviousClientX(clientX); // Use the determined clientX
+    previousClientXRef.current = clientX; // Update ref immediately
+
+
+    hasDragged.current = false; // Reset drag flag
+
+    pointerDownTimeRef.current = performance.now(); // Record timestamp
+
+
+    const canvasElement = document.getElementById('locker-carousel-canvas');
+    if (canvasElement) {
+      canvasElement.style.cursor = 'grabbing';
+      console.log("handleCanvasPointerDown (canvas): Cursor set to grabbing");
+    } else {
+      console.log("handleCanvasPointerDown (canvas): Canvas element not found for cursor change");
+    }
+
+
+    // Add event listeners to the window based on the event type
+    if(isTouchEvent) {
+        console.log("handleCanvasPointerDown (canvas): Adding touchmove and touchend listeners to window");
+        window.addEventListener('touchmove', handleCanvasPointerMove as EventListener); // Use handleCanvasPointerMove for touchmove
+        window.addEventListener('touchend', handleCanvasPointerUp as EventListener); // Use handleCanvasPointerUp for touchend
+        activeListenerTypeRef.current = 'touch'; // Set active listener type
+    } else {
+        console.log("handleCanvasPointerDown (canvas): Adding pointermove and pointerup listeners to window");
+        window.addEventListener('pointermove', handleCanvasPointerMove as EventListener);
+        window.addEventListener('pointerup', handleCanvasPointerUp as EventListener);
+        activeListenerTypeRef.current = 'pointer'; // Set active listener type
+    }
+
+
+    // Prevent default to avoid potential conflicts with other events, especially on mobile
+    // Prevent default if cancelable
+    if (event.cancelable) {
+        event.preventDefault();
+    }
+    event.stopPropagation(); // Stop propagation for pointerdown/touchstart on the canvas container
+
+
+  }, [setIsDragging, setAutoRotate, setPreviousClientX, handleCanvasPointerMove, handleCanvasPointerUp, setIsScrollLockActive]); // Dependencies include state setters and handlers
+
 
   useFrame(() => {
-    if (group.current && autoRotate && !isDragging) {
+    // Use refs for autoRotate and isDragging in useFrame
+    if (group.current && autoRotateRef.current && !isDraggingRef.current) {
       group.current.rotation.y += rotationSpeed;
-      groupRotationRef.current = group.current.rotation.y; 
-      invalidate(); 
+      groupRotationRef.current = group.current.rotation.y;
+      invalidate();
     }
 
     let currentFrontItem: THREE.Object3D | null = null; 
@@ -255,28 +452,52 @@ function EquipmentCarousel({ itemsData, onItemClick }: { itemsData: GameItemBase
     }
   });
 
-  return ( 
-    <group 
-        ref={group} 
-        onPointerDown={onPointerDown} // Keep onPointerDown here 
-        // Remove other pointer events from the group 
-        // onPointerMove={onPointerMove} 
-        // onPointerUp={onPointerUp} 
-        // onPointerLeave={() => { ... }} 
-    > 
+
+  // Effect to attach/remove pointerdown and touchstart listener on the canvas container (div)
+  useEffect(() => {
+      const canvasElement = document.getElementById('locker-carousel-canvas');
+      console.log("useEffect (canvas pointerdown/touchstart): Looking for canvas with id 'locker-carousel-canvas'", canvasElement);
+      if (canvasElement instanceof HTMLDivElement) { // It's the div container
+          console.log("useEffect (canvas pointerdown/touchstart): Found canvas container, adding listeners");
+          // Add listeners to the div container
+          canvasElement.addEventListener('pointerdown', handleCanvasPointerDown as EventListener);
+          canvasElement.addEventListener('touchstart', handleCanvasPointerDown as EventListener); // Add touchstart here
+
+
+      } else {
+          console.log("useEffect (canvas pointerdown/touchstart): Canvas container not found or not a DivElement");
+      }
+
+
+      // Cleanup: remove listeners
+      return () => {
+          console.log("useEffect cleanup (canvas pointerdown/touchstart): Removing listeners from canvas container");
+          if (canvasElement instanceof HTMLDivElement) {
+              canvasElement.removeEventListener('pointerdown', handleCanvasPointerDown as EventListener);
+              canvasElement.removeEventListener('touchstart', handleCanvasPointerDown as EventListener); // Remove touchstart here
+          }
+      };
+  }, [handleCanvasPointerDown]); // Dependency includes the handler
+
+
+  return (
+    <group
+        ref={group}
+        // Remove onPointerDown from the group
+        // onPointerDown={onPointerDown}
+    >
       {itemsData.map((item, index) => (
-        <CarouselItem 
-          key={item.id} 
-          itemData={item} 
-          index={index} 
-          totalItems={itemsData.length} 
-          carouselRadius={carouselRadius} 
-          onItemClick={onItemClick} // Keep onItemClick prop 
-          hasDragged={hasDragged.current} // Pass hasDragged ref value 
-        /> 
-      ))} 
-    </group> 
-  ); 
+        <CarouselItem
+          key={item.id}
+          itemData={item}
+          index={index}
+          totalItems={itemsData.length}
+          carouselRadius={carouselRadius}
+          onItemClick={onItemClick} // Keep onItemClick prop
+        />
+      ))}
+    </group>
+  );
 }
 
 
@@ -308,7 +529,6 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
     height: '400px', 
     margin: '0 auto',
     borderRadius: '1rem',
-    overflow: 'hidden',
     boxShadow: '0 0 30px rgba(0, 255, 255, 0.4)',
     cursor: 'grab',
   };
