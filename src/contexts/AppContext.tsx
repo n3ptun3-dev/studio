@@ -1,4 +1,3 @@
-
 // src/contexts/AppContext.tsx
 
 "use client";
@@ -124,6 +123,7 @@ interface AppContextType {
   playerInfo: Player | null;
   isScrollLockActive: boolean; // New state for TOD scroll lock
   setIsScrollLockActive: (locked: boolean) => void; // New setter
+  getItemById: (id: string) => GameItemBase | undefined; // Added getItemById
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -546,6 +546,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     playerInfo: playerInfoForShop,
     isScrollLockActive: _isScrollLockActive,
     setIsScrollLockActive: _setIsScrollLockActive,
+    getItemById: getItemById, // Explicitly include getItemById
   }), [
     _currentPlayer, _isLoading, _isPiBrowser, _onboardingStep, _messages, _dailyTeamCode, _pendingPiId,
     _isTODWindowOpen, _todWindowTitle, _todWindowContent, _todWindowOptions,
@@ -570,7 +571,10 @@ export function useAppContext() {
   if (context === undefined) {
     throw new Error('useAppContext must be used within an AppProvider');
   }
-  return context;
+  return {
+    ...context, // Spread existing context values
+    getItemById: getItemById, // Explicitly include getItemById
+  };
 }
 
 export { FIXED_DEV_PI_ID };

@@ -4,32 +4,22 @@
 
 "use client";
 
-import React, { useRef, useState, useEffect, useCallback, useLayoutEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback, useLayoutEffect, useMemo } from 'react'; // Added useMemo
 import { Canvas, useFrame, useThree, ThreeEvent } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import * as THREE from 'three';
 import { useAppContext } from '@/contexts/AppContext';
 import { HolographicPanel, HolographicButton } from '@/components/game/shared/HolographicPanel';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/utils'; // Corrected import statement
 import { ITEM_LEVEL_COLORS_CSS_VARS } from '@/lib/constants'; // Assuming this is needed for item colors
-import { getItemById, type GameItemBase, type ItemLevel } from '@/lib/game-items'; // For item data
+import { getItemById as getGameItemById, type GameItemBase, type ItemLevel } from '@/lib/game-items'; // Renamed import to avoid conflict
 
 interface SectionProps {
   parallaxOffset: number;
 }
 
-// Placeholder for your item data (adapt from your game-items.ts or directly import items)
-// This should match the structure of what you intend to display in the carousel.
-const MOCK_LOCKER_ITEMS: GameItemBase[] = [
-  // Example items - replace with actual data from your game-items.ts
-  getItemById('pick_l1')!, // Assuming pick_l1 exists and is level 1
-  getItemById('hydraulic_drill_l2')!,
-  getItemById('code_injector_l3')!,
-  getItemById('sonic_pulser_l4')!,
-  getItemById('biometric_seal_l5')!, // Locks can also be displayed here if relevant
-  getItemById('temporal_dephaser_l6')!,
-  getItemById('quantum_dephaser_l7')!,
-].filter(Boolean); // Filter out any undefined if getItemById fails
+// Removed MOCK_LOCKER_ITEMS as we will use player inventory
+// const MOCK_LOCKER_ITEMS: GameItemBase[] = [...]
 
 const itemWidth = 1.5;
 const itemHeight = 1.5;
@@ -43,7 +33,6 @@ interface CarouselItemProps {
   totalItems: number;
   carouselRadius: number;
   onItemClick: (item: GameItemBase, mesh: THREE.Mesh) => void;
-  // hasDragged prop is removed as per instructions
 }
 
 function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick }: CarouselItemProps) {
@@ -51,63 +40,65 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick
   const textureLoader = new THREE.TextureLoader();
   const [texture, setTexture] = useState<THREE.Texture | null>(null);
 
+  console.log("CarouselItem: itemData", itemData); // Log itemData prop
+
+  // Add a state for the fallback texture
+  const [fallbackTexture, setFallbackTexture] = useState<THREE.Texture | null>(null);
+
+
   useEffect(() => {
+    // Load the fallback texture once
+    if (!fallbackTexture) {
+        textureLoader.load('/Spi vs Spi icon.png', (loadedTexture) => {
+            setFallbackTexture(loadedTexture);
+        }, undefined, (error) => {
+            console.error('CarouselItem: Failed to load initial fallback texture:', error);
+        });
+    }
+
+
     if (itemData.imageSrc) {
+      console.log("CarouselItem: Loading texture from", itemData.imageSrc); // Log imageSrc
       textureLoader.load(
         itemData.imageSrc,
         (loadedTexture) => {
+          console.log("CarouselItem: Texture loaded successfully", itemData.imageSrc); // Log success
           setTexture(loadedTexture);
           if (meshRef.current) {
-            // Ensure userData exists or create it
             meshRef.current.userData = meshRef.current.userData || {};
-            // Assign the data
             meshRef.current.userData.itemData = itemData;
           }
         },
         undefined,
         (error) => {
-          console.error(`Failed to load texture for ${itemData.name}:`, error);
-          textureLoader.load(
-            '/Spi vs Spi icon.png',
-            (fallbackTexture) => {
-              setTexture(fallbackTexture);
-              if (meshRef.current) {
-                const mesh = meshRef.current as THREE.Mesh;
-                if (!mesh.userData) {
-                  mesh.userData = {};
-                }
-                mesh.userData.name = `${itemData.name} (Fallback)`;
-                mesh.userData.imageUrl = '/Spi vs Spi icon.png';
-              }
-            },
-            undefined,
-            (fallbackError) => {
-              console.error('Failed to load fallback texture (no imageSrc provided):', fallbackError);
+          console.error(`CarouselItem: Failed to load texture for ${itemData.name}:`, error); // Log error
+          // On error, fallback to the pre-loaded fallback texture
+          setTexture(fallbackTexture); // Use the pre-loaded fallback
+          if (meshRef.current) {
+            const mesh = meshRef.current as THREE.Mesh;
+            if (!mesh.userData) {
+              mesh.userData = {};
             }
-          );
+            mesh.userData.name = `${itemData.name} (Fallback)`;
+            mesh.userData.imageUrl = '/Spi vs Spi icon.png';
+          }
         }
       );
     } else {
-        textureLoader.load(
-          '/Spi vs Spi icon.png',
-          (fallbackTexture) => {
-            setTexture(fallbackTexture);
-            if (meshRef.current) {
-              const mesh = meshRef.current as THREE.Mesh;
-              if (!mesh.userData) {
-                mesh.userData = {};
-              }
-              mesh.userData.name = `${itemData.name} (No Image)`;
-              mesh.userData.imageUrl = '/Spi vs Spi icon.png';
-            }
-          },
-          undefined,
-          (fallbackError) => {
-            console.error('Failed to load fallback texture (no imageSrc provided):', fallbackError);
+        console.log("CarouselItem: No imageSrc provided, using fallback texture"); // Log no imageSrc
+        // If no imageSrc, use the pre-loaded fallback texture
+        setTexture(fallbackTexture); // Use the pre-loaded fallback
+        if (meshRef.current) {
+          const mesh = meshRef.current as THREE.Mesh;
+          if (!mesh.userData) {
+            mesh.userData = {};
           }
-        );
+          mesh.userData.name = `${itemData.name} (No Image)`;
+          mesh.userData.imageUrl = '/Spi vs Spi icon.png';
+        }
     }
-  }, [itemData.imageSrc, textureLoader, itemData.name]);
+  }, [itemData.imageSrc, textureLoader, itemData.name, fallbackTexture]); // Added fallbackTexture to dependencies
+
 
   const angle = (index / totalItems) * Math.PI * 2;
   const x = carouselRadius * Math.sin(angle);
@@ -116,48 +107,45 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick
   useLayoutEffect(() => {
     if (meshRef.current) {
       meshRef.current.position.set(x, 0, z);
-      meshRef.current?.lookAt(new THREE.Vector3(0, 0, 0)); 
-      meshRef.current.rotation.y += Math.PI; 
+      meshRef.current?.lookAt(new THREE.Vector3(0, 0, 0));
+      meshRef.current.rotation.y += Math.PI; // Orient the front of the plane towards the camera
     }
   }, [x, z]);
 
-  return (
-    <mesh
-      ref={meshRef}
-      onClick={(event) => { // Keep event parameter
-        // No drag check here, relying on parent's pointerup to stop propagation for drags
-        console.log("CarouselItem onClick: Triggered");
-        onItemClick(itemData, meshRef.current!); // Always call onItemClick
+  // Use a helper to visualize normals (optional, for debugging orientation)
+  // const normalsHelper = useMemo(() => {
+  //     if (meshRef.current) {
+  //         const helper = new THREE.FaceNormalsHelper(meshRef.current, 1, 0xff0000);
+  //         return helper;
+  //     }
+  //     return null;
+  // }, [meshRef.current]);
 
-      }}
-      castShadow 
-      receiveShadow 
-    >
+
+  // Temporary simplified CarouselItem return
+  return (
+    <mesh>
       <planeGeometry args={[itemWidth, itemHeight]} />
-      {texture ? (
-        <meshBasicMaterial map={texture} />
-      ) : (
-        <meshBasicMaterial color="grey" />
-      )}
+      <meshBasicMaterial color="red" />
     </mesh>
   );
+
 
 }
 
 
 // Main Carousel Scene Component
-function EquipmentCarousel({ itemsData, onItemClick }: { itemsData: GameItemBase[], onItemClick: (item: GameItemBase, mesh: THREE.Mesh) => void }) {
+// Add getItemById to the props
+function EquipmentCarousel({ itemsData, onItemClick, getItemById }: { itemsData: GameItemBase[], onItemClick: (item: GameItemBase, mesh: THREE.Mesh) => void, getItemById: (id: string) => GameItemBase | undefined }) {
   const group = useRef<THREE.Group>(null!);
+  // Get gl from useThree
   const { camera, invalidate, gl } = useThree();
-
   const groupRotationRef = useRef(0); // Stores the current rotation for continuity
-
   // Create refs for state variables to avoid stale closures
   const isDraggingRef = useRef(false);
   const previousClientXRef = useRef(0);
   const autoRotateRef = useRef(true);
   const pointerDownTimeRef = useRef(0); // Ref to store pointerdown timestamp
-
   // Create a ref for the Raycaster
   const raycaster = useRef(new THREE.Raycaster());
   // Create a ref for the mouse position (will store normalized device coordinates)
@@ -171,10 +159,10 @@ function EquipmentCarousel({ itemsData, onItemClick }: { itemsData: GameItemBase
   const [previousClientX, setPreviousClientX] = useState(0);
   const [autoRotate, setAutoRotate] = useState(true);
 
-  // Get the scroll lock state from AppContext
+  // Get the scroll lock state from AppContext (still needed here)
   const { isScrollLockActive, setIsScrollLockActive } = useAppContext();
 
-  const hasDragged = useRef(false); // Add a ref to track if a drag has occurred 
+  const hasDragged = useRef(false); // Add a ref to track if a drag has occurred
 
   // handleCanvasPointerMove uses refs (for both mouse and touch)
   // Accept PointerEvent or TouchEvent
@@ -243,7 +231,6 @@ function EquipmentCarousel({ itemsData, onItemClick }: { itemsData: GameItemBase
     let clientY = 0; // Also need clientY for raycasting
     if (event.type === 'touchend' || event.type === 'touchcancel') { // Check if it's a TouchendEvent specifically
         const touchEvent = event as TouchEvent;
-        // Use changedTouches for the end position in touchend
         if (touchEvent.changedTouches && touchEvent.changedTouches.length > 0) {
             finalClientX = touchEvent.changedTouches[0].clientX || 0;
             clientY = touchEvent.changedTouches[0].clientY || 0;
@@ -427,12 +414,12 @@ function EquipmentCarousel({ itemsData, onItemClick }: { itemsData: GameItemBase
       invalidate();
     }
 
-    let currentFrontItem: THREE.Object3D | null = null; 
+    let currentFrontItem: THREE.Object3D | null = null;
     let smallestZ = Infinity;
 
     if (group.current) {
         group.current.children.forEach(item => {
-            const threeObject = item as THREE.Object3D; 
+            const threeObject = item as THREE.Object3D;
             const worldPosition = new THREE.Vector3();
             threeObject.getWorldPosition(worldPosition);
 
@@ -440,14 +427,14 @@ function EquipmentCarousel({ itemsData, onItemClick }: { itemsData: GameItemBase
 
             if (worldPosition.z < smallestZ) {
                 smallestZ = worldPosition.z;
-                currentFrontItem = threeObject; 
+                currentFrontItem = threeObject;
             }
         });
     }
 
-    if (currentFrontItem) { 
+    if (currentFrontItem) {
         const typedItem = currentFrontItem as THREE.Object3D & { userData: { name?: string; imageUrl?: string } };
-        if (typedItem.userData.name) { 
+        if (typedItem.userData.name) {
         }
     }
   });
@@ -502,8 +489,41 @@ function EquipmentCarousel({ itemsData, onItemClick }: { itemsData: GameItemBase
 
 
 export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
-  const { openTODWindow, closeTODWindow } = useAppContext();
+  // Access playerInventory and getItemById from useAppContext
+  const { openTODWindow, closeTODWindow, playerInventory, getItemById } = useAppContext();
   const [selectedItem, setSelectedItem] = useState<GameItemBase | null>(null);
+
+  console.log("EquipmentLockerSection: playerInventory", playerInventory); // Log playerInventory
+  console.log("EquipmentLockerSection: getItemById is", typeof getItemById === 'function' ? 'a function' : 'NOT a function', getItemById); // Log getItemById status
+
+
+  // Prepare the data for the carousel from player inventory
+  const carouselItemsData = useMemo(() => {
+      // Check if playerInventory is a valid object and not null
+      if (typeof playerInventory !== 'object' || playerInventory === null) {
+          console.warn("EquipmentLockerSection: playerInventory is not a valid object", playerInventory);
+          return []; // Return an empty array if not a valid object
+      }
+
+      // Ensure getItemById is a function before attempting to use it
+      if (typeof getItemById !== 'function') {
+          console.warn("EquipmentLockerSection: getItemById is not a function, cannot process inventory items.");
+          return []; // Return empty array if getItemById is not available
+      }
+
+      // Get the values of the playerInventory object, which are the simple inventory items
+      const inventoryItems = Object.values(playerInventory) as { id: string; quantity: number }[]; // Cast to the expected inventory item structure
+
+
+      const items = inventoryItems
+          .filter(item => item.quantity > 0) // Only show items the player has
+          .map(item => getItemById(item.id)) // Get the full item data
+          .filter((item): item is GameItemBase => item !== undefined); // Filter out any undefined items and assert type
+
+      console.log("EquipmentLockerSection: carouselItemsData", items); // Log carouselItemsData
+      return items;
+  }, [playerInventory, getItemById]); // Depend on playerInventory and getItemById
+
 
   const handleItemClick = useCallback((item: GameItemBase, mesh: THREE.Mesh) => {
     setSelectedItem(item);
@@ -518,17 +538,18 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
         {item.minigameEffect && <p className="text-sm text-gray-400">Effect: {item.minigameEffect}</p>}
         <HolographicButton onClick={closeTODWindow} className="mt-4">Close</HolographicButton>
       </div>,
-      { showCloseButton: true } 
+      { showCloseButton: true }
     );
   }, [openTODWindow, closeTODWindow]);
 
   const canvasContainerStyle: React.CSSProperties = {
     position: 'relative',
-    width: '100%', 
-    maxWidth: '600px', 
-    height: '400px', 
+    width: '100%',
+    maxWidth: '600px',
+    height: '400px',
     margin: '0 auto',
     borderRadius: '1rem',
+    overflow: 'hidden',
     boxShadow: '0 0 30px rgba(0, 255, 255, 0.4)',
     cursor: 'grab',
   };
@@ -537,29 +558,25 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
   return (
     <div className="flex flex-col p-3 md:p-4 h-full overflow-hidden space-y-3 md:space-y-4 max-w-4xl mx-auto">
       <div className="flex-none flex items-center justify-center pt-6">
-        <h2 className="text-2xl font-orbitron holographic-text" 
-        >Equipment Locker</h2> 
+        <h2 className="text-2xl font-orbitron holographic-text"
+        >Equipment Locker</h2>
       </div>
 
       <div className="flex-grow flex flex-col items-center justify-center min-h-0">
         <HolographicPanel className="w-full h-full max-h-[500px] flex flex-col items-center justify-center p-4">
           <h3 className="text-xl font-bold text-emerald-400 mb-4">Your Gear</h3>
-          
+
           <div id="locker-carousel-container" style={canvasContainerStyle}>
             <Canvas
-              id="locker-carousel-canvas" 
+              id="locker-carousel-canvas"
               camera={{ position: [0, 0, carouselRadius * 1.5], fov: 75 }}
               shadows
             >
-              <><ambientLight intensity={0.7} />
+              <>
+                <ambientLight intensity={0.7} />
                 <pointLight position={[10, 10, 10]} intensity={0.5} castShadow />
-                {/* UNCOMMENTED: EquipmentCarousel to test its effect */}
- <EquipmentCarousel itemsData={MOCK_LOCKER_ITEMS} onItemClick={handleItemClick} />
-
-                {/* Remaining components are still commented out */}
-                {/* <pointLight position={[-10, -10, -10]} intensity={0.3} /> */}
-                 <Resizer /> 
-                {/* <OrbitControls enableZoom={false} enablePan={false} enableRotate={true} /> */}
+                <EquipmentCarousel itemsData={carouselItemsData} onItemClick={handleItemClick} getItemById={getItemById} />
+                <Resizer />
               </>
             </Canvas>
           </div>

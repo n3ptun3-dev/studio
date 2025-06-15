@@ -163,6 +163,19 @@ function generateItemLevels<K extends GameItemBase>( // K is the specific item t
     const cost = levelConfig?.cost ?? 0;
     const scarcity = levelConfig?.scarcity ?? 'Common';
 
+    // Determine the imageSrc for this specific item level
+    let itemImageSrc: string | undefined = commonProps.imageSrc; // Start with the common imageSrc
+    // Add logic here to set specific image paths based on baseId and level
+    if (commonProps.category === 'Hardware') {
+      itemImageSrc = `/spyshop/items/hardware/${baseId}_l${level}.jpg`;
+    }
+    // You can add more specific image logic for other categories here if needed
+    // else if (commonProps.category === 'Infiltration Gear') { ... }
+
+    // Use fallback if no specific imageSrc is determined
+    const finalImageSrc = itemImageSrc || `/Spi vs Spi icon.png`;
+
+
     return {
       id: `${baseId}_l${level}`,
       name: baseName,
@@ -174,9 +187,9 @@ function generateItemLevels<K extends GameItemBase>( // K is the specific item t
       // but this avoids the "specified more than once" warning.
       ...commonProps, // Spread common properties (excluding those explicitly defined above and in Omit)
       ...levelConfig, // Spread level-specific overrides (will override commonProps if duplicates exist)
-      // Ensure imageSrc and tileImageSrc are explicitly set last for fallbacks if not provided
-      imageSrc: commonProps.imageSrc || levelConfig?.imageSrc || `/Spi vs Spi icon.png`,
-      tileImageSrc: commonProps.tileImageSrc || levelConfig?.tileImageSrc || `/Spi vs Spi icon.png`,
+      // Explicitly set imageSrc and tileImageSrc with the determined paths
+      imageSrc: finalImageSrc,
+      tileImageSrc: commonProps.tileImageSrc || `/Spi vs Spi icon.png`, // tileImageSrc might have different fallback logic
     } as K; // Cast to K to ensure correct type for the array
   });
 }
