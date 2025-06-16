@@ -48,13 +48,12 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick
       undefined,
       (error) => {
         console.error(`CarouselItem: Failed to load texture for ${itemData.name} from ${imageToLoad}:`, error);
-        // Attempt to load a generic fallback if primary fallback also fails (though unlikely if /Spi vs Spi icon.png exists)
         textureLoader.load('/Spi vs Spi icon.png', setTexture, undefined, () => {
           console.error('Failed to load absolute fallback texture /Spi vs Spi icon.png');
         });
       }
     );
-  }, [itemData, textureLoader]); // Depend on itemData to reload if item changes
+  }, [itemData, textureLoader]);
 
   const angle = (index / totalItems) * Math.PI * 2;
   const x = carouselRadius * Math.sin(angle);
@@ -74,16 +73,15 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick
     }
   };
 
-  // Determine card background color based on current theme
   const getCardBgColor = () => {
     switch (currentGlobalTheme) {
       case 'cyphers':
-        return 'rgba(10, 25, 47, 0.8)'; // Dark blue, semi-transparent
+        return 'rgba(10, 25, 47, 0.8)';
       case 'shadows':
-        return 'rgba(40, 10, 10, 0.8)'; // Dark red, semi-transparent
+        return 'rgba(40, 10, 10, 0.8)';
       case 'terminal-green':
       default:
-        return 'rgba(5, 25, 10, 0.8)'; // Dark green, semi-transparent
+        return 'rgba(5, 25, 10, 0.8)';
     }
   };
   
@@ -109,9 +107,9 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick
 
   const getProgressBarFillColor = () => {
     switch (currentGlobalTheme) {
-      case 'cyphers': return 'hsl(204, 100%, 50%)'; // Primary Blue
-      case 'shadows': return 'hsl(0, 100%, 40%)';   // Primary Red
-      default: return 'hsl(130, 70%, 45%)';      // Primary Green
+      case 'cyphers': return 'hsl(var(--primary-hsl))';
+      case 'shadows': return 'hsl(var(--primary-hsl))';
+      default: return 'hsl(var(--primary-hsl))';
     }
   }
 
@@ -122,7 +120,7 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick
       {texture ? (
         <meshBasicMaterial map={texture} transparent />
       ) : (
-        <meshBasicMaterial color="rgba(50,50,50,0.5)" transparent /> // Placeholder material
+        <meshBasicMaterial color="rgba(50,50,50,0.5)" transparent />
       )}
       <Html center transform prepend occlude="blending" style={{ pointerEvents: 'none', width: `${itemWidth*100}px`, height: `${itemHeight*100}px`}}>
         <div style={{
@@ -185,14 +183,14 @@ function EquipmentCarousel({ itemsData, onItemClick }: { itemsData: GameItemBase
   const [isDragging, setIsDragging] = useState(false);
   const [previousClientX, setPreviousClientX] = useState(0);
   const [autoRotate, setAutoRotate] = useState(true);
-  const { setIsScrollLockActive } = useAppContext(); // For main TOD scroll lock
+  const { setIsScrollLockActive } = useAppContext();
 
   const isDraggingRef = useRef(isDragging);
   const autoRotateRef = useRef(autoRotate);
   const previousClientXRef = useRef(previousClientX);
   const pointerDownTimeRef = useRef(0);
   const activeListenerTypeRef = useRef<'pointer' | 'touch' | null>(null);
-  const groupRotationYRef = useRef(0); // To track group's Y rotation
+  const groupRotationYRef = useRef(0);
 
   useEffect(() => { isDraggingRef.current = isDragging; }, [isDragging]);
   useEffect(() => { autoRotateRef.current = autoRotate; }, [autoRotate]);
@@ -200,7 +198,7 @@ function EquipmentCarousel({ itemsData, onItemClick }: { itemsData: GameItemBase
   
   const handlePointerMove = useCallback((event: PointerEvent | TouchEvent) => {
     if (!isDraggingRef.current) return;
-    event.preventDefault(); // Prevent page scroll
+    event.preventDefault();
     event.stopPropagation();
 
     let currentX = 0;
@@ -213,7 +211,7 @@ function EquipmentCarousel({ itemsData, onItemClick }: { itemsData: GameItemBase
     const deltaX = currentX - previousClientXRef.current;
     if (group.current) {
       group.current.rotation.y += deltaX * 0.005;
-      groupRotationYRef.current = group.current.rotation.y; // Update ref
+      groupRotationYRef.current = group.current.rotation.y;
       invalidate();
     }
     previousClientXRef.current = currentX;
@@ -222,9 +220,9 @@ function EquipmentCarousel({ itemsData, onItemClick }: { itemsData: GameItemBase
   const handlePointerUp = useCallback((event: PointerEvent | TouchEvent) => {
     setIsDragging(false);
     setAutoRotate(true);
-    setIsScrollLockActive(false); // Release TOD scroll lock
+    setIsScrollLockActive(false);
 
-    const canvasElement = gl.domElement.parentElement; // Assuming canvas is inside a div
+    const canvasElement = gl.domElement.parentElement;
     if (canvasElement) canvasElement.style.cursor = 'grab';
 
     if (activeListenerTypeRef.current === 'touch') {
@@ -237,29 +235,38 @@ function EquipmentCarousel({ itemsData, onItemClick }: { itemsData: GameItemBase
     activeListenerTypeRef.current = null;
 
     const dragDuration = performance.now() - pointerDownTimeRef.current;
-    if (dragDuration < 200 && Math.abs( (event as PointerEvent).clientX - previousClientXRef.current) < 5) {
+    if (dragDuration < 200 && Math.abs( ('clientX' in event ? event.clientX : (event as TouchEvent).changedTouches[0].clientX) - previousClientXRef.current) < 5) {
         // This was likely a click, R3F's onClick on mesh will handle it
     }
   }, [gl.domElement, handlePointerMove, setIsScrollLockActive]);
 
 
-  const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
-    event.preventDefault(); // Prevent default actions like text selection or page scroll
-    event.stopPropagation();
+  const handlePointerDown = useCallback((event: React.PointerEvent<THREE.Group> | React.TouchEvent<THREE.Group>) => {
+    // This handler is for R3F objects, we need one for the canvas background drag.
+    // For canvas background drag, we'll attach to gl.domElement in useEffect.
+
+    // If the event target is one of the carousel items, let its onClick handle it.
+    // Otherwise, treat it as a drag initiation on the carousel background.
+    if (event.target !== group.current && group.current.children.includes(event.target as THREE.Object3D)) {
+      // Click was on an item, not the background of the carousel group
+      return;
+    }
+
+    event.stopPropagation(); // Stop propagation to R3F's default event system if we handle it
 
     let currentX = 0;
     let isTouchEvent = false;
-    if ('touches' in event.nativeEvent) { // Touch event
+    if ('touches' in event.nativeEvent) {
         isTouchEvent = true;
-        currentX = event.nativeEvent.touches[0].clientX;
-    } else { // Pointer event (mouse)
-        currentX = event.nativeEvent.clientX;
-        if ((event.nativeEvent as PointerEvent).button !== 0) return; // Only left mouse button
+        currentX = (event.nativeEvent as TouchEvent).touches[0].clientX;
+    } else {
+        currentX = (event.nativeEvent as PointerEvent).clientX;
+        if ((event.nativeEvent as PointerEvent).button !== 0) return;
     }
 
     setIsDragging(true);
     setAutoRotate(false);
-    setIsScrollLockActive(true); // Activate TOD scroll lock
+    setIsScrollLockActive(true);
     setPreviousClientX(currentX);
     pointerDownTimeRef.current = performance.now();
 
@@ -277,28 +284,64 @@ function EquipmentCarousel({ itemsData, onItemClick }: { itemsData: GameItemBase
     }
   }, [gl.domElement, handlePointerMove, handlePointerUp, setIsScrollLockActive]);
 
+  useEffect(() => {
+    const domElement = gl.domElement;
+    // The type for handlePointerDown needs to be correct for addEventListener
+    const onPointerDownCanvas = (event: Event) => {
+        // Simulate a React.PointerEvent for handlePointerDown
+        // This is a bit of a hack, ideally handlePointerDown would accept raw events
+        // or we'd have separate logic.
+        const nativeEvent = event as unknown as PointerEvent; // Cast
+        const simulatedReactEvent = {
+            nativeEvent: nativeEvent,
+            stopPropagation: () => event.stopPropagation(),
+            preventDefault: () => event.preventDefault(),
+            target: group.current, // Assume drag starts on group background
+        } as unknown as React.PointerEvent<THREE.Group>; // Cast
+        handlePointerDown(simulatedReactEvent);
+    };
+
+    domElement.addEventListener('pointerdown', onPointerDownCanvas as EventListener);
+    // Add touchstart if needed, ensuring handlePointerDown can differentiate or you have a separate touch handler
+    // domElement.addEventListener('touchstart', onTouchStartCanvas as EventListener);
+
+
+    return () => {
+      domElement.removeEventListener('pointerdown', onPointerDownCanvas as EventListener);
+      // domElement.removeEventListener('touchstart', onTouchStartCanvas as EventListener);
+      // Clean up global listeners if component unmounts while dragging
+      if (activeListenerTypeRef.current === 'touch') {
+        window.removeEventListener('touchmove', handlePointerMove as EventListener);
+        window.removeEventListener('touchend', handlePointerUp as EventListener);
+      } else if (activeListenerTypeRef.current === 'pointer') {
+        window.removeEventListener('pointermove', handlePointerMove as EventListener);
+        window.removeEventListener('pointerup', handlePointerUp as EventListener);
+      }
+    };
+  }, [gl.domElement, handlePointerDown, handlePointerMove, handlePointerUp]);
+
+
   useFrame(() => {
     if (group.current && autoRotateRef.current && !isDraggingRef.current) {
       group.current.rotation.y += rotationSpeed;
       groupRotationYRef.current = group.current.rotation.y;
       invalidate();
     }
-    // Make items always face the camera if rotating the group
     if (group.current) {
         group.current.children.forEach(child => {
             child.lookAt(camera.position);
-             // Adjust rotation if items are planes to make their front face the camera
             if (child instanceof THREE.Mesh && child.geometry instanceof THREE.PlaneGeometry) {
-                // Original lookAt makes them face origin. We want them to face camera from origin.
-                // So, their initial orientation (when group rotation is 0) is important.
-                // This keeps them facing outwards from the carousel center, and then the whole group rotates.
-                // The useLayoutEffect in CarouselItem already handles individual item orientation.
+                // This ensures the front face of the plane is oriented towards the camera.
+                // It assumes the plane's "front" is its positive Z axis in local space.
+                // If items are oriented "backwards" after lookAt, you might need:
+                // child.rotation.y += Math.PI; (or adjust initial item orientation)
             }
         });
     }
   });
 
   return (
+    // Removed onPointerDown from the group itself if global listeners on canvas are preferred for drag start
     <group ref={group} rotation={[0, groupRotationYRef.current, 0]}>
       {itemsData.map((item, index) => (
         <CarouselItem
@@ -316,6 +359,7 @@ function EquipmentCarousel({ itemsData, onItemClick }: { itemsData: GameItemBase
 
 const Resizer = React.memo(() => {
   const { camera, gl } = useThree();
+  // Use useMemo for container to avoid re-fetching on every render
   const container = useMemo(() => document.getElementById('locker-carousel-canvas-container'), []);
 
   useEffect(() => {
@@ -330,10 +374,15 @@ const Resizer = React.memo(() => {
         }
       }
     };
-    window.addEventListener('resize', handleResize);
-    handleResize(); // Initial resize
-    return () => window.removeEventListener('resize', handleResize);
-  }, [camera, gl, container]);
+    
+    // Ensure container exists before adding listener
+    if (container) {
+        // Call handleResize once initially after container is definitely available
+        handleResize(); 
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }
+  }, [camera, gl, container]); // Add container to dependency array
   return null;
 });
 Resizer.displayName = 'Resizer';
@@ -373,10 +422,6 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
     );
   }, [openTODWindow, closeTODWindow, currentGlobalTheme]);
 
-  const { handlePointerDown } = useThree(state => ({ // Get handlePointerDown from useThree's state for EquipmentCarousel
-    handlePointerDown: state.events.onPointerDown // This is a placeholder. EquipmentCarousel needs its own pointer down handling.
-  }));
-
 
   return (
     <div className="flex flex-col items-center justify-center p-4 md:p-6 h-full max-w-4xl mx-auto">
@@ -388,27 +433,20 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
         <h2 className="text-xl md:text-2xl font-orbitron my-2 md:my-3 holographic-text text-center flex-shrink-0">Equipment Locker</h2>
         
         <div 
-          id="locker-carousel-canvas-container" // Used by Resizer and for pointer events
-          className="w-full flex-grow min-h-0 relative touch-none" // touch-none to prevent browser default touch actions
+          id="locker-carousel-canvas-container"
+          className="w-full flex-grow min-h-0 relative touch-none"
           style={{ cursor: 'grab' }}
-          onPointerDown={(e) => { // Attach pointer down directly to the container
-            const carousel = document.getElementById('locker-carousel-canvas-container');
-            if (carousel && carousel.contains(e.target as Node)) {
-                // This event is for the EquipmentCarousel's internal drag logic
-                // We need to find a way to call EquipmentCarousel's handlePointerDown or simulate it.
-                // For now, this is a simplified interaction. The actual drag logic is inside EquipmentCarousel.
-            }
-          }}
+          // Removed onPointerDown from here; interactions are handled by EquipmentCarousel
         >
           {carouselItemsData.length > 0 ? (
             <Canvas
-              id="locker-carousel-canvas" // Keep this ID if specific styling targets it
-              camera={{ position: [0, 0.5, carouselRadius * 2], fov: 50 }} // Adjusted camera
+              id="locker-carousel-canvas"
+              camera={{ position: [0, 0.5, carouselRadius * 2], fov: 50 }}
               shadows
-              gl={{ antialias: true, alpha: true }} // Ensure alpha for transparency
+              gl={{ antialias: true, alpha: true }}
               style={{ background: 'transparent' }}
               onCreated={({ gl }) => {
-                gl.setClearColor(0x000000, 0); // Transparent background for canvas
+                gl.setClearColor(0x000000, 0);
               }}
             >
               <ambientLight intensity={1.2} />
@@ -416,7 +454,6 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
               <pointLight position={[-5, -5, -5]} intensity={0.3} />
               <EquipmentCarousel itemsData={carouselItemsData} onItemClick={handleItemClick3D} />
               <Resizer />
-              {/* <OrbitControls enableZoom={false} enablePan={false} minPolarAngle={Math.PI / 2.2} maxPolarAngle={Math.PI / 2.2} /> */}
             </Canvas>
           ) : (
             <div className="flex flex-col items-center justify-center h-full">
