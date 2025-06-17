@@ -15,10 +15,10 @@ interface SectionProps {
   parallaxOffset: number;
 }
 
-const itemWidth = 1.8; // Slightly wider for content
-const itemHeight = 2.4; // Taller for content
+const itemWidth = 1.2; // Slightly wider for content
+const itemHeight = 1.6; // Taller for content
 const carouselRadius = 3.5;
-const rotationSpeed = 0.0025;
+const rotationSpeed = 0.005;
 
 interface CarouselItemProps {
   itemData: GameItemBase;
@@ -120,7 +120,7 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick
       {texture ? (
         <meshBasicMaterial map={texture} transparent />
       ) : (
-        <meshBasicMaterial color="rgba(50,50,50,0.5)" transparent />
+        <meshBasicMaterial color="rgba(50,50,50,0.7)" transparent />
       )}
       <Html center transform prepend occlude="blending" style={{ pointerEvents: 'none', width: `${itemWidth*100}px`, height: `${itemHeight*100}px`}}>
         <div style={{
@@ -130,7 +130,6 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick
           color: getCardTextColor(),
           border: `1px solid ${getProgressBarFillColor()}`,
           borderRadius: '10px',
-          padding: '15px',
           boxSizing: 'border-box',
           display: 'flex',
           flexDirection: 'column',
@@ -142,7 +141,7 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick
           <img 
             src={itemData.imageSrc || '/Spi vs Spi icon.png'} 
             alt={itemData.title || itemData.name} 
-            style={{ width: '60%', maxHeight: '40%', objectFit: 'contain', marginBottom: '10px', borderRadius:'5px' }} 
+            style={{ width: '100%', objectFit: 'contain', marginBottom: '10px', borderRadius:'5px' }} 
             data-ai-hint={itemData.dataAiHint || "item icon"}
             />
           <p style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: 'bold', textAlign: 'center', color: `hsl(var(--primary-hsl))` }}>
