@@ -4,13 +4,14 @@
 
 import React, { useRef, useState, useEffect, useCallback, useLayoutEffect, useMemo } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Html } from '@react-three/drei'; // OrbitControls and PerspectiveCamera removed as they are not actively used
+import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { useAppContext, type GameItemBase, type ItemLevel } from '@/contexts/AppContext';
 import { HolographicPanel, HolographicButton } from '@/components/game/shared/HolographicPanel';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/contexts/ThemeContext';
-import { ITEM_LEVEL_COLORS_CSS_VARS } from '@/lib/constants'; // For card borders
+import { ITEM_LEVEL_COLORS_CSS_VARS } from '@/lib/constants';
+import { ShoppingCart } from 'lucide-react'; // Import ShoppingCart icon
 
 interface SectionProps {
   parallaxOffset: number;
@@ -42,7 +43,7 @@ interface CarouselItemProps {
 
 function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick }: CarouselItemProps) {
   const meshRef = useRef<THREE.Mesh>(null!);
-  const { theme: currentGlobalTheme } = useTheme();
+  const { theme: currentGlobalTheme } = useTheme(); // For theming if needed
 
   const angle = (index / totalItems) * Math.PI * 2;
   const x = carouselRadius * Math.sin(angle);
@@ -51,8 +52,8 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick
   useLayoutEffect(() => {
     if (meshRef.current) {
       meshRef.current.position.set(x, 0, z);
-      meshRef.current.lookAt(new THREE.Vector3(0, 0, 0));
-      meshRef.current.rotation.y += Math.PI;
+      meshRef.current.lookAt(new THREE.Vector3(0, 0, 0)); // Initially face center
+      meshRef.current.rotation.y += Math.PI; // Then rotate to face outwards from center
       meshRef.current.userData = { itemData };
     }
   }, [x, z, itemData]);
@@ -66,19 +67,17 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick
   const itemLevelForColor = itemData.level || 1;
   const itemColorCssVar = ITEM_LEVEL_COLORS_CSS_VARS[itemLevelForColor as ItemLevel] || 'var(--muted-color)';
   const cardBgClass = LEVEL_TO_BG_CLASS[itemLevelForColor as ItemLevel] || 'bg-muted/30';
-
-  const fallbackImageSrc = '/Spi vs Spi icon.png'; // Define placeholder
+  const fallbackImageSrc = '/Spi vs Spi icon.png';
 
   return (
     <mesh ref={meshRef} onClick={handleMeshClick} userData={{ itemData }}>
       <planeGeometry args={[itemWidth, itemHeight]} />
-      {/* Make the 3D plane itself fully transparent */}
-      <meshBasicMaterial transparent opacity={0} />
+      <meshBasicMaterial transparent opacity={0} /> {/* Plane is invisible */}
       <Html
         center
         transform
         prepend
-        occlude="blending"
+        occlude="blending" // occlude="blending" can help with render order issues
         style={{ pointerEvents: 'none', width: `${itemWidth * 100}px`, height: `${itemHeight * 100}px` }}
       >
         <div
@@ -89,7 +88,7 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick
           style={{
             borderColor: itemColorCssVar,
             fontFamily: 'var(--font-rajdhani)',
-            color: `hsl(var(--foreground-hsl))`,
+            color: `hsl(var(--foreground-hsl))`, // Use theme foreground for text
             boxShadow: `0 0 10px ${itemColorCssVar}`,
           }}
         >
@@ -101,9 +100,9 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick
               data-ai-hint={itemData.dataAiHint || "item icon"}
               onError={(e) => {
                 const target = e.currentTarget as HTMLImageElement;
-                if (target.src !== fallbackImageSrc) { // Prevent loop if fallback itself fails
+                if (target.src !== fallbackImageSrc) {
                   target.src = fallbackImageSrc;
-                  target.onerror = null; // Prevent future error triggers for this element if placeholder also fails
+                  target.onerror = null; 
                 }
               }}
             />
@@ -162,61 +161,14 @@ function EquipmentCarousel({ itemsData, onItemClick }: { itemsData: GameItemBase
   const autoRotateRef = useRef(true);
   const previousPointerXRef = useRef(0);
   const pointerDownTimeRef = useRef(0);
-  const activeListenerTypeRef = useRef<'pointer' | 'touch' | null>(null);
-  const groupRotationYRef = useRef(0);
+  const groupRotationYRef = useRef(group.current ? group.current.rotation.y : 0);
 
-  const handlePointerMove = useCallback((event: PointerEvent | TouchEvent) => {
-    if (!isDraggingRef.current) return;
-    // Check if it's a TouchEvent and prevent default only for touch to avoid console warnings on passive listeners
-    if ('touches' in event) {
-        event.preventDefault();
-    }
-
+  const handleDragStart = useCallback((event: PointerEvent | TouchEvent) => {
     let currentX = 0;
-    if (activeListenerTypeRef.current === 'touch') {
-      currentX = (event as TouchEvent).touches[0].clientX;
-    } else {
-      currentX = (event as PointerEvent).clientX;
-    }
-
-    const deltaX = currentX - previousPointerXRef.current;
-    if (group.current) {
-      groupRotationYRef.current += deltaX * 0.005;
-      invalidate();
-    }
-    previousPointerXRef.current = currentX;
-  }, [invalidate]);
-
-  const handlePointerUp = useCallback((event: PointerEvent | TouchEvent) => {
-    if (!isDraggingRef.current) return;
-
-    isDraggingRef.current = false;
-    autoRotateRef.current = true;
-    setIsScrollLockActive(false);
-
-    const canvasElement = gl.domElement.parentElement;
-    if (canvasElement) canvasElement.style.cursor = 'grab';
-
-    if (activeListenerTypeRef.current === 'touch') {
-      window.removeEventListener('touchmove', handlePointerMove);
-      window.removeEventListener('touchend', handlePointerUp);
-    } else if (activeListenerTypeRef.current === 'pointer') {
-      window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerup', handlePointerUp);
-    }
-    activeListenerTypeRef.current = null;
-
-  }, [gl.domElement, setIsScrollLockActive, handlePointerMove]);
-
-
-  const handlePointerDown = useCallback((event: PointerEvent | TouchEvent) => {
-    let currentX = 0;
-    let isTouchEvent = 'touches' in event;
+    const isTouchEvent = 'touches' in event;
 
     if (isTouchEvent) {
       currentX = (event as TouchEvent).touches[0].clientX;
-      // For touch events, explicitly set passive: false if you intend to preventDefault
-      // However, modern browsers might still warn if the initial listener wasn't {passive: false}
     } else {
       if ((event as PointerEvent).button !== 0) return;
       currentX = (event as PointerEvent).clientX;
@@ -232,37 +184,60 @@ function EquipmentCarousel({ itemsData, onItemClick }: { itemsData: GameItemBase
     if (canvasElement) canvasElement.style.cursor = 'grabbing';
 
     if (isTouchEvent) {
-      window.addEventListener('touchmove', handlePointerMove, { passive: false });
-      window.addEventListener('touchend', handlePointerUp, { passive: false });
-      activeListenerTypeRef.current = 'touch';
+      window.addEventListener('touchmove', handleDragMove, { passive: false });
+      window.addEventListener('touchend', handleDragEnd, { passive: false });
     } else {
-      window.addEventListener('pointermove', handlePointerMove, { passive: false }); // Standard pointer events are not passive by default
-      window.addEventListener('pointerup', handlePointerUp, { passive: false });
-      activeListenerTypeRef.current = 'pointer';
+      window.addEventListener('pointermove', handleDragMove, { passive: false });
+      window.addEventListener('pointerup', handleDragEnd, { passive: false });
     }
-  }, [gl.domElement, setIsScrollLockActive, handlePointerMove, handlePointerUp]);
+  }, [gl, setIsScrollLockActive, invalidate]); // Added invalidate to deps for handleDragMove call
+
+  const handleDragMove = useCallback((event: PointerEvent | TouchEvent) => {
+    if (!isDraggingRef.current) return;
+    if (event.cancelable) event.preventDefault();
+
+    let currentX = 0;
+    if ('touches' in event) {
+      currentX = (event as TouchEvent).touches[0].clientX;
+    } else {
+      currentX = (event as PointerEvent).clientX;
+    }
+
+    const deltaX = currentX - previousPointerXRef.current;
+    groupRotationYRef.current += deltaX * 0.005;
+    previousPointerXRef.current = currentX;
+    invalidate();
+  }, [invalidate]);
+
+  const handleDragEnd = useCallback(() => {
+    isDraggingRef.current = false;
+    autoRotateRef.current = true; // Re-enable auto-rotation after drag
+    setIsScrollLockActive(false);
+
+    const canvasElement = gl.domElement.parentElement;
+    if (canvasElement) canvasElement.style.cursor = 'grab';
+
+    window.removeEventListener('touchmove', handleDragMove);
+    window.removeEventListener('touchend', handleDragEnd);
+    window.removeEventListener('pointermove', handleDragMove);
+    window.removeEventListener('pointerup', handleDragEnd);
+  }, [gl, setIsScrollLockActive, handleDragMove]);
+
 
   useEffect(() => {
     const domElement = gl.domElement;
-    // Add 'pointerdown' for mouse
-    domElement.addEventListener('pointerdown', handlePointerDown as EventListener);
-    // Add 'touchstart' for touch, ensuring passive is false if preventDefault will be called
-    domElement.addEventListener('touchstart', handlePointerDown as EventListener, { passive: false });
+    domElement.addEventListener('pointerdown', handleDragStart as EventListener);
+    domElement.addEventListener('touchstart', handleDragStart as EventListener, { passive: false });
 
     return () => {
-      domElement.removeEventListener('pointerdown', handlePointerDown as EventListener);
-      domElement.removeEventListener('touchstart', handlePointerDown as EventListener);
-
-      if (activeListenerTypeRef.current === 'touch') {
-        window.removeEventListener('touchmove', handlePointerMove);
-        window.removeEventListener('touchend', handlePointerUp);
-      } else if (activeListenerTypeRef.current === 'pointer') {
-        window.removeEventListener('pointermove', handlePointerMove);
-        window.removeEventListener('pointerup', handlePointerUp);
-      }
+      domElement.removeEventListener('pointerdown', handleDragStart as EventListener);
+      domElement.removeEventListener('touchstart', handleDragStart as EventListener);
+      window.removeEventListener('pointermove', handleDragMove);
+      window.removeEventListener('pointerup', handleDragEnd);
+      window.removeEventListener('touchmove', handleDragMove);
+      window.removeEventListener('touchend', handleDragEnd);
     };
-  }, [gl.domElement, handlePointerDown, handlePointerMove, handlePointerUp]);
-
+  }, [gl, handleDragStart, handleDragMove, handleDragEnd]);
 
   useFrame(() => {
     if (group.current) {
@@ -324,7 +299,7 @@ const Resizer = React.memo(() => {
         resizeObserver.observe(container);
         window.addEventListener('resize', handleResize);
         return () => {
-          if (container) resizeObserver.unobserve(container); // Check container again before unobserving
+          if (container) resizeObserver.unobserve(container);
           window.removeEventListener('resize', handleResize);
         };
     }
@@ -334,7 +309,13 @@ const Resizer = React.memo(() => {
 Resizer.displayName = 'Resizer';
 
 export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
-  const { openTODWindow, closeTODWindow, playerInventory, getItemById, appContext } = useAppContext(); // Removed unused appContext
+  const { 
+    openTODWindow, 
+    closeTODWindow, 
+    playerInventory, 
+    getItemById, 
+    openSpyShop // Get openSpyShop from AppContext
+  } = useAppContext();
   const [selectedItem3D, setSelectedItem3D] = useState<GameItemBase | null>(null);
   const { theme: currentGlobalTheme, themeVersion } = useTheme();
 
@@ -364,7 +345,7 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
             src={item.imageSrc || fallbackImageSrc} 
             alt={item.title || item.name} 
             className="max-w-full max-h-full object-contain" 
-            data-ai-hint={item.dataAiHint || "item icon"}
+            data-ai-hint={itemData.dataAiHint || "item icon"}
             onError={(e) => {
               const target = e.currentTarget as HTMLImageElement;
               if (target.src !== fallbackImageSrc) {
@@ -384,7 +365,6 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
     );
   }, [openTODWindow, closeTODWindow, currentGlobalTheme, themeVersion]);
 
-
   return (
     <div className="flex flex-col items-center justify-center p-4 md:p-6 h-full max-w-4xl mx-auto">
       <HolographicPanel
@@ -392,17 +372,27 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
         className="w-full h-full flex flex-col items-center p-2 md:p-4 overflow-hidden"
         explicitTheme={currentGlobalTheme} 
       >
-        <h2 className="text-xl md:text-2xl font-orbitron my-2 md:my-3 holographic-text text-center flex-shrink-0">Equipment Locker</h2>
+        <div className="flex-shrink-0 w-full flex items-center justify-between my-2 md:my-3 px-2">
+          <h2 className="text-xl md:text-2xl font-orbitron holographic-text text-center flex-grow">Equipment Locker</h2>
+          <HolographicButton
+            onClick={openSpyShop}
+            className="!p-2"
+            aria-label="Open Spy Shop"
+            explicitTheme={currentGlobalTheme}
+          >
+            <ShoppingCart className="w-5 h-5 icon-glow" />
+          </HolographicButton>
+        </div>
         
         <div 
           id="locker-carousel-canvas-container"
-          className="w-full flex-grow min-h-0 relative touch-auto"
+          className="w-full flex-grow min-h-0 relative touch-auto" // Ensure touch-auto for mobile interactions
           style={{ cursor: 'grab' }}
         >
           {carouselItemsData.length > 0 ? (
             <Canvas
               id="locker-carousel-canvas"
-              camera={{ position: [0, 0.5, carouselRadius * 1.75], fov: 60 }}
+              camera={{ position: [0, 0.5, carouselRadius * 2.25], fov: 60 }} // Adjusted camera Z position
               shadows
               gl={{ antialias: true, alpha: true }}
               style={{ background: 'transparent' }}
@@ -431,6 +421,3 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
     </div>
   );
 }
-
-
-    
