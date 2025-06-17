@@ -3,22 +3,33 @@
 
 import React, { useRef, useState, useEffect, useCallback, useLayoutEffect, useMemo } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Html, OrbitControls, PerspectiveCamera } from '@react-three/drei'; // Added Html
+import { Html, OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import * as THREE from 'three';
-import { useAppContext } from '@/contexts/AppContext';
+import { useAppContext, type GameItemBase, type ItemLevel } from '@/contexts/AppContext'; // GameItemBase needed for itemData
 import { HolographicPanel, HolographicButton } from '@/components/game/shared/HolographicPanel';
 import { cn } from '@/lib/utils';
-import type { GameItemBase, ItemLevel } from '@/lib/game-items'; // GameItemBase needed for itemData
-import { useTheme } from '@/contexts/ThemeContext'; // For theming the HTML card
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface SectionProps {
   parallaxOffset: number;
 }
 
-const itemWidth = 1.2; // Slightly wider for content
-const itemHeight = 1.6; // Taller for content
+const itemWidth = 1.2;
+const itemHeight = 1.6;
 const carouselRadius = 3.5;
-const rotationSpeed = 0.005;
+const rotationSpeed = 0.005; // Auto-rotation speed
+
+// For card background colors based on item level (Tailwind classes)
+const LEVEL_TO_BG_CLASS: Record<ItemLevel, string> = {
+  1: 'bg-level-1/30',
+  2: 'bg-level-2/30',
+  3: 'bg-level-3/30',
+  4: 'bg-level-4/30',
+  5: 'bg-level-5/30',
+  6: 'bg-level-6/30',
+  7: 'bg-level-7/30',
+  8: 'bg-level-8/30',
+};
 
 interface CarouselItemProps {
   itemData: GameItemBase;
@@ -30,31 +41,9 @@ interface CarouselItemProps {
 
 function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick }: CarouselItemProps) {
   const meshRef = useRef<THREE.Mesh>(null!);
-  const textureLoader = useMemo(() => new THREE.TextureLoader(), []);
-  const [texture, setTexture] = useState<THREE.Texture | null>(null);
   const { theme: currentGlobalTheme } = useTheme();
 
-  useEffect(() => {
-    const imageToLoad = itemData.imageSrc || '/Spi vs Spi icon.png'; // Use fallback
-    textureLoader.load(
-      imageToLoad,
-      (loadedTexture) => {
-        setTexture(loadedTexture);
-        if (meshRef.current) {
-          meshRef.current.userData = meshRef.current.userData || {};
-          meshRef.current.userData.itemData = itemData; // Store full itemData
-        }
-      },
-      undefined,
-      (error) => {
-        console.error(`CarouselItem: Failed to load texture for ${itemData.name} from ${imageToLoad}:`, error);
-        textureLoader.load('/Spi vs Spi icon.png', setTexture, undefined, () => {
-          console.error('Failed to load absolute fallback texture /Spi vs Spi icon.png');
-        });
-      }
-    );
-  }, [itemData, textureLoader]);
-
+  // Position calculation
   const angle = (index / totalItems) * Math.PI * 2;
   const x = carouselRadius * Math.sin(angle);
   const z = carouselRadius * Math.cos(angle);
@@ -62,10 +51,11 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick
   useLayoutEffect(() => {
     if (meshRef.current) {
       meshRef.current.position.set(x, 0, z);
-      meshRef.current.lookAt(new THREE.Vector3(0, 0, 0));
-      meshRef.current.rotation.y += Math.PI;
+      meshRef.current.lookAt(new THREE.Vector3(0, 0, 0)); // Look at carousel center
+      meshRef.current.rotation.y += Math.PI; // Orient front towards center
+      meshRef.current.userData = { itemData }; // Store item data on the mesh
     }
-  }, [x, z]);
+  }, [x, z, itemData]);
 
   const handleMeshClick = () => {
     if (meshRef.current) {
@@ -73,103 +63,86 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick
     }
   };
 
-  const getCardBgColor = () => {
-    switch (currentGlobalTheme) {
-      case 'cyphers':
-        return 'rgba(10, 25, 47, 0.8)';
-      case 'shadows':
-        return 'rgba(40, 10, 10, 0.8)';
-      case 'terminal-green':
-      default:
-        return 'rgba(5, 25, 10, 0.8)';
-    }
-  };
-  
-  const getCardTextColor = () => {
-     switch (currentGlobalTheme) {
-      case 'cyphers':
-        return 'hsl(200, 100%, 90%)'; 
-      case 'shadows':
-        return 'hsl(0, 0%, 90%)';
-      case 'terminal-green':
-      default:
-        return 'hsl(130, 80%, 70%)'; 
-    }
-  };
-
-  const getProgressBarBgColor = () => {
-    switch (currentGlobalTheme) {
-      case 'cyphers': return 'rgba(30, 70, 130, 0.5)';
-      case 'shadows': return 'rgba(130, 30, 30, 0.5)';
-      default: return 'rgba(30, 130, 70, 0.5)';
-    }
-  }
-
-  const getProgressBarFillColor = () => {
-    switch (currentGlobalTheme) {
-      case 'cyphers': return 'hsl(var(--primary-hsl))';
-      case 'shadows': return 'hsl(var(--primary-hsl))';
-      default: return 'hsl(var(--primary-hsl))';
-    }
-  }
-
+  const itemLevelForColor = itemData.level || 1;
+  const itemColorCssVar = `var(--level-${itemLevelForColor}-color)`;
+  const cardBgClass = LEVEL_TO_BG_CLASS[itemLevelForColor as ItemLevel] || 'bg-muted/30';
 
   return (
     <mesh ref={meshRef} onClick={handleMeshClick} userData={{ itemData }}>
       <planeGeometry args={[itemWidth, itemHeight]} />
-      {texture ? (
-        <meshBasicMaterial map={texture} transparent />
-      ) : (
-        <meshBasicMaterial color="rgba(50,50,50,0.7)" transparent />
-      )}
-      <Html center transform prepend occlude="blending" style={{ pointerEvents: 'none', width: `${itemWidth*100}px`, height: `${itemHeight*100}px`}}>
-        <div style={{
-          width: '100%',
-          height: '100%',
-          backgroundColor: getCardBgColor(),
-          color: getCardTextColor(),
-          border: `1px solid ${getProgressBarFillColor()}`,
-          borderRadius: '10px',
-          boxSizing: 'border-box',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          fontFamily: 'var(--font-rajdhani)',
-          overflow: 'hidden',
-          boxShadow: `0 0 15px ${getProgressBarFillColor()}`
-        }}>
-          <img 
-            src={itemData.imageSrc || '/Spi vs Spi icon.png'} 
-            alt={itemData.title || itemData.name} 
-            style={{ width: '100%', objectFit: 'contain', marginBottom: '10px', borderRadius:'5px' }} 
-            data-ai-hint={itemData.dataAiHint || "item icon"}
+      {/* The 3D plane is now just a semi-transparent backdrop or click target. Image is in HTML. */}
+      <meshBasicMaterial
+        color={itemColorCssVar} // Use the item's level color for the plane's base
+        transparent
+        opacity={0.1} // Make the plane itself very subtle if HTML provides main bg
+      />
+      <Html
+        center
+        transform
+        prepend
+        occlude="blending" // occlude only if other meshes are in front, "blending" for correct Html transparency
+        style={{ pointerEvents: 'none', width: `${itemWidth * 100}px`, height: `${itemHeight * 100}px` }}
+      >
+        <div
+          className={cn(
+            "w-full h-full rounded-lg border-2 flex flex-col items-center justify-start overflow-hidden shadow-lg p-2",
+            cardBgClass // Themed background with opacity
+          )}
+          style={{
+            borderColor: itemColorCssVar, // Themed border color
+            fontFamily: 'var(--font-rajdhani)',
+            color: `hsl(var(--foreground-hsl))`, // Use theme's foreground
+            boxShadow: `0 0 10px ${itemColorCssVar}`,
+          }}
+        >
+          <div className="w-full h-2/5 relative mb-1 flex-shrink-0">
+            <img
+              src={itemData.imageSrc || '/Spi vs Spi icon.png'}
+              alt={itemData.title || itemData.name}
+              className="w-full h-full object-contain rounded-sm"
+              data-ai-hint={itemData.dataAiHint || "item icon"}
             />
-          <p style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: 'bold', textAlign: 'center', color: `hsl(var(--primary-hsl))` }}>
+          </div>
+          <p className="text-sm font-semibold text-center leading-tight mb-1" style={{ color: `hsl(var(--primary-hsl))` }}>
             {itemData.title || itemData.name} L{itemData.level}
           </p>
-          
-          {itemData.strength && (
-            <div style={{ width: '90%', marginBottom: '5px' }}>
-              <p style={{ fontSize: '12px', margin: '0 0 2px 0', opacity: 0.8 }}>Strength:</p>
-              <div style={{ height: '8px', backgroundColor: getProgressBarBgColor(), borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ width: `${(itemData.strength.current / itemData.strength.max) * 100}%`, height: '100%', backgroundColor: getProgressBarFillColor(), borderRadius: '4px' }}></div>
+
+          <div className="w-full text-xs space-y-0.5 overflow-y-auto scrollbar-hide flex-grow">
+            {itemData.strength && (
+              <div className="w-full">
+                <p className="text-[10px] opacity-80 mb-px">Strength:</p>
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: `hsla(var(--muted-hsl), 0.3)`}}>
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${(itemData.strength.current / itemData.strength.max) * 100}%`,
+                      backgroundColor: itemColorCssVar,
+                    }}
+                  />
+                </div>
               </div>
-            </div>
-          )}
-          {itemData.resistance && (
-             <div style={{ width: '90%', marginBottom: '5px' }}>
-              <p style={{ fontSize: '12px', margin: '0 0 2px 0', opacity: 0.8 }}>Resistance:</p>
-              <div style={{ height: '8px', backgroundColor: getProgressBarBgColor(), borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ width: `${(itemData.resistance.current / itemData.resistance.max) * 100}%`, height: '100%', backgroundColor: getProgressBarFillColor(), borderRadius: '4px' }}></div>
+            )}
+            {itemData.resistance && (
+              <div className="w-full mt-1">
+                <p className="text-[10px] opacity-80 mb-px">Resistance:</p>
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: `hsla(var(--muted-hsl), 0.3)`}}>
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${(itemData.resistance.current / itemData.resistance.max) * 100}%`,
+                      backgroundColor: itemColorCssVar,
+                    }}
+                  />
+                </div>
               </div>
-            </div>
-          )}
-          {itemData.attackFactor && (
-            <p style={{ fontSize: '12px', margin: '2px 0', opacity: 0.8 }}>Attack: {itemData.attackFactor}</p>
-          )}
-          <p style={{ fontSize: '11px', margin: '5px 0 0 0', opacity: 0.7, textAlign:'center', maxHeight: '2.2em', lineHeight: '1.1em', overflow:'hidden', textOverflow:'ellipsis' }}>
-            {itemData.description}
-          </p>
+            )}
+            {itemData.attackFactor !== undefined && (
+              <p className="text-[10px] opacity-80 mt-1">Attack: {itemData.attackFactor}</p>
+            )}
+             <p className="text-[10px] leading-snug opacity-70 mt-1 text-center max-h-[3.3em] overflow-hidden">
+              {itemData.description}
+            </p>
+          </div>
         </div>
       </Html>
     </mesh>
@@ -179,168 +152,149 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick
 function EquipmentCarousel({ itemsData, onItemClick }: { itemsData: GameItemBase[], onItemClick: (item: GameItemBase, mesh: THREE.Mesh) => void }) {
   const group = useRef<THREE.Group>(null!);
   const { camera, invalidate, gl } = useThree();
-  const [isDragging, setIsDragging] = useState(false);
-  const [previousClientX, setPreviousClientX] = useState(0);
-  const [autoRotate, setAutoRotate] = useState(true);
-  const { setIsScrollLockActive } = useAppContext();
+  const { setIsScrollLockActive } = useAppContext(); // Get from AppContext
 
-  const isDraggingRef = useRef(isDragging);
-  const autoRotateRef = useRef(autoRotate);
-  const previousClientXRef = useRef(previousClientX);
+  // Refs for managing drag state and interaction
+  const isDraggingRef = useRef(false);
+  const autoRotateRef = useRef(true);
+  const previousPointerXRef = useRef(0);
   const pointerDownTimeRef = useRef(0);
   const activeListenerTypeRef = useRef<'pointer' | 'touch' | null>(null);
-  const groupRotationYRef = useRef(0);
+  const groupRotationYRef = useRef(0); // To store rotation and apply it declaratively
 
-  useEffect(() => { isDraggingRef.current = isDragging; }, [isDragging]);
-  useEffect(() => { autoRotateRef.current = autoRotate; }, [autoRotate]);
-  useEffect(() => { previousClientXRef.current = previousClientX; }, [previousClientX]);
-  
-  const handlePointerMove = useCallback((event: PointerEvent | TouchEvent) => {
-    if (!isDraggingRef.current) return;
-    event.preventDefault();
-    event.stopPropagation();
+  const handlePointerDown = useCallback((event: PointerEvent | TouchEvent) => {
+    // Prevent R3F's default event system if we handle it for drag
+    // event.stopPropagation(); // Only stop if it's truly a drag initiation on the canvas
 
     let currentX = 0;
-    if (event.type === 'touchmove') {
-        currentX = (event as TouchEvent).touches[0].clientX;
+    let isTouchEvent = 'touches' in event;
+
+    if (isTouchEvent) {
+      currentX = (event as TouchEvent).touches[0].clientX;
     } else {
-        currentX = (event as PointerEvent).clientX;
+      if ((event as PointerEvent).button !== 0) return; // Only left mouse button
+      currentX = (event as PointerEvent).clientX;
     }
 
-    const deltaX = currentX - previousClientXRef.current;
-    if (group.current) {
-      group.current.rotation.y += deltaX * 0.005;
-      groupRotationYRef.current = group.current.rotation.y;
-      invalidate();
-    }
-    previousClientXRef.current = currentX;
-  }, [invalidate]);
-
-  const handlePointerUp = useCallback((event: PointerEvent | TouchEvent) => {
-    setIsDragging(false);
-    setAutoRotate(true);
-    setIsScrollLockActive(false);
-
-    const canvasElement = gl.domElement.parentElement;
-    if (canvasElement) canvasElement.style.cursor = 'grab';
-
-    if (activeListenerTypeRef.current === 'touch') {
-        window.removeEventListener('touchmove', handlePointerMove as EventListener);
-        window.removeEventListener('touchend', handlePointerUp as EventListener);
-    } else if (activeListenerTypeRef.current === 'pointer') {
-        window.removeEventListener('pointermove', handlePointerMove as EventListener);
-        window.removeEventListener('pointerup', handlePointerUp as EventListener);
-    }
-    activeListenerTypeRef.current = null;
-
-    const dragDuration = performance.now() - pointerDownTimeRef.current;
-    if (dragDuration < 200 && Math.abs( ('clientX' in event ? event.clientX : (event as TouchEvent).changedTouches[0].clientX) - previousClientXRef.current) < 5) {
-        // This was likely a click, R3F's onClick on mesh will handle it
-    }
-  }, [gl.domElement, handlePointerMove, setIsScrollLockActive]);
-
-
-  const handlePointerDown = useCallback((event: React.PointerEvent<THREE.Group> | React.TouchEvent<THREE.Group>) => {
-    // This handler is for R3F objects, we need one for the canvas background drag.
-    // For canvas background drag, we'll attach to gl.domElement in useEffect.
-
-    // If the event target is one of the carousel items, let its onClick handle it.
-    // Otherwise, treat it as a drag initiation on the carousel background.
-    if (event.target !== group.current && group.current.children.includes(event.target as THREE.Object3D)) {
-      // Click was on an item, not the background of the carousel group
-      return;
-    }
-
-    event.stopPropagation(); // Stop propagation to R3F's default event system if we handle it
-
-    let currentX = 0;
-    let isTouchEvent = false;
-    if ('touches' in event.nativeEvent) {
-        isTouchEvent = true;
-        currentX = (event.nativeEvent as TouchEvent).touches[0].clientX;
-    } else {
-        currentX = (event.nativeEvent as PointerEvent).clientX;
-        if ((event.nativeEvent as PointerEvent).button !== 0) return;
-    }
-
-    setIsDragging(true);
-    setAutoRotate(false);
-    setIsScrollLockActive(true);
-    setPreviousClientX(currentX);
+    isDraggingRef.current = true;
+    autoRotateRef.current = false;
+    setIsScrollLockActive(true); // Lock main TOD scroll
+    previousPointerXRef.current = currentX;
     pointerDownTimeRef.current = performance.now();
 
     const canvasElement = gl.domElement.parentElement;
     if (canvasElement) canvasElement.style.cursor = 'grabbing';
 
     if (isTouchEvent) {
-        window.addEventListener('touchmove', handlePointerMove as EventListener, { passive: false });
-        window.addEventListener('touchend', handlePointerUp as EventListener, { passive: false });
-        activeListenerTypeRef.current = 'touch';
+      window.addEventListener('touchmove', handlePointerMove, { passive: false });
+      window.addEventListener('touchend', handlePointerUp, { passive: false });
+      activeListenerTypeRef.current = 'touch';
     } else {
-        window.addEventListener('pointermove', handlePointerMove as EventListener, { passive: false });
-        window.addEventListener('pointerup', handlePointerUp as EventListener, { passive: false });
-        activeListenerTypeRef.current = 'pointer';
+      window.addEventListener('pointermove', handlePointerMove, { passive: false });
+      window.addEventListener('pointerup', handlePointerUp, { passive: false });
+      activeListenerTypeRef.current = 'pointer';
     }
-  }, [gl.domElement, handlePointerMove, handlePointerUp, setIsScrollLockActive]);
+  }, [gl.domElement, setIsScrollLockActive]); // Removed internal handlePointerMove/Up
 
+  const handlePointerMove = useCallback((event: PointerEvent | TouchEvent) => {
+    if (!isDraggingRef.current) return;
+    event.preventDefault(); // Prevent page scroll during drag
+
+    let currentX = 0;
+    if (activeListenerTypeRef.current === 'touch') {
+      currentX = (event as TouchEvent).touches[0].clientX;
+    } else {
+      currentX = (event as PointerEvent).clientX;
+    }
+
+    const deltaX = currentX - previousPointerXRef.current;
+    if (group.current) {
+      // Update the ref, the useFrame loop will apply it
+      groupRotationYRef.current += deltaX * 0.005; // Adjust sensitivity as needed
+      invalidate(); // Request a re-render
+    }
+    previousPointerXRef.current = currentX;
+  }, [invalidate]);
+
+  const handlePointerUp = useCallback((event: PointerEvent | TouchEvent) => {
+    if (!isDraggingRef.current) return; // Ensure this only runs if a drag was active
+
+    isDraggingRef.current = false;
+    autoRotateRef.current = true;
+    setIsScrollLockActive(false); // Unlock main TOD scroll
+
+    const canvasElement = gl.domElement.parentElement;
+    if (canvasElement) canvasElement.style.cursor = 'grab';
+
+    if (activeListenerTypeRef.current === 'touch') {
+      window.removeEventListener('touchmove', handlePointerMove);
+      window.removeEventListener('touchend', handlePointerUp);
+    } else if (activeListenerTypeRef.current === 'pointer') {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+    }
+    activeListenerTypeRef.current = null;
+
+    // Simple click detection (if drag was very short)
+    // R3F's onClick on individual mesh should handle item clicks.
+    // This logic here is more about distinguishing drag from click on the canvas background.
+    const dragDuration = performance.now() - pointerDownTimeRef.current;
+    const clientXUp = 'changedTouches' in event ? (event as TouchEvent).changedTouches[0].clientX : (event as PointerEvent).clientX;
+    if (dragDuration < 200 && Math.abs(clientXUp - previousPointerXRef.current) < 5) {
+      // Likely a click on the background, not a drag.
+      // If an item was clicked, its own onClick would fire.
+    }
+  }, [gl.domElement, setIsScrollLockActive]); // Removed internal handlePointerMove
+
+
+  // Effect to add/remove listeners for dragging on the canvas itself
   useEffect(() => {
     const domElement = gl.domElement;
-    // The type for handlePointerDown needs to be correct for addEventListener
-    const onPointerDownCanvas = (event: Event) => {
-        // Simulate a React.PointerEvent for handlePointerDown
-        // This is a bit of a hack, ideally handlePointerDown would accept raw events
-        // or we'd have separate logic.
-        const nativeEvent = event as unknown as PointerEvent; // Cast
-        const simulatedReactEvent = {
-            nativeEvent: nativeEvent,
-            stopPropagation: () => event.stopPropagation(),
-            preventDefault: () => event.preventDefault(),
-            target: group.current, // Assume drag starts on group background
-        } as unknown as React.PointerEvent<THREE.Group>; // Cast
-        handlePointerDown(simulatedReactEvent);
-    };
-
-    domElement.addEventListener('pointerdown', onPointerDownCanvas as EventListener);
-    // Add touchstart if needed, ensuring handlePointerDown can differentiate or you have a separate touch handler
-    // domElement.addEventListener('touchstart', onTouchStartCanvas as EventListener);
-
+    domElement.addEventListener('pointerdown', handlePointerDown as EventListener);
+    domElement.addEventListener('touchstart', handlePointerDown as EventListener, { passive: false }); // For touch devices
 
     return () => {
-      domElement.removeEventListener('pointerdown', onPointerDownCanvas as EventListener);
-      // domElement.removeEventListener('touchstart', onTouchStartCanvas as EventListener);
+      domElement.removeEventListener('pointerdown', handlePointerDown as EventListener);
+      domElement.removeEventListener('touchstart', handlePointerDown as EventListener);
+
       // Clean up global listeners if component unmounts while dragging
       if (activeListenerTypeRef.current === 'touch') {
-        window.removeEventListener('touchmove', handlePointerMove as EventListener);
-        window.removeEventListener('touchend', handlePointerUp as EventListener);
+        window.removeEventListener('touchmove', handlePointerMove);
+        window.removeEventListener('touchend', handlePointerUp);
       } else if (activeListenerTypeRef.current === 'pointer') {
-        window.removeEventListener('pointermove', handlePointerMove as EventListener);
-        window.removeEventListener('pointerup', handlePointerUp as EventListener);
+        window.removeEventListener('pointermove', handlePointerMove);
+        window.removeEventListener('pointerup', handlePointerUp);
       }
     };
   }, [gl.domElement, handlePointerDown, handlePointerMove, handlePointerUp]);
 
 
   useFrame(() => {
-    if (group.current && autoRotateRef.current && !isDraggingRef.current) {
-      group.current.rotation.y += rotationSpeed;
-      groupRotationYRef.current = group.current.rotation.y;
-      invalidate();
-    }
     if (group.current) {
-        group.current.children.forEach(child => {
-            child.lookAt(camera.position);
-            if (child instanceof THREE.Mesh && child.geometry instanceof THREE.PlaneGeometry) {
-                // This ensures the front face of the plane is oriented towards the camera.
-                // It assumes the plane's "front" is its positive Z axis in local space.
-                // If items are oriented "backwards" after lookAt, you might need:
-                // child.rotation.y += Math.PI; (or adjust initial item orientation)
-            }
-        });
+      if (autoRotateRef.current && !isDraggingRef.current) {
+        groupRotationYRef.current += rotationSpeed;
+      }
+      group.current.rotation.y = groupRotationYRef.current; // Apply rotation from ref
+
+      // Make items face the camera
+      group.current.children.forEach(child => {
+        if (child instanceof THREE.Mesh) {
+          // Calculate direction from item to camera
+          const itemWorldPosition = new THREE.Vector3();
+          child.getWorldPosition(itemWorldPosition);
+          
+          const lookAtPosition = new THREE.Vector3(camera.position.x, itemWorldPosition.y, camera.position.z);
+          child.lookAt(lookAtPosition);
+          // If using planes and they are "backwards", might need:
+          // child.rotation.y += Math.PI; // Ensure front of plane faces camera
+        }
+      });
+      invalidate();
     }
   });
 
   return (
-    // Removed onPointerDown from the group itself if global listeners on canvas are preferred for drag start
+    // The group itself doesn't need pointer event handlers if gl.domElement handles drag initiation
     <group ref={group} rotation={[0, groupRotationYRef.current, 0]}>
       {itemsData.map((item, index) => (
         <CarouselItem
@@ -358,7 +312,6 @@ function EquipmentCarousel({ itemsData, onItemClick }: { itemsData: GameItemBase
 
 const Resizer = React.memo(() => {
   const { camera, gl } = useThree();
-  // Use useMemo for container to avoid re-fetching on every render
   const container = useMemo(() => document.getElementById('locker-carousel-canvas-container'), []);
 
   useEffect(() => {
@@ -366,30 +319,35 @@ const Resizer = React.memo(() => {
       if (container) {
         const width = container.offsetWidth;
         const height = container.offsetHeight;
-        gl.setSize(width, height);
-        if (camera instanceof THREE.PerspectiveCamera) {
-          camera.aspect = width / height;
-          camera.updateProjectionMatrix();
+        if (width > 0 && height > 0) { // Ensure dimensions are valid
+          gl.setSize(width, height);
+          if (camera instanceof THREE.PerspectiveCamera) {
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+          }
         }
       }
     };
     
-    // Ensure container exists before adding listener
     if (container) {
-        // Call handleResize once initially after container is definitely available
         handleResize(); 
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+        const resizeObserver = new ResizeObserver(handleResize);
+        resizeObserver.observe(container);
+        window.addEventListener('resize', handleResize); // Fallback for general window resize
+        return () => {
+          resizeObserver.unobserve(container);
+          window.removeEventListener('resize', handleResize);
+        };
     }
-  }, [camera, gl, container]); // Add container to dependency array
+  }, [camera, gl, container]);
   return null;
 });
 Resizer.displayName = 'Resizer';
 
 export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
-  const { openTODWindow, closeTODWindow, playerInventory, getItemById } = useAppContext();
+  const { openTODWindow, closeTODWindow, playerInventory, getItemById, appContext } = useAppContext();
   const [selectedItem3D, setSelectedItem3D] = useState<GameItemBase | null>(null);
-  const { theme: currentGlobalTheme } = useTheme();
+  const { theme: currentGlobalTheme, themeVersion } = useTheme();
 
   const carouselItemsData = useMemo(() => {
     if (typeof playerInventory !== 'object' || playerInventory === null || typeof getItemById !== 'function') {
@@ -399,7 +357,7 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
     return inventoryItems
       .filter(item => item.quantity > 0)
       .map(item => getItemById(item.id))
-      .filter((item): item is GameItemBase => item !== undefined);
+      .filter((item): item is GameItemBase => item !== undefined && item !== null);
   }, [playerInventory, getItemById]);
 
   const handleItemClick3D = useCallback((item: GameItemBase, mesh: THREE.Mesh) => {
@@ -426,33 +384,36 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
     <div className="flex flex-col items-center justify-center p-4 md:p-6 h-full max-w-4xl mx-auto">
       <HolographicPanel
         id="equipment-locker-section-panel"
-        className="w-full h-full flex flex-col items-center justify-center p-2 md:p-4 overflow-hidden"
+        className="w-full h-full flex flex-col items-center p-2 md:p-4 overflow-hidden"
         explicitTheme={currentGlobalTheme}
       >
         <h2 className="text-xl md:text-2xl font-orbitron my-2 md:my-3 holographic-text text-center flex-shrink-0">Equipment Locker</h2>
         
         <div 
           id="locker-carousel-canvas-container"
-          className="w-full flex-grow min-h-0 relative touch-none"
+          className="w-full flex-grow min-h-0 relative touch-auto" // Changed touch-none to touch-auto
           style={{ cursor: 'grab' }}
-          // Removed onPointerDown from here; interactions are handled by EquipmentCarousel
         >
           {carouselItemsData.length > 0 ? (
             <Canvas
               id="locker-carousel-canvas"
-              camera={{ position: [0, 0.5, carouselRadius * 2], fov: 50 }}
+              camera={{ position: [0, 0.5, carouselRadius * 1.75], fov: 60 }} // Adjusted camera for better view
               shadows
               gl={{ antialias: true, alpha: true }}
-              style={{ background: 'transparent' }}
+              style={{ background: 'transparent' }} // Ensure canvas itself is transparent
               onCreated={({ gl }) => {
-                gl.setClearColor(0x000000, 0);
+                gl.setClearColor(0x000000, 0); // Explicitly set clear color to transparent
               }}
             >
-              <ambientLight intensity={1.2} />
-              <directionalLight position={[5, 5, 5]} intensity={0.8} castShadow />
-              <pointLight position={[-5, -5, -5]} intensity={0.3} />
+              <ambientLight intensity={1.5} /> {/* Slightly increased ambient light */}
+              <directionalLight position={[5, 5, 5]} intensity={1} castShadow shadow-mapSize-width={1024} shadow-mapSize-height={1024} />
+              <pointLight position={[-5, -5, -10]} intensity={0.5} color="hsl(var(--primary-hsl))" />
+              <pointLight position={[0, 10, 0]} intensity={0.3} />
+
               <EquipmentCarousel itemsData={carouselItemsData} onItemClick={handleItemClick3D} />
               <Resizer />
+              {/* OrbitControls can be added for debugging, but remove for final product if not needed */}
+              {/* <OrbitControls enableZoom={true} enablePan={true} /> */}
             </Canvas>
           ) : (
             <div className="flex flex-col items-center justify-center h-full">
@@ -462,7 +423,7 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
           )}
         </div>
          <p className="text-center text-xs text-muted-foreground mt-2 flex-shrink-0 px-2">
-            {carouselItemsData.length > 0 ? "Click and drag or use arrow keys (L/R) to navigate. Click item for details." : ""}
+            {carouselItemsData.length > 0 ? "Drag to rotate. Click item for details." : ""}
           </p>
       </HolographicPanel>
     </div>
