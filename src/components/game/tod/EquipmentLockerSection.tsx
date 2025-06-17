@@ -6,21 +6,21 @@ import React, { useRef, useState, useEffect, useCallback, useLayoutEffect, useMe
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
-import { useAppContext, type GameItemBase, type ItemLevel } from '@/contexts/AppContext';
+import { useAppContext, type GameItemBase, type ItemLevel, type ItemCategory } from '@/contexts/AppContext';
 import { HolographicPanel, HolographicButton } from '@/components/game/shared/HolographicPanel';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ITEM_LEVEL_COLORS_CSS_VARS } from '@/lib/constants';
-import { ShoppingCart } from 'lucide-react'; // Import ShoppingCart icon
+import { ShoppingCart } from 'lucide-react';
 
 interface SectionProps {
   parallaxOffset: number;
 }
 
 const itemWidth = 1.2;
-const itemHeight = 1.6;
+const itemHeight = 1.8; // Slightly taller to accommodate more info
 const carouselRadius = 3.5;
-const rotationSpeed = 0.005; // Auto-rotation speed
+const rotationSpeed = 0.005;
 
 const LEVEL_TO_BG_CLASS: Record<ItemLevel, string> = {
   1: 'bg-level-1/30',
@@ -33,6 +33,27 @@ const LEVEL_TO_BG_CLASS: Record<ItemLevel, string> = {
   8: 'bg-level-8/30',
 };
 
+// Simple Progress Bar Component for Cards
+const CardProgressBar: React.FC<{ current: number; max: number; label?: string; colorVar: string }> = ({ current, max, label, colorVar }) => {
+  const percentage = max > 0 ? (current / max) * 100 : 0;
+  return (
+    <div className="w-full text-xs mt-1">
+      {label && <p className="text-[10px] opacity-80 mb-px text-left">{label}</p>}
+      <div className="h-1.5 rounded-full overflow-hidden w-full" style={{ backgroundColor: `hsla(var(--muted-hsl), 0.3)` }}>
+        <div
+          className="h-full rounded-full"
+          style={{
+            width: `${percentage}%`,
+            backgroundColor: colorVar,
+          }}
+        />
+      </div>
+      <p className="text-[9px] opacity-70 text-right">{current}/{max}</p>
+    </div>
+  );
+};
+
+
 interface CarouselItemProps {
   itemData: GameItemBase;
   index: number;
@@ -43,7 +64,7 @@ interface CarouselItemProps {
 
 function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick }: CarouselItemProps) {
   const meshRef = useRef<THREE.Mesh>(null!);
-  const { theme: currentGlobalTheme } = useTheme(); // For theming if needed
+  const fallbackImageSrc = '/Spi vs Spi icon.png'; // General fallback
 
   const angle = (index / totalItems) * Math.PI * 2;
   const x = carouselRadius * Math.sin(angle);
@@ -52,9 +73,9 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick
   useLayoutEffect(() => {
     if (meshRef.current) {
       meshRef.current.position.set(x, 0, z);
-      meshRef.current.lookAt(new THREE.Vector3(0, 0, 0)); // Initially face center
-      meshRef.current.rotation.y += Math.PI; // Then rotate to face outwards from center
-      meshRef.current.userData = { itemData };
+      meshRef.current.lookAt(new THREE.Vector3(0, 0, 0));
+      meshRef.current.rotation.y += Math.PI;
+      meshRef.current.userData = { itemData }; // Store itemData for click handling
     }
   }, [x, z, itemData]);
 
@@ -63,11 +84,60 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick
       onItemClick(itemData, meshRef.current);
     }
   };
-
+  
   const itemLevelForColor = itemData.level || 1;
   const itemColorCssVar = ITEM_LEVEL_COLORS_CSS_VARS[itemLevelForColor as ItemLevel] || 'var(--muted-color)';
   const cardBgClass = LEVEL_TO_BG_CLASS[itemLevelForColor as ItemLevel] || 'bg-muted/30';
-  const fallbackImageSrc = '/Spi vs Spi icon.png';
+
+  // Conditional content rendering
+  let detailContent = null;
+  const strengthVal = itemData.strength?.current ?? 0;
+  const maxStrengthVal = itemData.strength?.max ?? 100;
+
+  switch (itemData.category) {
+    case 'Hardware':
+      detailContent = <CardProgressBar current={strengthVal} max={maxStrengthVal} label="Strength" colorVar={itemColorCssVar} />;
+      break;
+    case 'Lock Fortifiers':
+      if (itemData.type === 'Rechargeable') {
+        detailContent = <CardProgressBar current={strengthVal} max={maxStrengthVal} label="Recharges" colorVar={itemColorCssVar} />;
+      } else {
+        detailContent = <p className="text-xs text-center font-semibold p-1 rounded bg-muted/50" style={{color: itemColorCssVar}}>Single Use</p>;
+      }
+      break;
+    case 'Nexus Upgrades':
+      if (itemData.name.includes('Security Camera')) {
+        const maxAlerts = parseInt(itemData.rechargeCapacity?.split(' ')[0] || '0') || maxStrengthVal;
+        detailContent = <CardProgressBar current={strengthVal} max={maxAlerts} label="Alerts Left" colorVar={itemColorCssVar} />;
+      } else if (itemData.name.includes('Emergency Repair System')) {
+        detailContent = <CardProgressBar current={strengthVal} max={maxStrengthVal} label="ERS Strength" colorVar={itemColorCssVar} />;
+      } else if (itemData.name.includes('Reinforced Foundation')) {
+        detailContent = <p className="text-xs text-center font-semibold p-1 rounded bg-muted/50" style={{color: itemColorCssVar}}>Permanent</p>;
+      } else if (itemData.name.includes('Emergency Power Cell')) {
+        detailContent = <CardProgressBar current={strengthVal} max={maxStrengthVal} label="EPC Strength" colorVar={itemColorCssVar} />;
+      }
+      break;
+    case 'Infiltration Gear':
+      if (itemData.name === 'Pick' && itemData.level === 1) {
+        detailContent = <p className="text-xs text-center font-semibold p-1 rounded bg-muted/50" style={{color: itemColorCssVar}}>Basic Tool</p>;
+      } else if (itemData.type === 'Rechargeable') {
+        detailContent = <CardProgressBar current={strengthVal} max={maxStrengthVal} label="Uses Left" colorVar={itemColorCssVar} />;
+      } else if (itemData.type === 'One-Time Use' || itemData.type === 'Consumable') {
+        detailContent = <p className="text-xs text-center font-semibold p-1 rounded bg-muted/50" style={{color: itemColorCssVar}}>Single Use</p>;
+      }
+      break;
+    case 'Assault Tech':
+      detailContent = <p className="text-xs text-center font-semibold p-1 rounded bg-muted/50" style={{color: itemColorCssVar}}>Single Use</p>;
+      break;
+    case 'Aesthetic Schemes':
+      // No progress bar, just image and title
+      break;
+    default:
+      if (itemData.strength) {
+        detailContent = <CardProgressBar current={strengthVal} max={maxStrengthVal} label="Status" colorVar={itemColorCssVar} />;
+      }
+  }
+
 
   return (
     <mesh ref={meshRef} onClick={handleMeshClick} userData={{ itemData }}>
@@ -77,74 +147,43 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick
         center
         transform
         prepend
-        occlude="blending" // occlude="blending" can help with render order issues
+        occlude="blending"
         style={{ pointerEvents: 'none', width: `${itemWidth * 100}px`, height: `${itemHeight * 100}px` }}
       >
         <div
           className={cn(
-            "w-full h-full rounded-lg border-2 flex flex-col items-center justify-start overflow-hidden shadow-lg p-2",
+            "w-full h-full rounded-lg border-2 flex flex-col items-center justify-start overflow-hidden shadow-lg",
             cardBgClass
           )}
           style={{
             borderColor: itemColorCssVar,
             fontFamily: 'var(--font-rajdhani)',
-            color: `hsl(var(--foreground-hsl))`, // Use theme foreground for text
+            color: `hsl(var(--foreground-hsl))`,
             boxShadow: `0 0 10px ${itemColorCssVar}`,
           }}
         >
-          <div className="w-full h-2/5 relative mb-1 flex-shrink-0">
+          <div className="w-full h-3/5 relative flex-shrink-0 bg-black/20">
             <img
               src={itemData.imageSrc || fallbackImageSrc}
               alt={itemData.title || itemData.name}
-              className="w-full h-full object-contain rounded-sm"
+              className="w-full h-full object-contain"
               data-ai-hint={itemData.dataAiHint || "item icon"}
               onError={(e) => {
                 const target = e.currentTarget as HTMLImageElement;
                 if (target.src !== fallbackImageSrc) {
                   target.src = fallbackImageSrc;
-                  target.onerror = null; 
+                  target.onerror = null;
                 }
               }}
             />
           </div>
-          <p className="text-sm font-semibold text-center leading-tight mb-1" style={{ color: itemColorCssVar }}>
-            {itemData.title || itemData.name} L{itemData.level}
-          </p>
-          <div className="w-full text-xs space-y-0.5 overflow-y-auto scrollbar-hide flex-grow">
-            {itemData.strength && (
-              <div className="w-full">
-                <p className="text-[10px] opacity-80 mb-px">Strength:</p>
-                <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: `hsla(var(--muted-hsl), 0.3)`}}>
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${(itemData.strength.current / itemData.strength.max) * 100}%`,
-                      backgroundColor: itemColorCssVar,
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-            {itemData.resistance && (
-              <div className="w-full mt-1">
-                <p className="text-[10px] opacity-80 mb-px">Resistance:</p>
-                <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: `hsla(var(--muted-hsl), 0.3)`}}>
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${(itemData.resistance.current / itemData.resistance.max) * 100}%`,
-                      backgroundColor: itemColorCssVar,
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-            {itemData.attackFactor !== undefined && (
-              <p className="text-[10px] opacity-80 mt-1">Attack: {itemData.attackFactor}</p>
-            )}
-             <p className="text-[10px] leading-snug opacity-70 mt-1 text-center max-h-[3.3em] overflow-hidden">
-              {itemData.description}
+          <div className="w-full p-2 flex flex-col justify-between flex-grow min-h-0">
+            <p className="text-sm font-semibold text-center leading-tight mb-1 truncate" style={{ color: itemColorCssVar }}>
+              {itemData.title || itemData.name} L{itemData.level}
             </p>
+            <div className="w-full text-xs space-y-0.5 overflow-y-auto scrollbar-hide flex-grow">
+              {detailContent}
+            </div>
           </div>
         </div>
       </Html>
@@ -155,13 +194,14 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius, onItemClick
 function EquipmentCarousel({ itemsData, onItemClick }: { itemsData: GameItemBase[], onItemClick: (item: GameItemBase, mesh: THREE.Mesh) => void }) {
   const group = useRef<THREE.Group>(null!);
   const { camera, invalidate, gl } = useThree();
-  const { setIsScrollLockActive } = useAppContext();
+  const appContext = useAppContext();
 
   const isDraggingRef = useRef(false);
   const autoRotateRef = useRef(true);
   const previousPointerXRef = useRef(0);
   const pointerDownTimeRef = useRef(0);
   const groupRotationYRef = useRef(group.current ? group.current.rotation.y : 0);
+  const accumulatedDeltaXRef = useRef(0); // To differentiate clicks from drags
 
   const handleDragStart = useCallback((event: PointerEvent | TouchEvent) => {
     let currentX = 0;
@@ -169,6 +209,7 @@ function EquipmentCarousel({ itemsData, onItemClick }: { itemsData: GameItemBase
 
     if (isTouchEvent) {
       currentX = (event as TouchEvent).touches[0].clientX;
+      if (event.cancelable) event.preventDefault();
     } else {
       if ((event as PointerEvent).button !== 0) return;
       currentX = (event as PointerEvent).clientX;
@@ -176,8 +217,9 @@ function EquipmentCarousel({ itemsData, onItemClick }: { itemsData: GameItemBase
 
     isDraggingRef.current = true;
     autoRotateRef.current = false;
-    setIsScrollLockActive(true);
+    appContext.setIsScrollLockActive(true);
     previousPointerXRef.current = currentX;
+    accumulatedDeltaXRef.current = 0;
     pointerDownTimeRef.current = performance.now();
 
     const canvasElement = gl.domElement.parentElement;
@@ -190,7 +232,7 @@ function EquipmentCarousel({ itemsData, onItemClick }: { itemsData: GameItemBase
       window.addEventListener('pointermove', handleDragMove, { passive: false });
       window.addEventListener('pointerup', handleDragEnd, { passive: false });
     }
-  }, [gl, setIsScrollLockActive, invalidate]); // Added invalidate to deps for handleDragMove call
+  }, [gl, appContext.setIsScrollLockActive, invalidate]); // Removed handleDragMove, handleDragEnd
 
   const handleDragMove = useCallback((event: PointerEvent | TouchEvent) => {
     if (!isDraggingRef.current) return;
@@ -205,14 +247,27 @@ function EquipmentCarousel({ itemsData, onItemClick }: { itemsData: GameItemBase
 
     const deltaX = currentX - previousPointerXRef.current;
     groupRotationYRef.current += deltaX * 0.005;
+    accumulatedDeltaXRef.current += Math.abs(deltaX);
     previousPointerXRef.current = currentX;
     invalidate();
   }, [invalidate]);
 
-  const handleDragEnd = useCallback(() => {
+  const handleDragEnd = useCallback((event: PointerEvent | TouchEvent) => {
+    if (!isDraggingRef.current) return; // Ensure drag was actually started
     isDraggingRef.current = false;
-    autoRotateRef.current = true; // Re-enable auto-rotation after drag
-    setIsScrollLockActive(false);
+    appContext.setIsScrollLockActive(false);
+    
+    const dragDuration = performance.now() - pointerDownTimeRef.current;
+
+    // Re-enable auto-rotation only if it was a significant drag, not a quick click
+    if (dragDuration > 200 || accumulatedDeltaXRef.current > 10) {
+      setTimeout(() => {
+        if (!isDraggingRef.current) {
+          autoRotateRef.current = true;
+        }
+      }, 500);
+    }
+
 
     const canvasElement = gl.domElement.parentElement;
     if (canvasElement) canvasElement.style.cursor = 'grab';
@@ -221,28 +276,34 @@ function EquipmentCarousel({ itemsData, onItemClick }: { itemsData: GameItemBase
     window.removeEventListener('touchend', handleDragEnd);
     window.removeEventListener('pointermove', handleDragMove);
     window.removeEventListener('pointerup', handleDragEnd);
-  }, [gl, setIsScrollLockActive, handleDragMove]);
+  }, [appContext.setIsScrollLockActive, handleDragMove]); // Added handleDragMove dependency as it's called from window listeners
 
 
   useEffect(() => {
     const domElement = gl.domElement;
-    domElement.addEventListener('pointerdown', handleDragStart as EventListener);
-    domElement.addEventListener('touchstart', handleDragStart as EventListener, { passive: false });
+    domElement.style.touchAction = 'none';
+
+    const currentHandleDragStart = handleDragStart; // Capture current ref for cleanup
+
+    domElement.addEventListener('pointerdown', currentHandleDragStart as EventListener);
+    domElement.addEventListener('touchstart', currentHandleDragStart as EventListener, { passive: false });
 
     return () => {
-      domElement.removeEventListener('pointerdown', handleDragStart as EventListener);
-      domElement.removeEventListener('touchstart', handleDragStart as EventListener);
+      domElement.removeEventListener('pointerdown', currentHandleDragStart as EventListener);
+      domElement.removeEventListener('touchstart', currentHandleDragStart as EventListener);
+      // Ensure window event listeners are also cleaned up, though they are added/removed in dragStart/End
       window.removeEventListener('pointermove', handleDragMove);
       window.removeEventListener('pointerup', handleDragEnd);
       window.removeEventListener('touchmove', handleDragMove);
       window.removeEventListener('touchend', handleDragEnd);
+      if (domElement.parentElement) domElement.parentElement.style.cursor = 'default';
     };
-  }, [gl, handleDragStart, handleDragMove, handleDragEnd]);
+  }, [gl, handleDragStart, handleDragMove, handleDragEnd]); // Added handleDragMove, handleDragEnd
 
-  useFrame(() => {
+  useFrame((state, delta) => {
     if (group.current) {
       if (autoRotateRef.current && !isDraggingRef.current) {
-        groupRotationYRef.current += rotationSpeed;
+        groupRotationYRef.current += rotationSpeed * delta * 60;
       }
       group.current.rotation.y = groupRotationYRef.current;
 
@@ -274,6 +335,7 @@ function EquipmentCarousel({ itemsData, onItemClick }: { itemsData: GameItemBase
   );
 }
 
+// Resizer Component
 const Resizer = React.memo(() => {
   const { camera, gl } = useThree();
   const container = useMemo(() => typeof document !== 'undefined' ? document.getElementById('locker-carousel-canvas-container') : null, []);
@@ -294,7 +356,7 @@ const Resizer = React.memo(() => {
     };
     
     if (container) {
-        handleResize(); 
+        handleResize(); // Initial call
         const resizeObserver = new ResizeObserver(handleResize);
         resizeObserver.observe(container);
         window.addEventListener('resize', handleResize);
@@ -303,21 +365,23 @@ const Resizer = React.memo(() => {
           window.removeEventListener('resize', handleResize);
         };
     }
-  }, [camera, gl, container]);
+  }, [camera, gl, container]); // container is now stable due to useMemo
   return null;
 });
 Resizer.displayName = 'Resizer';
 
+
 export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
+  const appContext = useAppContext();
   const { 
     openTODWindow, 
     closeTODWindow, 
     playerInventory, 
-    getItemById, 
-    openSpyShop // Get openSpyShop from AppContext
-  } = useAppContext();
+    getItemById,
+    openSpyShop // Get openSpyShop from context
+  } = appContext;
   const [selectedItem3D, setSelectedItem3D] = useState<GameItemBase | null>(null);
-  const { theme: currentGlobalTheme, themeVersion } = useTheme();
+  const { theme: currentGlobalTheme, themeVersion } = useTheme(); // Get theme for HolographicButton
 
   const carouselItemsData = useMemo(() => {
     if (typeof playerInventory !== 'object' || playerInventory === null || typeof getItemById !== 'function') {
@@ -331,10 +395,10 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
   }, [playerInventory, getItemById]);
 
   const handleItemClick3D = useCallback((item: GameItemBase, mesh: THREE.Mesh) => {
-    setSelectedItem3D(item);
+    setSelectedItem3D(item); // Update state, though it's not directly used for this modal
     const itemLevelForColor = item.level || 1;
     const itemColorCssVar = ITEM_LEVEL_COLORS_CSS_VARS[itemLevelForColor as ItemLevel] || 'var(--muted-color)';
-    const fallbackImageSrc = '/Spi vs Spi icon.png';
+    const fallbackImageSrc = '/Spi vs Spi icon.png'; // General fallback
 
     openTODWindow(
       item.title || item.name,
@@ -345,7 +409,7 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
             src={item.imageSrc || fallbackImageSrc} 
             alt={item.title || item.name} 
             className="max-w-full max-h-full object-contain" 
-            data-ai-hint={itemData.dataAiHint || "item icon"}
+            data-ai-hint={item.dataAiHint || "item icon"}
             onError={(e) => {
               const target = e.currentTarget as HTMLImageElement;
               if (target.src !== fallbackImageSrc) {
@@ -360,44 +424,50 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
         {item.strength && <p className="text-xs text-muted-foreground/80">Strength: {item.strength.current}/{item.strength.max}</p>}
         {item.resistance && <p className="text-xs text-muted-foreground/80">Resistance: {item.resistance.current}/{item.resistance.max}</p>}
         <HolographicButton onClick={closeTODWindow} className="mt-4" explicitTheme={currentGlobalTheme}>Close</HolographicButton>
-      </div>,
-      { showCloseButton: true, explicitTheme: currentGlobalTheme, themeVersion }
+      </div>, // Comma here is crucial
+      { 
+        showCloseButton: true, 
+        explicitTheme: currentGlobalTheme, 
+        themeVersion: themeVersion
+      }
     );
-  }, [openTODWindow, closeTODWindow, currentGlobalTheme, themeVersion]);
+  }, [openTODWindow, closeTODWindow, currentGlobalTheme, themeVersion, setSelectedItem3D]);
+
 
   return (
     <div className="flex flex-col items-center justify-center p-4 md:p-6 h-full max-w-4xl mx-auto">
       <HolographicPanel
-        id="equipment-locker-section-panel"
-        className="w-full h-full flex flex-col items-center p-2 md:p-4 overflow-hidden"
+        id="equipment-locker-section"
+        className="w-full h-full flex flex-col items-center p-2 md:p-4 overflow-hidden" // Keep overflow-hidden for panel itself
         explicitTheme={currentGlobalTheme} 
       >
         <div className="flex-shrink-0 w-full flex items-center justify-between my-2 md:my-3 px-2">
           <h2 className="text-xl md:text-2xl font-orbitron holographic-text text-center flex-grow">Equipment Locker</h2>
           <HolographicButton
-            onClick={openSpyShop}
-            className="!p-2"
+            onClick={openSpyShop} // Use openSpyShop from context
+            className="!p-2" // Ensure padding is small for icon button
             aria-label="Open Spy Shop"
-            explicitTheme={currentGlobalTheme}
+            explicitTheme={currentGlobalTheme} // Pass theme
           >
             <ShoppingCart className="w-5 h-5 icon-glow" />
           </HolographicButton>
         </div>
         
+        {/* Container for the Canvas - ensure it allows touch actions for R3F */}
         <div 
           id="locker-carousel-canvas-container"
-          className="w-full flex-grow min-h-0 relative touch-auto" // Ensure touch-auto for mobile interactions
-          style={{ cursor: 'grab' }}
+          className="w-full flex-grow min-h-0 relative touch-auto" // touch-auto might be default, ensure R3F handles touch
+          style={{ cursor: 'grab', touchAction: 'none' }} // touchAction: 'none' for R3F to handle gestures
         >
           {carouselItemsData.length > 0 ? (
             <Canvas
               id="locker-carousel-canvas"
-              camera={{ position: [0, 0.5, carouselRadius * 2.25], fov: 60 }} // Adjusted camera Z position
+              camera={{ position: [0, 0.5, carouselRadius * 2.25], fov: 60 }} // Adjusted camera distance
               shadows
               gl={{ antialias: true, alpha: true }}
-              style={{ background: 'transparent' }}
+              style={{ background: 'transparent' }} // Make canvas background transparent
               onCreated={({ gl }) => {
-                gl.setClearColor(0x000000, 0);
+                gl.setClearColor(0x000000, 0); // Set clear color to transparent
               }}
             >
               <ambientLight intensity={1.5} />
