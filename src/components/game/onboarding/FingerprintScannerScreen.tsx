@@ -65,6 +65,21 @@ export function FingerprintScannerScreen() {
     };
   }, []);
 
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.cancelable) {
+      e.preventDefault();
+    }
+    startScan();
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.cancelable) {
+      e.preventDefault();
+    }
+    cancelScan();
+  };
+
+
   return (
     <HolographicPanel
       className="w-full max-w-md text-center p-6 flex flex-col items-center flex-grow h-0 overflow-hidden"
@@ -106,9 +121,9 @@ export function FingerprintScannerScreen() {
               <div
                 className="relative w-48 h-48 mx-auto rounded-full border-2 border-primary flex items-center justify-center cursor-pointer select-none touch-none"
                 onMouseDown={startScan}
-                onTouchStart={(e) => { e.preventDefault(); startScan(); }}
+                onTouchStart={handleTouchStart}
                 onMouseUp={cancelScan}
-                onTouchEnd={(e) => { e.preventDefault(); cancelScan(); }}
+                onTouchEnd={handleTouchEnd}
                 onMouseLeave={cancelScan}
               >
                 <Fingerprint
