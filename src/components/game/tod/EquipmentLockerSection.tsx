@@ -16,8 +16,8 @@ const itemWidth = 1;
 const itemHeight = 1.8;
 const carouselRadius = 3.5;
 const rotationSpeed = 0.0035;
-const CLICK_DRAG_THRESHOLD_SQUARED = 10 * 10; 
-const CLICK_DURATION_THRESHOLD = 250; 
+const CLICK_DRAG_THRESHOLD_SQUARED = 10 * 10; // Threshold for distinguishing click from drag
+const CLICK_DURATION_THRESHOLD = 250; // Max duration for a click
 
 const LEVEL_TO_BG_CLASS: Record<ItemLevel, string> = {
   1: 'bg-level-1/30',
@@ -59,9 +59,9 @@ interface CarouselItemProps {
   carouselRadius: number;
 }
 
-function CarouselItem({ itemData, index, totalItems, carouselRadius }: CarouselItemProps) {
+const CarouselItem = React.memo(function CarouselItem({ itemData, index, totalItems, carouselRadius }: CarouselItemProps) {
   const meshRef = useRef<THREE.Mesh>(null!);
-  const fallbackImageSrc = '/Spi vs Spi icon.png'; 
+  const fallbackImageSrc = '/Spi vs Spi icon.png';
   const actualImageSrc = itemData.imageSrc || fallbackImageSrc;
 
   const angle = (index / totalItems) * Math.PI * 2;
@@ -100,7 +100,7 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius }: CarouselI
       break;
     case 'Nexus Upgrades':
       if (itemData.name === 'Security Camera') {
-        const currentAlerts = itemData.currentAlerts ?? itemData.level; 
+        const currentAlerts = itemData.currentAlerts ?? itemData.level; // Assuming level is maxAlerts if specific not found
         const maxAlerts = itemData.maxAlerts ?? itemData.level;
         detailContent = <CardProgressBar label="Alerts" current={currentAlerts} max={maxAlerts} colorVar={itemColorCssVar} />;
       } else if (itemData.name === 'Emergency Repair System (ERS)') {
@@ -130,7 +130,7 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius }: CarouselI
         detailContent = <CardProgressBar label="Status" current={strengthCurrent} max={strengthMax} colorVar={itemColorCssVar} />;
       }
   }
-  
+
   return (
     <mesh ref={meshRef} userData={{ itemData, isCarouselItem: true, id: itemData.id }}>
       <planeGeometry args={[itemWidth, itemHeight]} />
@@ -144,17 +144,17 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius }: CarouselI
       >
         <div
           className={cn(
-            "w-full h-full rounded-lg border-2 flex flex-col items-center justify-start overflow-hidden",
+            "w-full h-full rounded-md border flex flex-col items-center justify-start overflow-hidden",
             cardBgClass
           )}
           style={{
             borderColor: itemColorCssVar,
             fontFamily: 'var(--font-rajdhani)',
             color: `hsl(var(--foreground-hsl))`,
-            boxShadow: `0 0 8px ${itemColorCssVar}`,
+            boxShadow: `0 0 5px ${itemColorCssVar}`,
           }}
         >
-          <div className="w-full h-3/5 relative flex-shrink-0 bg-black/20">
+          <div className="w-full h-3/5 relative flex-shrink-0 bg-black/10">
             <img
               src={actualImageSrc}
               alt={itemData.title || itemData.name}
@@ -181,7 +181,7 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius }: CarouselI
       </Html>
     </mesh>
   );
-}
+});
 CarouselItem.displayName = 'CarouselItem';
 
 interface EquipmentCarouselProps {
@@ -203,168 +203,172 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel({ itemsData, onI
   const accumulatedDeltaXRef = useRef(0);
   const activePointerIdRef = useRef<number | null>(null);
 
-  const handlePointerDownInternal = useCallback((event: PointerEvent | TouchEvent) => {
-    console.log("[Carousel] Drag Start. Event type:", event.type);
-    if (event.type === 'touchstart' && event.cancelable) {
-        event.preventDefault();
-    }
+  useEffect(() => {
+    console.log("[Carousel] useEffect for listeners executing. gl.domElement:", gl?.domElement);
+    const canvasElement = gl?.domElement;
+    if (!canvasElement) return;
 
-    let clientX = 0, clientY = 0;
+    const handlePointerDownInternal = (event: PointerEvent | TouchEvent) => {
+      console.log("[Carousel] handlePointerDownInternal INVOKED. Event type:", event.type);
 
-    if ('touches' in event) {
+      let clientX = 0, clientY = 0;
+      let isTouchEvent = false;
+
+      if ('touches' in event) {
+        isTouchEvent = true;
+        if (event.cancelable) event.preventDefault();
         clientX = (event as TouchEvent).touches[0].clientX;
         clientY = (event as TouchEvent).touches[0].clientY;
-    } else {
+      } else {
         if ((event as PointerEvent).button !== 0) return;
         clientX = (event as PointerEvent).clientX;
         clientY = (event as PointerEvent).clientY;
         activePointerIdRef.current = (event as PointerEvent).pointerId;
-        gl?.domElement?.setPointerCapture(activePointerIdRef.current);
-    }
+        try { canvasElement.setPointerCapture(activePointerIdRef.current); } catch (e) { console.warn("Failed to set pointer capture", e); }
+      }
 
-    isDraggingRef.current = true;
-    autoRotateRef.current = false;
-    appContext.setIsScrollLockActive(true);
-    previousPointerXRef.current = clientX;
-    pointerDownCoords.current = { x: clientX, y: clientY };
-    accumulatedDeltaXRef.current = 0;
-    pointerDownTimeRef.current = performance.now();
-    if(gl?.domElement) gl.domElement.style.cursor = 'grabbing';
-    document.body.style.userSelect = 'none';
+      isDraggingRef.current = true;
+      autoRotateRef.current = false;
+      appContext.setIsScrollLockActive(true);
+      previousPointerXRef.current = clientX;
+      pointerDownCoords.current = { x: clientX, y: clientY };
+      accumulatedDeltaXRef.current = 0;
+      pointerDownTimeRef.current = performance.now();
+      canvasElement.style.cursor = 'grabbing';
+      document.body.style.userSelect = 'none'; // Prevent text selection
 
-    window.addEventListener('pointermove', handlePointerMoveInternal);
-    window.addEventListener('pointerup', handlePointerUpInternal);
-    window.addEventListener('touchmove', handlePointerMoveInternal, { passive: false });
-    window.addEventListener('touchend', handlePointerUpInternal);
-  }, [gl, appContext.setIsScrollLockActive, invalidate]);
+      window.addEventListener(isTouchEvent ? 'touchmove' : 'pointermove', handlePointerMoveInternal, { passive: !isTouchEvent });
+      window.addEventListener(isTouchEvent ? 'touchend' : 'pointerup', handlePointerUpInternal);
+      console.log("[Carousel] Added move/up listeners to window.");
+    };
 
-  const handlePointerMoveInternal = useCallback((event: PointerEvent | TouchEvent) => {
-    if (!isDraggingRef.current) return;
-    if (event.type === 'touchmove' && event.cancelable) {
-      event.preventDefault();
-    }
+    const handlePointerMoveInternal = (event: PointerEvent | TouchEvent) => {
+      if (!isDraggingRef.current) return;
 
-    let currentX = 0;
-    if ('touches' in event) {
+      let currentX = 0;
+      if ('touches' in event) {
+        if (event.cancelable) event.preventDefault();
         currentX = (event as TouchEvent).touches[0].clientX;
-    } else {
+      } else {
         if (activePointerIdRef.current !== null && (event as PointerEvent).pointerId !== activePointerIdRef.current) return;
         currentX = (event as PointerEvent).clientX;
-    }
+      }
 
-    const deltaX = currentX - previousPointerXRef.current;
-    groupRotationYRef.current += deltaX * 0.005;
-    accumulatedDeltaXRef.current += Math.abs(deltaX);
-    previousPointerXRef.current = currentX;
-    console.log(`[Carousel] Drag Move - DeltaX: ${deltaX.toFixed(2)}, New RotationY: ${groupRotationYRef.current.toFixed(2)}`);
-    invalidate();
-  }, [invalidate]);
+      const deltaX = currentX - previousPointerXRef.current;
+      if (group.current) {
+        group.current.rotation.y += deltaX * 0.005; // Directly update rotation for immediate feedback
+      }
+      groupRotationYRef.current += deltaX * 0.005; // Keep ref in sync
+      accumulatedDeltaXRef.current += Math.abs(deltaX);
+      previousPointerXRef.current = currentX;
+      invalidate(); // Request a re-render
+      console.log(`[Carousel] Drag Move - DeltaX: ${deltaX.toFixed(2)}, New RotationY: ${groupRotationYRef.current.toFixed(2)}`);
+    };
 
-  const handlePointerUpInternal = useCallback((event: PointerEvent | TouchEvent) => {
-    console.log("[Carousel] Drag End. Event type:", event.type);
-    if (!isDraggingRef.current && (event.type === 'pointerup' && activePointerIdRef.current === null)) return;
-    if (event.type === 'pointerup' && activePointerIdRef.current !== null && (event as PointerEvent).pointerId !== activePointerIdRef.current) return;
+    const handlePointerUpInternal = (event: PointerEvent | TouchEvent) => {
+      console.log("[Carousel] handlePointerUpInternal INVOKED. Event type:", event.type);
+      if (!isDraggingRef.current && (event.type === 'pointerup' && activePointerIdRef.current === null)) return;
 
-    const dragDuration = performance.now() - pointerDownTimeRef.current;
-    let currentX = 0, currentY = 0;
+      const dragDuration = performance.now() - pointerDownTimeRef.current;
+      let currentX = 0, currentY = 0;
 
-    if ('changedTouches' in event && (event as TouchEvent).changedTouches.length > 0) {
+      if ('changedTouches' in event && (event as TouchEvent).changedTouches.length > 0) {
         currentX = (event as TouchEvent).changedTouches[0].clientX;
         currentY = (event as TouchEvent).changedTouches[0].clientY;
-    } else if ('clientX' in event) {
+      } else if ('clientX' in event) {
         currentX = (event as PointerEvent).clientX;
         currentY = (event as PointerEvent).clientY;
-    }
-    
-    if(gl?.domElement) gl.domElement.style.cursor = 'grab';
-    document.body.style.userSelect = '';
+      }
+      
+      canvasElement.style.cursor = 'grab';
+      document.body.style.userSelect = ''; // Re-enable text selection
 
-    if (event.type === 'pointerup' && activePointerIdRef.current !== null) {
-        gl?.domElement?.releasePointerCapture(activePointerIdRef.current);
-    }
-    activePointerIdRef.current = null;
-    
-    const wasActuallyDragging = accumulatedDeltaXRef.current > Math.sqrt(CLICK_DRAG_THRESHOLD_SQUARED);
-    isDraggingRef.current = false;
-    appContext.setIsScrollLockActive(false);
+      if (event.type === 'pointerup' && activePointerIdRef.current !== null) {
+        try { canvasElement.releasePointerCapture(activePointerIdRef.current); } catch (e) { console.warn("Failed to release pointer capture", e); }
+      }
+      activePointerIdRef.current = null;
+      
+      const wasSignificantDrag = accumulatedDeltaXRef.current > Math.sqrt(CLICK_DRAG_THRESHOLD_SQUARED);
+      const wasQuickEnoughForClick = dragDuration < CLICK_DURATION_THRESHOLD;
 
-    if (!wasActuallyDragging && dragDuration < CLICK_DURATION_THRESHOLD) {
-        const rect = gl.domElement.getBoundingClientRect();
+      if (!wasSignificantDrag && wasQuickEnoughForClick) {
+        const rect = canvasElement.getBoundingClientRect();
         const clickPointer = new THREE.Vector2();
         clickPointer.x = ((currentX - rect.left) / rect.width) * 2 - 1;
         clickPointer.y = -((currentY - rect.top) / rect.height) * 2 + 1;
         console.log(`[Carousel] Click detected. Canvas Coords: (${clickPointer.x.toFixed(2)}, ${clickPointer.y.toFixed(2)})`);
 
         raycaster.setFromCamera(clickPointer, camera);
-        const intersects = raycaster.intersectObjects(group.current?.children || [], true);
+        const intersects = raycaster.intersectObjects(group.current?.children || [], true); // Intersect with group's children
         console.log(`[Carousel] Raycaster INTERSECTED count: ${intersects.length}`);
 
         if (intersects.length > 0) {
-            let clickedMesh = intersects[0].object as THREE.Mesh;
-            while (clickedMesh.parent && clickedMesh.parent !== scene && !clickedMesh.userData?.isCarouselItem) {
-                clickedMesh = clickedMesh.parent as THREE.Mesh;
-            }
-            if (clickedMesh.userData?.isCarouselItem && clickedMesh.userData.itemData && clickedMesh instanceof THREE.Mesh) {
-                console.log(`[Carousel] Clicked Item: ${clickedMesh.userData.itemData?.name || 'Unknown'}`);
-                onItemClick(clickedMesh.userData.itemData, clickedMesh);
-            } else {
-                console.log("[Carousel] Clicked, but no valid item data found on mesh or parents.");
-            }
+          let clickedMesh = intersects[0].object as THREE.Mesh;
+          // Traverse up to find the mesh with userData.isCarouselItem
+          while (clickedMesh.parent && clickedMesh.parent !== scene && !clickedMesh.userData?.isCarouselItem) {
+            clickedMesh = clickedMesh.parent as THREE.Mesh;
+          }
+          if (clickedMesh.userData?.isCarouselItem && clickedMesh.userData.itemData && clickedMesh instanceof THREE.Mesh) {
+            console.log(`[Carousel] Clicked Item: ${clickedMesh.userData.itemData?.name || 'Unknown'}`);
+            onItemClick(clickedMesh.userData.itemData, clickedMesh);
+          } else {
+            console.log("[Carousel] Clicked, but no valid item data found on mesh or parents.");
+          }
         } else {
-            console.log("[Carousel] Clicked, but raycaster found no intersections with carousel items.");
+          console.log("[Carousel] Clicked, but raycaster found no intersections with carousel items.");
         }
-    }
-    
-    setTimeout(() => {
+      } else {
+         console.log(`[Carousel] Drag detected or click too long. Dragged: ${wasSignificantDrag}, Duration: ${dragDuration.toFixed(0)}ms`);
+      }
+      
+      isDraggingRef.current = false;
+      appContext.setIsScrollLockActive(false);
+      
+      // Add a delay before re-enabling auto-rotate to prevent immediate rotation after drag
+      setTimeout(() => {
         if (!isDraggingRef.current) autoRotateRef.current = true;
-    }, 500);
+      }, 500);
 
-    window.removeEventListener('pointermove', handlePointerMoveInternal);
-    window.removeEventListener('pointerup', handlePointerUpInternal);
-    window.removeEventListener('touchmove', handlePointerMoveInternal);
-    window.removeEventListener('touchend', handlePointerUpInternal);
-  }, [gl, appContext.setIsScrollLockActive, camera, raycaster, onItemClick, scene, invalidate]);
-
-  useEffect(() => {
-    const domElement = gl?.domElement;
-    console.log("[Carousel] Main Effect: Attempting to attach event listeners. Canvas DOM element:", domElement);
-    if (!domElement) {
-        console.log("[Carousel] Main Effect: Canvas DOM element not available for listeners.");
-        return;
-    }
+      window.removeEventListener('pointermove', handlePointerMoveInternal);
+      window.removeEventListener('pointerup', handlePointerUpInternal);
+      window.removeEventListener('touchmove', handlePointerMoveInternal);
+      window.removeEventListener('touchend', handlePointerUpInternal);
+      console.log("[Carousel] Removed move/up listeners from window.");
+    };
     
-    console.log("[Carousel] Main Effect: Attaching 'pointerdown' and 'touchstart' listeners to canvas.");
-    domElement.addEventListener('pointerdown', handlePointerDownInternal);
-    domElement.addEventListener('touchstart', handlePointerDownInternal, { passive: false });
+    console.log("[Carousel] Attaching pointerdown and touchstart to:", canvasElement);
+    canvasElement.addEventListener('pointerdown', handlePointerDownInternal);
+    canvasElement.addEventListener('touchstart', handlePointerDownInternal, { passive: false }); // Explicitly passive: false for touchstart
 
     return () => {
-        console.log("[Carousel] Main Effect: Cleaning up 'pointerdown' and 'touchstart' listeners from canvas.");
-        domElement.removeEventListener('pointerdown', handlePointerDownInternal);
-        domElement.removeEventListener('touchstart', handlePointerDownInternal);
-        
-        window.removeEventListener('pointermove', handlePointerMoveInternal);
-        window.removeEventListener('pointerup', handlePointerUpInternal);
-        window.removeEventListener('touchmove', handlePointerMoveInternal);
-        window.removeEventListener('touchend', handlePointerUpInternal);
-        
-        if (isDraggingRef.current) {
-            document.body.style.userSelect = '';
-            appContext.setIsScrollLockActive(false);
-            if (domElement.style.cursor === 'grabbing') domElement.style.cursor = 'grab';
-            if (activePointerIdRef.current !== null) {
-                 domElement.releasePointerCapture(activePointerIdRef.current);
-                 activePointerIdRef.current = null;
-            }
-        }
+      console.log("[Carousel] Cleaning up event listeners from canvas.");
+      canvasElement.removeEventListener('pointerdown', handlePointerDownInternal);
+      canvasElement.removeEventListener('touchstart', handlePointerDownInternal);
+      
+      // Clean up window listeners if component unmounts during a drag
+      window.removeEventListener('pointermove', handlePointerMoveInternal);
+      window.removeEventListener('pointerup', handlePointerUpInternal);
+      window.removeEventListener('touchmove', handlePointerMoveInternal);
+      window.removeEventListener('touchend', handlePointerUpInternal);
+
+      if (isDraggingRef.current) { // Reset states if unmounting during drag
+          document.body.style.userSelect = '';
+          appContext.setIsScrollLockActive(false);
+          if (canvasElement.style.cursor === 'grabbing') canvasElement.style.cursor = 'grab';
+          if (activePointerIdRef.current !== null) {
+              try { canvasElement.releasePointerCapture(activePointerIdRef.current); } catch(e) {/* ignore */}
+              activePointerIdRef.current = null;
+          }
+      }
     };
-  }, [gl, handlePointerDownInternal, handlePointerMoveInternal, handlePointerUpInternal, appContext.setIsScrollLockActive]);
+  }, [gl, onItemClick, camera, raycaster, scene, invalidate, appContext.setIsScrollLockActive]); // Dependencies should be stable
 
   useFrame((state, delta) => {
     if (group.current) {
       if (autoRotateRef.current && !isDraggingRef.current) {
-        groupRotationYRef.current += rotationSpeed * delta * 60;
+        group.current.rotation.y += rotationSpeed * delta * 60; // Apply rotationSpeed consistently
+        groupRotationYRef.current = group.current.rotation.y; // Keep ref in sync
       }
-      group.current.rotation.y = groupRotationYRef.current;
     }
   });
 
@@ -383,6 +387,7 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel({ itemsData, onI
   );
 });
 EquipmentCarousel.displayName = 'EquipmentCarousel';
+
 
 const Resizer = React.memo(() => {
   const { camera, gl } = useThree();
@@ -433,17 +438,33 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
   } = appContext;
 
   const { theme: currentGlobalTheme, themeVersion } = useTheme();
-  const [pointLightColor, setPointLightColor] = useState('hsl(0, 0%, 100%)'); // Default to white
+  const [pointLightColor, setPointLightColor] = useState<string | THREE.Color>('hsl(0, 0%, 100%)');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      let hslVar = '--accent-hsl'; // Default for terminal-green or others
+      let hslVarName = '--accent-hsl'; 
       if (currentGlobalTheme === 'cyphers' || currentGlobalTheme === 'shadows') {
-        hslVar = '--primary-hsl';
+        hslVarName = '--primary-hsl';
       }
-      const computedHSL = getComputedStyle(document.documentElement).getPropertyValue(hslVar).trim();
-      if (computedHSL) {
-        setPointLightColor(`hsl(${computedHSL})`);
+      const computedHSLString = getComputedStyle(document.documentElement).getPropertyValue(hslVarName).trim();
+      
+      if (computedHSLString) {
+        const parts = computedHSLString.match(/(\d+)\s*(\d+)%?\s*(\d+)%?/);
+        if (parts && parts.length === 4) {
+          const h = parseFloat(parts[1]);
+          const s = parseFloat(parts[2]);
+          const l = parseFloat(parts[3]);
+          // Format for Three.js Color.setStyle (which CAN parse "hsl(h, s%, l%)")
+          const colorStringForThree = `hsl(${h}, ${s}%, ${l}%)`;
+          setPointLightColor(colorStringForThree);
+          console.log(`[EquipmentLocker] Set pointLightColor to: ${colorStringForThree} from var ${hslVarName}`);
+        } else {
+          console.warn(`[EquipmentLocker] Could not parse HSL string: '${computedHSLString}' from var ${hslVarName}. Defaulting light color.`);
+          setPointLightColor('hsl(0, 0%, 100%)'); // Default to white on parse error
+        }
+      } else {
+        console.warn(`[EquipmentLocker] HSL variable ${hslVarName} not found. Defaulting light color.`);
+        setPointLightColor('hsl(0, 0%, 100%)'); // Default to white if var not found
       }
     }
   }, [currentGlobalTheme, themeVersion]);
@@ -468,7 +489,7 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
     openTODWindow(
       item.title || item.name,
       <div className="font-rajdhani p-4 text-center">
-        <h3 className="text-xl font-bold mb-2" style={{color: itemColorCssVar }}>{item.title || item.name}</h3>
+        <h3 className="text-xl font-bold mb-2" style={{color: itemColorCssVar }}>{item.title || item.name} L{item.level}</h3>
         <div className="w-32 h-32 mx-auto my-2 rounded bg-black/30 flex items-center justify-center">
           <img
             src={item.imageSrc || fallbackImageSrc}
@@ -519,7 +540,7 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
         <div
           id="locker-carousel-canvas-container"
           className="w-full flex-grow min-h-0 relative"
-          style={{ cursor: 'grab', touchAction: 'none' }}
+          style={{ cursor: 'grab', touchAction: 'none' }} // touchAction: none is crucial for mobile
         >
           {carouselItemsData.length > 0 ? (
             <Canvas
