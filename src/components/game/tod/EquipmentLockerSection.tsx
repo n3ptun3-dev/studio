@@ -21,9 +21,9 @@ const CLICK_DRAG_THRESHOLD_SQUARED = 10 * 10; // (10px)^2
 const CLICK_DURATION_THRESHOLD = 250; // ms
 
 // Constants for dynamic radius and camera calculations
-const MIN_RADIUS_FOR_TWO_ITEMS = 1.4; // Increased from 1.2
-const CARD_SPACING_FACTOR = 0.3;    // Increased from 0.15
-const CAMERA_DISTANCE_FROM_FRONT_CARD = 5.0; // Increased from 4.0
+const MIN_RADIUS_FOR_TWO_ITEMS = 1.4;
+const CARD_SPACING_FACTOR = 0.3;
+const CAMERA_DISTANCE_FROM_FRONT_CARD = 5.0;
 const MIN_CAMERA_Z = 3.5; // Absolute minimum camera Z to prevent clipping if radius is tiny
 
 
@@ -88,8 +88,8 @@ const CarouselItem = React.memo(function CarouselItem({ itemData, index, totalIt
 
   useFrame(({ camera }) => {
     if (meshRef.current) {
-      const lookAtTarget = new THREE.Vector3(camera.position.x, meshRef.current.position.y, camera.position.z);
-      meshRef.current.lookAt(lookAtTarget);
+      // Make the card always face the camera
+      meshRef.current.lookAt(camera.position);
     }
   });
 
@@ -221,33 +221,44 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
   const autoRotateRef = useRef(true);
   const accumulatedDeltaXRef = useRef(0);
   const pointerDownTimeRef = useRef(0);
-  const pointerDownCoords = useRef({ x: 0, y: 0 });
-  const activePointerIdRef = useRef<number | null>(null);
+  const pointerDownCoords = useRef({ x: 0, y: 0 }); // For both pointer and touch
+  const activePointerIdRef = useRef<number | null>(null); // For pointer events only
+
 
   useEffect(() => {
+    console.log("[Carousel] useEffect for listeners executing. gl.domElement:", gl?.domElement);
     const canvasElement = gl?.domElement;
-    console.log("[Carousel] useEffect for listeners executing. gl.domElement:", canvasElement);
-    if (!canvasElement) return;
+    if (!canvasElement) {
+      console.log("[Carousel] Canvas DOM element not available yet.");
+      return;
+    }
 
-    canvasElement.style.pointerEvents = 'auto';
-    console.log("[Carousel] Set canvas pointerEvents to 'auto'");
+    // Explicitly set pointer events on the canvas if it's not already 'auto'
+    if (canvasElement.style.pointerEvents !== 'auto') {
+        console.log("[Carousel] Set canvas pointerEvents to 'auto'");
+        canvasElement.style.pointerEvents = 'auto';
+    }
+
 
     const handlePointerDownInternal = (event: PointerEvent | TouchEvent) => {
       console.log("[Carousel] handlePointerDownInternal INVOKED. Event type:", event.type);
-      let clientX = 0, clientY = 0;
-      let isTouchEvent = event.type.startsWith('touch');
+      let clientX: number, clientY: number;
 
-      if (isTouchEvent) {
-        if (event.cancelable) event.preventDefault();
-        clientX = (event as TouchEvent).touches[0].clientX;
-        clientY = (event as TouchEvent).touches[0].clientY;
+      if (event.type.startsWith('touch')) {
+        const touchEvent = event as TouchEvent;
+        if (touchEvent.touches.length === 0) return;
+        if (touchEvent.cancelable) event.preventDefault();
+        clientX = touchEvent.touches[0].clientX;
+        clientY = touchEvent.touches[0].clientY;
+        // For touch, we don't manage activePointerIdRef or pointer capture in the same way
       } else {
-        if ((event as PointerEvent).button !== 0) return;
-        clientX = (event as PointerEvent).clientX;
-        clientY = (event as PointerEvent).clientY;
-        activePointerIdRef.current = (event as PointerEvent).pointerId;
+        const pointerEvent = event as PointerEvent;
+        if (pointerEvent.button !== 0) return; // Only main button
+        clientX = pointerEvent.clientX;
+        clientY = pointerEvent.clientY;
+        activePointerIdRef.current = pointerEvent.pointerId;
         try {
-          canvasElement.setPointerCapture(activePointerIdRef.current);
+          canvasElement.setPointerCapture(pointerEvent.pointerId);
         } catch (e) {
           console.warn("[Carousel] Failed to set pointer capture:", e);
         }
@@ -260,75 +271,85 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
       pointerDownTimeRef.current = performance.now();
       pointerDownCoords.current = { x: clientX, y: clientY };
       canvasElement.style.cursor = 'grabbing';
-      document.body.style.userSelect = 'none';
+      document.body.style.userSelect = 'none'; // Prevent text selection during drag
 
-      const moveEvent = isTouchEvent ? 'touchmove' : 'pointermove';
-      const upEvent = isTouchEvent ? 'touchend' : 'pointerup';
+      const moveEventName = event.type.startsWith('touch') ? 'touchmove' : 'pointermove';
+      const upEventName = event.type.startsWith('touch') ? 'touchend' : 'pointerup';
 
-      window.addEventListener(moveEvent, handlePointerMoveInternal, { passive: !isTouchEvent });
-      window.addEventListener(upEvent, handlePointerUpInternal, { passive: false });
+      // Add move and up listeners to window to capture events outside canvas
+      window.addEventListener(moveEventName, handlePointerMoveInternal, { passive: !event.type.startsWith('touch') });
+      window.addEventListener(upEventName, handlePointerUpInternal, { passive: false });
     };
 
     const handlePointerMoveInternal = (event: PointerEvent | TouchEvent) => {
       if (!isDraggingRef.current) return;
-      let currentX = 0;
-      let isTouchEvent = event.type.startsWith('touch');
+      let currentX: number;
 
-      if (isTouchEvent) {
-        if (event.cancelable) event.preventDefault();
-        currentX = (event as TouchEvent).touches[0].clientX;
+      if (event.type.startsWith('touch')) {
+        const touchEvent = event as TouchEvent;
+        if (touchEvent.touches.length === 0) return;
+         if (touchEvent.cancelable) event.preventDefault();
+        currentX = touchEvent.touches[0].clientX;
       } else {
-        if (activePointerIdRef.current !== null && (event as PointerEvent).pointerId !== activePointerIdRef.current) return;
-        currentX = (event as PointerEvent).clientX;
+        const pointerEvent = event as PointerEvent;
+        if (activePointerIdRef.current !== null && pointerEvent.pointerId !== activePointerIdRef.current) return;
+        currentX = pointerEvent.clientX;
       }
 
       const deltaX = currentX - pointerDownCoords.current.x;
-      pointerDownCoords.current.x = currentX;
-      accumulatedDeltaXRef.current += Math.abs(deltaX);
+      pointerDownCoords.current.x = currentX; // Update for next move
+      accumulatedDeltaXRef.current += Math.abs(deltaX); // Track total drag distance
 
       if (group.current) {
-        const rotationAmount = deltaX * 0.005;
+        const rotationAmount = deltaX * 0.005; // Sensitivity factor
         if (itemsData.length === 1 && group.current.children[0]) {
           (group.current.children[0] as THREE.Mesh).rotation.y += rotationAmount;
         } else if (itemsData.length > 1) {
           group.current.rotation.y += rotationAmount;
         }
-        invalidate();
+        invalidate(); // Request a re-render from R3F
       }
     };
 
     const handlePointerUpInternal = (event: PointerEvent | TouchEvent) => {
       console.log("[Carousel] handlePointerUpInternal INVOKED. Event type:", event.type);
-      if (!isDraggingRef.current && (event.type === 'pointerup' && activePointerIdRef.current === null)) return;
+      if (!isDraggingRef.current && (event.type === 'pointerup' && activePointerIdRef.current === null) && !(event.type.startsWith('touch'))) {
+          return; // Avoid processing if not dragging and it's a pointerup without an active pointer (could be other buttons)
+      }
 
       const dragDuration = performance.now() - pointerDownTimeRef.current;
-      let currentX = 0, currentY = 0;
+      let clickClientX = 0, clickClientY = 0;
 
-      if (event.type.startsWith('touch') && (event as TouchEvent).changedTouches.length > 0) {
-        currentX = (event as TouchEvent).changedTouches[0].clientX;
-        currentY = (event as TouchEvent).changedTouches[0].clientY;
-      } else if (event.type === 'pointerup') {
-        currentX = (event as PointerEvent).clientX;
-        currentY = (event as PointerEvent).clientY;
+      if (event.type.startsWith('touch')) {
+          const touchEvent = event as TouchEvent;
+          if (touchEvent.changedTouches.length > 0) {
+              clickClientX = touchEvent.changedTouches[0].clientX;
+              clickClientY = touchEvent.changedTouches[0].clientY;
+          }
+      } else {
+          const pointerEvent = event as PointerEvent;
+          clickClientX = pointerEvent.clientX;
+          clickClientY = pointerEvent.clientY;
       }
 
       canvasElement.style.cursor = 'grab';
-      document.body.style.userSelect = '';
+      document.body.style.userSelect = ''; // Re-enable text selection
 
       if (event.type === 'pointerup' && activePointerIdRef.current !== null) {
         try { canvasElement.releasePointerCapture(activePointerIdRef.current); } catch (e) { /* ignore */ }
       }
       activePointerIdRef.current = null;
 
+
       const wasSignificantDrag = accumulatedDeltaXRef.current > Math.sqrt(CLICK_DRAG_THRESHOLD_SQUARED);
       const wasQuickEnoughForClick = dragDuration < CLICK_DURATION_THRESHOLD;
 
       if (!wasSignificantDrag && wasQuickEnoughForClick) {
-        console.log("[Carousel] Click detected. Coords for raycast:", currentX, currentY);
+        console.log("[Carousel] Click detected. Coords for raycast:", clickClientX, clickClientY);
         const rect = canvasElement.getBoundingClientRect();
         const pointerVector = new THREE.Vector2(
-          ((currentX - rect.left) / rect.width) * 2 - 1,
-          -((currentY - rect.top) / rect.height) * 2 + 1
+          ((clickClientX - rect.left) / rect.width) * 2 - 1,
+          -((clickClientY - rect.top) / rect.height) * 2 + 1
         );
         raycaster.setFromCamera(pointerVector, camera);
         const intersects = raycaster.intersectObjects(group.current?.children || [], true);
@@ -337,11 +358,11 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
         if (intersects.length > 0) {
           let clickedMesh: THREE.Mesh | null = null;
           for (const intersect of intersects) {
-            let obj = intersect.object;
-            while (obj.parent && !(obj.userData?.isCarouselItem)) {
+            let obj: THREE.Object3D | null = intersect.object;
+            while (obj && !(obj.userData?.isCarouselItem)) {
               obj = obj.parent;
             }
-            if (obj.userData?.isCarouselItem && obj instanceof THREE.Mesh) {
+            if (obj?.userData?.isCarouselItem && obj instanceof THREE.Mesh) {
               clickedMesh = obj;
               break;
             }
@@ -354,45 +375,50 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
           }
         }
       } else {
-        console.log(`[Carousel] Drag detected or click too long. Acc Delta: ${accumulatedDeltaXRef.current.toFixed(0)}, Duration: ${dragDuration.toFixed(0)}ms`);
+         console.log(`[Carousel] Drag detected or click too long. Acc Delta: ${accumulatedDeltaXRef.current.toFixed(0)}, Duration: ${dragDuration.toFixed(0)}ms`);
       }
-
+      
       isDraggingRef.current = false;
       appContext.setIsScrollLockActive(false);
 
-      const moveEvent = event.type.startsWith('touch') ? 'touchmove' : 'pointermove';
-      const upEvent = event.type.startsWith('touch') ? 'touchend' : 'pointerup';
-      window.removeEventListener(moveEvent, handlePointerMoveInternal);
-      window.removeEventListener(upEvent, handlePointerUpInternal);
+      // Clean up window event listeners
+      const moveEventName = event.type.startsWith('touch') ? 'touchmove' : 'pointermove';
+      const upEventName = event.type.startsWith('touch') ? 'touchend' : 'pointerup';
+      window.removeEventListener(moveEventName, handlePointerMoveInternal);
+      window.removeEventListener(upEventName, handlePointerUpInternal);
 
+      // Delay re-enabling auto-rotate to prevent immediate spin after drag
       setTimeout(() => {
         if (!isDraggingRef.current) autoRotateRef.current = true;
       }, 300);
     };
 
+    console.log("[Carousel] Main Effect: Attaching 'pointerdown' and 'touchstart' listeners to canvas.");
     canvasElement.addEventListener('pointerdown', handlePointerDownInternal);
     canvasElement.addEventListener('touchstart', handlePointerDownInternal, { passive: false });
-    console.log("[Carousel] Main Effect: Attaching 'pointerdown' and 'touchstart' listeners to canvas.");
 
     return () => {
       console.log("[Carousel] Cleaning up event listeners from canvas.");
       canvasElement.removeEventListener('pointerdown', handlePointerDownInternal);
       canvasElement.removeEventListener('touchstart', handlePointerDownInternal);
+      // Ensure window listeners are also cleaned up if the component unmounts mid-drag
       window.removeEventListener('pointermove', handlePointerMoveInternal);
       window.removeEventListener('pointerup', handlePointerUpInternal);
       window.removeEventListener('touchmove', handlePointerMoveInternal);
       window.removeEventListener('touchend', handlePointerUpInternal);
+      
+      // Reset styles and states if unmounting mid-drag
       if (isDraggingRef.current) {
           document.body.style.userSelect = '';
           appContext.setIsScrollLockActive(false);
           if (canvasElement.style.cursor === 'grabbing') canvasElement.style.cursor = 'grab';
           if (activePointerIdRef.current !== null) {
-              try { canvasElement.releasePointerCapture(activePointerIdRef.current); } catch(e) {}
+              try { canvasElement.releasePointerCapture(activePointerIdRef.current); } catch(e) { /* ignore */ }
               activePointerIdRef.current = null;
           }
       }
     };
-  }, [gl?.domElement, itemsData.length, onItemClick, camera, raycaster, scene, invalidate, appContext.setIsScrollLockActive, appContext.isScrollLockActive]);
+  }, [gl, onItemClick, camera, raycaster, scene, invalidate, appContext.setIsScrollLockActive, itemsData.length]); // Added itemsData.length
 
 
   useFrame((state, delta) => {
@@ -444,19 +470,21 @@ const Resizer = React.memo(function Resizer() {
     };
 
     if (container) {
-        handleResize();
+        handleResize(); // Initial resize
         const resizeObserver = new ResizeObserver(handleResize);
         resizeObserver.observe(container);
         return () => {
           if (container) resizeObserver.unobserve(container);
         };
     }
-  }, [camera, gl]);
+  }, [camera, gl]); // Rerun if camera or gl instance changes
+
   return null;
 });
 Resizer.displayName = 'Resizer';
 
-const fallbackImageSrc = '/Spi vs Spi icon.png';
+
+const fallbackImageSrc = '/Spi vs Spi icon.png'; // Fallback for item images
 
 interface SectionProps {
   parallaxOffset: number;
@@ -473,11 +501,11 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
   } = appContext;
 
   const { theme: currentGlobalTheme, themeVersion } = useTheme();
-  const [pointLightColor, setPointLightColor] = useState<string | THREE.Color>('hsl(0, 0%, 100%)');
+  const [pointLightColor, setPointLightColor] = useState<THREE.ColorRepresentation>('hsl(0, 0%, 100%)');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      let hslVarName = '--accent-hsl';
+      let hslVarName = '--accent-hsl'; // Default for terminal-green or neutral
       if (currentGlobalTheme === 'cyphers' || currentGlobalTheme === 'shadows') {
         hslVarName = '--primary-hsl';
       }
@@ -489,19 +517,19 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
           const h = parseFloat(parts[1]);
           const s = parseFloat(parts[2]);
           const l = parseFloat(parts[3]);
-          const colorStringForThree = `hsl(${h}, ${s}%, ${l}%)`;
+          const colorStringForThree = `hsl(${h}, ${s}%, ${l}%)`; // Add commas
           setPointLightColor(colorStringForThree);
           console.log(`[EquipmentLocker] Set pointLightColor to: ${colorStringForThree} from var ${hslVarName}`);
         } else {
           console.warn(`[EquipmentLocker] Could not parse HSL string: '${computedHSLStringRaw}' from var ${hslVarName}. Defaulting light color.`);
-          setPointLightColor('hsl(0, 0%, 100%)');
+          setPointLightColor('hsl(0, 0%, 100%)'); // Default to white
         }
       } else {
         console.warn(`[EquipmentLocker] HSL variable ${hslVarName} not found. Defaulting light color.`);
-        setPointLightColor('hsl(0, 0%, 100%)');
+        setPointLightColor('hsl(0, 0%, 100%)'); // Default to white
       }
     }
-  }, [currentGlobalTheme, themeVersion]);
+  }, [currentGlobalTheme, themeVersion]); // Re-run when theme or its version changes
 
   const carouselItemsData = useMemo(() => {
     if (typeof playerInventory !== 'object' || playerInventory === null || typeof getItemById !== 'function') {
@@ -522,6 +550,7 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
     } else if (numItems === 2) {
       radius = MIN_RADIUS_FOR_TWO_ITEMS;
     } else if (numItems > 2) {
+      // Calculate circumference based on number of items, item width, and spacing
       const circumference = numItems * (ITEM_WIDTH + CARD_SPACING_FACTOR);
       radius = Math.max(MIN_RADIUS_FOR_TWO_ITEMS, circumference / (2 * Math.PI));
     }
@@ -588,15 +617,16 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
           id="locker-carousel-canvas-container"
           className="w-full flex-grow min-h-0 relative"
           style={{ cursor: 'grab', touchAction: 'none' }}
-        >{carouselItemsData.length > 0 ? (
+        >
+          {carouselItemsData.length > 0 ? (
             <Canvas
               id="locker-carousel-canvas"
               camera={{ position: [0, 0.5, dynamicCameraZ], fov: 60 }}
               shadows
               gl={{ antialias: true, alpha: true, preserveDrawingBuffer: false }}
-              style={{ background: 'transparent', pointerEvents: 'auto' }}
+              style={{ background: 'transparent', pointerEvents: 'auto' }} // Crucially ensure pointerEvents: 'auto'
               onCreated={({ gl: canvasGl }) => {
-                canvasGl.setClearColor(0x000000, 0);
+                canvasGl.setClearColor(0x000000, 0); // Transparent background
                 console.log("[Canvas] Created");
               }}
             >
@@ -616,7 +646,8 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
               <p className="holographic-text text-lg">Locker Empty</p>
               <p className="text-muted-foreground text-sm">Visit the Spy Shop or Check In with HQ.</p>
             </div>
-          )}</div>
+          )}
+        </div>
          <p className="text-center text-xs text-muted-foreground mt-2 flex-shrink-0 px-2">
             {carouselItemsData.length > 0 ? "Drag to rotate. Click item for details." : ""}
           </p>
@@ -624,6 +655,3 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
     </div>
   );
 }
-
-
-    

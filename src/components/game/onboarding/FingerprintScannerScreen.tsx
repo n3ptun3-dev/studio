@@ -74,7 +74,7 @@ export function FingerprintScannerScreen() {
   };
 
   const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.cancelable) {
+    if (e.cancelable) { // Check if cancelable before preventing default
       e.preventDefault();
     }
     cancelScan();
@@ -122,7 +122,7 @@ export function FingerprintScannerScreen() {
               <div
                 className="relative w-48 h-48 mx-auto rounded-full border-2 border-primary flex items-center justify-center cursor-pointer select-none touch-none"
                 onMouseDown={startScan}
-                onTouchStart={handleTouchStart}
+                onTouchStart={handleTouchStart} 
                 onMouseUp={cancelScan}
                 onTouchEnd={handleTouchEnd}
                 onMouseLeave={cancelScan}
