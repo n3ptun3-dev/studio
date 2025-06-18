@@ -66,14 +66,15 @@ export function FingerprintScannerScreen() {
   }, []);
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.cancelable) { // Only call preventDefault if the event is cancelable
+    // Only call preventDefault if the event is cancelable, to avoid console warning
+    if (e.cancelable) {
       e.preventDefault();
     }
     startScan();
   };
 
   const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.cancelable) { // Only call preventDefault if the event is cancelable
+    if (e.cancelable) {
       e.preventDefault();
     }
     cancelScan();

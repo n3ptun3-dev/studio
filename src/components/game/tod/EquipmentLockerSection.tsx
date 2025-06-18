@@ -16,7 +16,7 @@ const itemWidth = 1;
 const itemHeight = 1.8;
 const carouselRadius = 3.5;
 const rotationSpeed = 0.0035;
-const CLICK_DRAG_THRESHOLD_SQUARED = 10 * 10; // (10px)^2
+const CLICK_DRAG_THRESHOLD_SQUARED = 10 * 10;
 const CLICK_DURATION_THRESHOLD = 250; // ms
 
 const LEVEL_TO_BG_CLASS: Record<ItemLevel, string> = {
@@ -91,32 +91,34 @@ const CarouselItem = React.memo(function CarouselItem({ itemData, index, totalIt
       break;
     case 'Lock Fortifiers':
       if (itemData.type === 'Rechargeable') {
-        const currentCharges = itemData.currentCharges ?? strengthCurrent; // Fallback if specific field not present
-        const maxCharges = itemData.maxCharges ?? strengthMax;
-        detailContent = <CardProgressBar label="Recharges" current={currentCharges} max={maxCharges} colorVar={itemColorCssVar} />;
+        const currentCharges = itemData.currentCharges ?? itemData.strength?.current ?? 0;
+        const maxCharges = itemData.maxCharges ?? itemData.strength?.max ?? 0;
+        detailContent = <CardProgressBar label="Recharges Left" current={currentCharges} max={maxCharges} colorVar={itemColorCssVar} />;
       } else {
         detailContent = <p className="text-[9px] text-center font-semibold p-0.5 rounded bg-black/30 mt-auto mx-1" style={{color: itemColorCssVar}}>Single Use</p>;
       }
       break;
     case 'Nexus Upgrades':
       if (itemData.name === 'Security Camera') {
-        const currentAlerts = itemData.currentAlerts ?? itemData.level; // Example: use level if no specific currentAlerts
-        const maxAlerts = itemData.maxAlerts ?? itemData.level;
-        detailContent = <CardProgressBar label="Alerts" current={currentAlerts} max={maxAlerts} colorVar={itemColorCssVar} />;
+        const currentAlerts = itemData.currentAlerts ?? itemData.strength?.current ?? itemData.level ?? 0;
+        const maxAlerts = itemData.maxAlerts ?? itemData.strength?.max ?? itemData.level ?? 0;
+        detailContent = <CardProgressBar label="Alerts Left" current={currentAlerts} max={maxAlerts} colorVar={itemColorCssVar} />;
       } else if (itemData.name === 'Emergency Repair System (ERS)') {
-        detailContent = <CardProgressBar label="ERS Strength" current={strengthCurrent} max={strengthMax} colorVar={itemColorCssVar} />;
+        detailContent = <CardProgressBar label="Reserve Strength" current={strengthCurrent} max={strengthMax} colorVar={itemColorCssVar} />;
       } else if (itemData.name === 'Emergency Power Cell (EPC)') {
-        detailContent = <CardProgressBar label="EPC Strength" current={strengthCurrent} max={strengthMax} colorVar={itemColorCssVar} />;
+        const currentEPCStrength = itemData.currentStrength ?? itemData.strength?.current ?? 0;
+        const maxEPCStrength = itemData.maxStrength ?? itemData.strength?.max ?? itemData.level ?? 0;
+        detailContent = <CardProgressBar label="Strength" current={currentEPCStrength} max={maxEPCStrength} colorVar={itemColorCssVar} />;
       } else if (itemData.name?.includes('Reinforced Foundation')) {
-         detailContent = <p className="text-[9px] text-center font-semibold p-0.5 rounded bg-black/30 mt-auto mx-1" style={{color: itemColorCssVar}}>Permanent</p>;
+         detailContent = <p className="text-[9px] text-center font-semibold p-0.5 rounded bg-black/30 mt-auto mx-1" style={{color: itemColorCssVar}}>Permanent Upgrade</p>;
       }
       break;
     case 'Infiltration Gear':
       if (itemData.name === 'Pick' && itemData.level === 1) {
-        detailContent = <p className="text-[9px] text-center font-semibold p-0.5 rounded bg-black/30 mt-auto mx-1" style={{color: itemColorCssVar}}>Basic Tool</p>;
+        detailContent = <p className="text-[9px] text-center font-semibold p-0.5 rounded bg-black/30 mt-auto mx-1" style={{color: itemColorCssVar}}>Basic Infiltration Tool</p>;
       } else if (itemData.type === 'Rechargeable') {
-        const currentUses = itemData.currentUses ?? strengthCurrent;
-        const maxUses = itemData.maxUses ?? strengthMax;
+        const currentUses = itemData.currentUses ?? itemData.strength?.current ?? 0;
+        const maxUses = itemData.maxUses ?? itemData.strength?.max ?? 0;
         detailContent = <CardProgressBar label="Uses Left" current={currentUses} max={maxUses} colorVar={itemColorCssVar} />;
       } else if (itemData.type === 'One-Time Use' || itemData.type === 'Consumable') {
         detailContent = <p className="text-[9px] text-center font-semibold p-0.5 rounded bg-black/30 mt-auto mx-1" style={{color: itemColorCssVar}}>Single Use</p>;
@@ -124,6 +126,9 @@ const CarouselItem = React.memo(function CarouselItem({ itemData, index, totalIt
       break;
     case 'Assault Tech':
       detailContent = <p className="text-[9px] text-center font-semibold p-0.5 rounded bg-black/30 mt-auto mx-1" style={{color: itemColorCssVar}}>Single Use</p>;
+      break;
+    case 'Aesthetic Schemes':
+      detailContent = null;
       break;
     default:
       if (itemData.strength) {
@@ -154,7 +159,7 @@ const CarouselItem = React.memo(function CarouselItem({ itemData, index, totalIt
             boxShadow: `0 0 5px ${itemColorCssVar}`,
           }}
         >
-          <div className="w-full h-3/5 relative flex-shrink-0 bg-black/10">
+          <div className="w-full h-3/5 relative flex-shrink-0">
             <img
               src={actualImageSrc}
               alt={itemData.title || itemData.name}
@@ -170,7 +175,7 @@ const CarouselItem = React.memo(function CarouselItem({ itemData, index, totalIt
             />
           </div>
           <div className="w-full px-1.5 py-1 flex flex-col justify-between flex-grow min-h-0">
-            <p className="text-[10px] font-semibold text-center leading-tight mb-0.5" style={{ color: itemColorCssVar }}>
+             <p className="text-[10px] font-semibold text-center leading-tight mb-0.5" style={{ color: itemColorCssVar }}>
               {itemData.title}
             </p>
             <div className="w-full text-xs space-y-0.5 overflow-y-auto scrollbar-hide flex-grow mt-auto">
@@ -200,35 +205,31 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
   const previousPointerXRef = useRef(0);
   const pointerDownTimeRef = useRef(0);
   const pointerDownCoords = useRef({ x: 0, y: 0 });
-  const groupRotationYRef = useRef(group.current ? group.current.rotation.y : 0);
   const accumulatedDeltaXRef = useRef(0);
   const activePointerIdRef = useRef<number | null>(null);
-
+  const groupRotationYRef = useRef(0); // Keep track of group rotation for click calculations
 
   useEffect(() => {
     const canvasElement = gl?.domElement;
+    console.log("[Carousel] useEffect for listeners executing. gl.domElement:", canvasElement);
     if (!canvasElement) {
-      console.warn("[Carousel] Canvas DOM element not available for attaching listeners.");
+      console.warn("[Carousel] Main Effect: Canvas DOM element not available.");
       return;
     }
-    // Ensure canvas is interactive
-    canvasElement.style.pointerEvents = 'auto';
-    console.log("[Carousel] useEffect for listeners executing. gl.domElement:", canvasElement);
 
+    canvasElement.style.pointerEvents = 'auto'; // Crucial for ensuring events are received
 
     const handlePointerDownInternal = (event: PointerEvent | TouchEvent) => {
       console.log("[Carousel] handlePointerDownInternal INVOKED. Event type:", event.type);
-
       let clientX = 0, clientY = 0;
-      let isTouchEvent = false;
+      let isTouchEvent = event.type === 'touchstart';
 
-      if (event.type === 'touchstart') {
-        isTouchEvent = true;
-        if (event.cancelable) event.preventDefault(); // Crucial for touch
+      if (isTouchEvent) {
+        if (event.cancelable) event.preventDefault();
         clientX = (event as TouchEvent).touches[0].clientX;
         clientY = (event as TouchEvent).touches[0].clientY;
       } else {
-        if ((event as PointerEvent).button !== 0) return; // Only main button
+        if ((event as PointerEvent).button !== 0) return;
         clientX = (event as PointerEvent).clientX;
         clientY = (event as PointerEvent).clientY;
         activePointerIdRef.current = (event as PointerEvent).pointerId;
@@ -250,17 +251,16 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
       document.body.style.userSelect = 'none';
 
       window.addEventListener(isTouchEvent ? 'touchmove' : 'pointermove', handlePointerMoveInternal, { passive: !isTouchEvent });
-      window.addEventListener(isTouchEvent ? 'touchend' : 'pointerup', handlePointerUpInternal, { passive: false }); // passive: false for touchend too
+      window.addEventListener(isTouchEvent ? 'touchend' : 'pointerup', handlePointerUpInternal, { passive: false });
       console.log("[Carousel] Added move/up listeners to window for", event.type);
     };
 
     const handlePointerMoveInternal = (event: PointerEvent | TouchEvent) => {
       if (!isDraggingRef.current) return;
-      console.log("[Carousel] handlePointerMoveInternal INVOKED. Event type:", event.type);
-
+      // console.log("[Carousel] handlePointerMoveInternal INVOKED. Event type:", event.type); // Can be spammy
       let currentX = 0;
       if (event.type === 'touchmove') {
-        if (event.cancelable) event.preventDefault(); // Crucial for touch
+        if (event.cancelable) event.preventDefault();
         currentX = (event as TouchEvent).touches[0].clientX;
       } else {
         if (activePointerIdRef.current !== null && (event as PointerEvent).pointerId !== activePointerIdRef.current) return;
@@ -269,12 +269,13 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
 
       const deltaX = currentX - previousPointerXRef.current;
       if (group.current) {
-        group.current.rotation.y += deltaX * 0.005;
+        const rotationDelta = deltaX * 0.005;
+        group.current.rotation.y += rotationDelta;
+        groupRotationYRef.current += rotationDelta; // Update tracked rotation
       }
-      groupRotationYRef.current += deltaX * 0.005;
       accumulatedDeltaXRef.current += Math.abs(deltaX);
       previousPointerXRef.current = currentX;
-      invalidate(); // Request a re-render
+      invalidate();
     };
 
     const handlePointerUpInternal = (event: PointerEvent | TouchEvent) => {
@@ -304,7 +305,11 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
       }
       activePointerIdRef.current = null;
       
-      const wasSignificantDrag = accumulatedDeltaXRef.current > Math.sqrt(CLICK_DRAG_THRESHOLD_SQUARED);
+      const deltaPointerX = Math.abs(currentX - pointerDownCoords.current.x);
+      const deltaPointerY = Math.abs(currentY - pointerDownCoords.current.y);
+      const distanceSquared = deltaPointerX * deltaPointerX + deltaPointerY * deltaPointerY;
+      
+      const wasSignificantDrag = distanceSquared > CLICK_DRAG_THRESHOLD_SQUARED || accumulatedDeltaXRef.current > Math.sqrt(CLICK_DRAG_THRESHOLD_SQUARED);
       const wasQuickEnoughForClick = dragDuration < CLICK_DURATION_THRESHOLD;
 
       if (!wasSignificantDrag && wasQuickEnoughForClick) {
@@ -316,13 +321,12 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
         console.log(`[Carousel] Canvas Coords for Raycast: (${pointerVector.x.toFixed(2)}, ${pointerVector.y.toFixed(2)})`);
 
         raycaster.setFromCamera(pointerVector, camera);
-        const intersects = raycaster.intersectObjects(group.current?.children || [], true); // true for recursive
+        const intersects = raycaster.intersectObjects(group.current?.children || [], true);
         console.log(`[Carousel] Raycaster INTERSECTED count: ${intersects.length}`);
 
         if (intersects.length > 0) {
           let clickedObject: THREE.Object3D | null = intersects[0].object;
           let carouselItemMesh: THREE.Mesh | null = null;
-
           while (clickedObject) {
             if (clickedObject instanceof THREE.Mesh && clickedObject.userData?.isCarouselItem) {
               carouselItemMesh = clickedObject;
@@ -330,7 +334,6 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
             }
             clickedObject = clickedObject.parent;
           }
-
           if (carouselItemMesh && carouselItemMesh.userData.itemData) {
             console.log(`[Carousel] Clicked Item: ${carouselItemMesh.userData.itemData?.name || 'Unknown'}`);
             onItemClick(carouselItemMesh.userData.itemData, carouselItemMesh);
@@ -341,20 +344,18 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
           console.log("[Carousel] Clicked, but raycaster found no intersections with carousel items.");
         }
       } else {
-         console.log(`[Carousel] Drag detected or click too long. Dragged Amount: ${accumulatedDeltaXRef.current.toFixed(2)}, Duration: ${dragDuration.toFixed(0)}ms`);
+         console.log(`[Carousel] Drag detected or click too long. Dragged Dist Sq: ${distanceSquared.toFixed(0)}, Acc Delta: ${accumulatedDeltaXRef.current.toFixed(2)}, Duration: ${dragDuration.toFixed(0)}ms`);
       }
       
-      isDraggingRef.current = false; // Reset dragging state
+      isDraggingRef.current = false;
       appContext.setIsScrollLockActive(false);
       
-      // Remove window listeners
       window.removeEventListener('pointermove', handlePointerMoveInternal);
       window.removeEventListener('pointerup', handlePointerUpInternal);
       window.removeEventListener('touchmove', handlePointerMoveInternal);
       window.removeEventListener('touchend', handlePointerUpInternal);
       console.log("[Carousel] Removed move/up listeners from window for", event.type);
 
-      // Small delay before re-enabling auto-rotate if no new drag has started
       setTimeout(() => {
         if (!isDraggingRef.current) autoRotateRef.current = true;
       }, 500);
@@ -362,37 +363,34 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
     
     console.log("[Carousel] Attaching pointerdown and touchstart to:", canvasElement);
     canvasElement.addEventListener('pointerdown', handlePointerDownInternal);
-    canvasElement.addEventListener('touchstart', handlePointerDownInternal, { passive: false }); // passive: false to allow preventDefault
+    canvasElement.addEventListener('touchstart', handlePointerDownInternal, { passive: false });
 
     return () => {
       console.log("[Carousel] Cleaning up event listeners from canvas.");
       canvasElement.removeEventListener('pointerdown', handlePointerDownInternal);
       canvasElement.removeEventListener('touchstart', handlePointerDownInternal);
-      
-      // Ensure window listeners are also cleaned up if component unmounts mid-drag
       window.removeEventListener('pointermove', handlePointerMoveInternal);
       window.removeEventListener('pointerup', handlePointerUpInternal);
       window.removeEventListener('touchmove', handlePointerMoveInternal);
       window.removeEventListener('touchend', handlePointerUpInternal);
-
-      // Reset body styles if unmounting mid-drag
       if (isDraggingRef.current) {
           document.body.style.userSelect = '';
           appContext.setIsScrollLockActive(false);
           if (canvasElement.style.cursor === 'grabbing') canvasElement.style.cursor = 'grab';
           if (activePointerIdRef.current !== null) {
-              try { canvasElement.releasePointerCapture(activePointerIdRef.current); } catch(e) {/* ignore */}
+              try { canvasElement.releasePointerCapture(activePointerIdRef.current); } catch(e) {}
               activePointerIdRef.current = null;
           }
       }
     };
-  }, [gl, onItemClick, camera, raycaster, scene, invalidate, appContext.setIsScrollLockActive]); // appContext.setIsScrollLockActive should be stable
+  }, [gl?.domElement, onItemClick, camera, raycaster, scene, invalidate, appContext.setIsScrollLockActive]);
+
 
   useFrame((state, delta) => {
     if (group.current) {
       if (autoRotateRef.current && !isDraggingRef.current) {
-        group.current.rotation.y += rotationSpeed * delta * 60; // Adjust speed by delta
-        groupRotationYRef.current = group.current.rotation.y;
+        group.current.rotation.y += rotationSpeed * delta * 60;
+        groupRotationYRef.current = group.current.rotation.y; // Update tracked rotation
       }
     }
   });
@@ -412,7 +410,6 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
   );
 });
 EquipmentCarousel.displayName = 'EquipmentCarousel';
-
 
 const Resizer = React.memo(() => {
   const { camera, gl } = useThree();
@@ -434,7 +431,7 @@ const Resizer = React.memo(() => {
     };
 
     if (container) {
-        handleResize(); // Initial call
+        handleResize();
         const resizeObserver = new ResizeObserver(handleResize);
         resizeObserver.observe(container);
         return () => {
@@ -479,7 +476,7 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
           const h = parseFloat(parts[1]);
           const s = parseFloat(parts[2]);
           const l = parseFloat(parts[3]);
-          const colorStringForThree = `hsl(${h}, ${s}%, ${l}%)`; // Correct HSL format with commas
+          const colorStringForThree = `hsl(${h}, ${s}%, ${l}%)`;
           setPointLightColor(colorStringForThree);
           console.log(`[EquipmentLocker] Set pointLightColor to: ${colorStringForThree} from var ${hslVarName}`);
         } else {
@@ -492,7 +489,6 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
       }
     }
   }, [currentGlobalTheme, themeVersion]);
-
 
   const carouselItemsData = useMemo(() => {
     if (typeof playerInventory !== 'object' || playerInventory === null || typeof getItemById !== 'function') {
@@ -513,7 +509,7 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
     openTODWindow(
       item.title || item.name,
       <div className="font-rajdhani p-4 text-center">
-        <h3 className="text-xl font-bold mb-2" style={{color: itemColorCssVar }}>{item.title || item.name}</h3>
+        <h3 className="text-xl font-bold mb-2" style={{color: itemColorCssVar }}>{item.title || item.name} L{item.level}</h3>
         <div className="w-32 h-32 mx-auto my-2 rounded bg-black/30 flex items-center justify-center">
           <img
             src={item.imageSrc || fallbackImageSrc}
@@ -564,7 +560,7 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
         <div
           id="locker-carousel-canvas-container"
           className="w-full flex-grow min-h-0 relative"
-          style={{ cursor: 'grab', touchAction: 'none' }} // touchAction: 'none' is important for mobile
+          style={{ cursor: 'grab', touchAction: 'none' }}
         >
           {carouselItemsData.length > 0 ? (
             <Canvas
@@ -572,13 +568,12 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
               camera={{ position: [0, 0.5, carouselRadius * 2.25], fov: 60 }}
               shadows
               gl={{ antialias: true, alpha: true, preserveDrawingBuffer: false }}
-              style={{ background: 'transparent', pointerEvents: 'auto' }} // Ensure canvas itself allows pointer events
+              style={{ background: 'transparent', pointerEvents: 'auto' }} // Crucial for interaction
               onCreated={({ gl: canvasGl }) => {
                 canvasGl.setClearColor(0x000000, 0);
                 console.log("[Canvas] Created");
               }}
             >
-              {/* No stray text or comments between these direct children */}
               <ambientLight intensity={1.5} />
               <directionalLight position={[5, 5, 5]} intensity={1} castShadow shadow-mapSize-width={1024} shadow-mapSize-height={1024} />
               <pointLight position={[-5, -5, -10]} intensity={0.5} color={pointLightColor} />
@@ -601,4 +596,3 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
   );
 }
 
-```
