@@ -16,8 +16,8 @@ const itemWidth = 1;
 const itemHeight = 1.8;
 const carouselRadius = 3.5;
 const rotationSpeed = 0.0035;
-const CLICK_DRAG_THRESHOLD_SQUARED = 10 * 10; // Threshold for distinguishing click from drag
-const CLICK_DURATION_THRESHOLD = 250; // Max duration for a click
+const CLICK_DRAG_THRESHOLD_SQUARED = 10 * 10;
+const CLICK_DURATION_THRESHOLD = 250;
 
 const LEVEL_TO_BG_CLASS: Record<ItemLevel, string> = {
   1: 'bg-level-1/30',
@@ -61,7 +61,7 @@ interface CarouselItemProps {
 
 const CarouselItem = React.memo(function CarouselItem({ itemData, index, totalItems, carouselRadius }: CarouselItemProps) {
   const meshRef = useRef<THREE.Mesh>(null!);
-  const fallbackImageSrc = '/Spi vs Spi icon.png';
+  const fallbackImageSrc = '/Spi vs Spi icon.png'; // Ensure this path is correct in your public folder
   const actualImageSrc = itemData.imageSrc || fallbackImageSrc;
 
   const angle = (index / totalItems) * Math.PI * 2;
@@ -100,7 +100,7 @@ const CarouselItem = React.memo(function CarouselItem({ itemData, index, totalIt
       break;
     case 'Nexus Upgrades':
       if (itemData.name === 'Security Camera') {
-        const currentAlerts = itemData.currentAlerts ?? itemData.level; // Assuming level is maxAlerts if specific not found
+        const currentAlerts = itemData.currentAlerts ?? itemData.level;
         const maxAlerts = itemData.maxAlerts ?? itemData.level;
         detailContent = <CardProgressBar label="Alerts" current={currentAlerts} max={maxAlerts} colorVar={itemColorCssVar} />;
       } else if (itemData.name === 'Emergency Repair System (ERS)') {
@@ -189,7 +189,8 @@ interface EquipmentCarouselProps {
   onItemClick: (item: GameItemBase, mesh: THREE.Mesh) => void;
 }
 
-const EquipmentCarousel = React.memo(function EquipmentCarousel({ itemsData, onItemClick }: EquipmentCarouselProps) {
+const EquipmentCarousel = React.memo(function EquipmentCarousel(props: EquipmentCarouselProps) {
+  const { itemsData, onItemClick } = props;
   const group = useRef<THREE.Group>(null!);
   const { gl, camera, raycaster, scene, invalidate } = useThree();
   const appContext = useAppContext();
@@ -206,7 +207,15 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel({ itemsData, onI
   useEffect(() => {
     console.log("[Carousel] useEffect for listeners executing. gl.domElement:", gl?.domElement);
     const canvasElement = gl?.domElement;
-    if (!canvasElement) return;
+    if (!canvasElement) {
+      console.warn("[Carousel] Canvas DOM element not available for attaching listeners.");
+      return;
+    }
+
+    // DIRECTLY MANIPULATE CANVAS POINTER EVENTS
+    canvasElement.style.pointerEvents = 'auto';
+    console.log("[Carousel] Explicitly set canvas style.pointerEvents to 'auto'. Current:", canvasElement.style.pointerEvents);
+
 
     const handlePointerDownInternal = (event: PointerEvent | TouchEvent) => {
       console.log("[Carousel] handlePointerDownInternal INVOKED. Event type:", event.type);
@@ -214,28 +223,32 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel({ itemsData, onI
       let clientX = 0, clientY = 0;
       let isTouchEvent = false;
 
-      if ('touches' in event) {
+      if (event.type === 'touchstart') {
         isTouchEvent = true;
         if (event.cancelable) event.preventDefault();
         clientX = (event as TouchEvent).touches[0].clientX;
         clientY = (event as TouchEvent).touches[0].clientY;
       } else {
-        if ((event as PointerEvent).button !== 0) return;
+        if ((event as PointerEvent).button !== 0) return; // Only main button
         clientX = (event as PointerEvent).clientX;
         clientY = (event as PointerEvent).clientY;
         activePointerIdRef.current = (event as PointerEvent).pointerId;
-        try { canvasElement.setPointerCapture(activePointerIdRef.current); } catch (e) { console.warn("Failed to set pointer capture", e); }
+        try {
+          canvasElement.setPointerCapture(activePointerIdRef.current);
+        } catch (e) {
+          console.warn("[Carousel] Failed to set pointer capture:", e);
+        }
       }
 
       isDraggingRef.current = true;
       autoRotateRef.current = false;
-      appContext.setIsScrollLockActive(true);
+      appContext.setIsScrollLockActive(true); // Prevent main TOD scroll
       previousPointerXRef.current = clientX;
       pointerDownCoords.current = { x: clientX, y: clientY };
       accumulatedDeltaXRef.current = 0;
       pointerDownTimeRef.current = performance.now();
       canvasElement.style.cursor = 'grabbing';
-      document.body.style.userSelect = 'none'; // Prevent text selection
+      document.body.style.userSelect = 'none'; // Prevent text selection globally
 
       window.addEventListener(isTouchEvent ? 'touchmove' : 'pointermove', handlePointerMoveInternal, { passive: !isTouchEvent });
       window.addEventListener(isTouchEvent ? 'touchend' : 'pointerup', handlePointerUpInternal);
@@ -244,9 +257,10 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel({ itemsData, onI
 
     const handlePointerMoveInternal = (event: PointerEvent | TouchEvent) => {
       if (!isDraggingRef.current) return;
+      console.log("[Carousel] handlePointerMoveInternal INVOKED. Event type:", event.type);
 
       let currentX = 0;
-      if ('touches' in event) {
+      if (event.type === 'touchmove') {
         if (event.cancelable) event.preventDefault();
         currentX = (event as TouchEvent).touches[0].clientX;
       } else {
@@ -256,12 +270,12 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel({ itemsData, onI
 
       const deltaX = currentX - previousPointerXRef.current;
       if (group.current) {
-        group.current.rotation.y += deltaX * 0.005; // Directly update rotation for immediate feedback
+        group.current.rotation.y += deltaX * 0.005;
       }
-      groupRotationYRef.current += deltaX * 0.005; // Keep ref in sync
+      groupRotationYRef.current += deltaX * 0.005;
       accumulatedDeltaXRef.current += Math.abs(deltaX);
       previousPointerXRef.current = currentX;
-      invalidate(); // Request a re-render
+      invalidate();
       console.log(`[Carousel] Drag Move - DeltaX: ${deltaX.toFixed(2)}, New RotationY: ${groupRotationYRef.current.toFixed(2)}`);
     };
 
@@ -272,19 +286,23 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel({ itemsData, onI
       const dragDuration = performance.now() - pointerDownTimeRef.current;
       let currentX = 0, currentY = 0;
 
-      if ('changedTouches' in event && (event as TouchEvent).changedTouches.length > 0) {
+      if (event.type === 'touchend' && (event as TouchEvent).changedTouches.length > 0) {
         currentX = (event as TouchEvent).changedTouches[0].clientX;
         currentY = (event as TouchEvent).changedTouches[0].clientY;
-      } else if ('clientX' in event) {
+      } else if (event.type === 'pointerup') {
         currentX = (event as PointerEvent).clientX;
         currentY = (event as PointerEvent).clientY;
       }
       
       canvasElement.style.cursor = 'grab';
-      document.body.style.userSelect = ''; // Re-enable text selection
+      document.body.style.userSelect = '';
 
       if (event.type === 'pointerup' && activePointerIdRef.current !== null) {
-        try { canvasElement.releasePointerCapture(activePointerIdRef.current); } catch (e) { console.warn("Failed to release pointer capture", e); }
+        try {
+          canvasElement.releasePointerCapture(activePointerIdRef.current);
+        } catch (e) {
+          console.warn("[Carousel] Failed to release pointer capture:", e);
+        }
       }
       activePointerIdRef.current = null;
       
@@ -293,26 +311,32 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel({ itemsData, onI
 
       if (!wasSignificantDrag && wasQuickEnoughForClick) {
         const rect = canvasElement.getBoundingClientRect();
-        const clickPointer = new THREE.Vector2();
-        clickPointer.x = ((currentX - rect.left) / rect.width) * 2 - 1;
-        clickPointer.y = -((currentY - rect.top) / rect.height) * 2 + 1;
-        console.log(`[Carousel] Click detected. Canvas Coords: (${clickPointer.x.toFixed(2)}, ${clickPointer.y.toFixed(2)})`);
+        const pointerVector = new THREE.Vector2();
+        pointerVector.x = ((currentX - rect.left) / rect.width) * 2 - 1;
+        pointerVector.y = -((currentY - rect.top) / rect.height) * 2 + 1;
+        console.log(`[Carousel] Click detected. Canvas Coords: (${pointerVector.x.toFixed(2)}, ${pointerVector.y.toFixed(2)})`);
 
-        raycaster.setFromCamera(clickPointer, camera);
-        const intersects = raycaster.intersectObjects(group.current?.children || [], true); // Intersect with group's children
+        raycaster.setFromCamera(pointerVector, camera);
+        const intersects = raycaster.intersectObjects(group.current?.children || [], true);
         console.log(`[Carousel] Raycaster INTERSECTED count: ${intersects.length}`);
 
         if (intersects.length > 0) {
-          let clickedMesh = intersects[0].object as THREE.Mesh;
-          // Traverse up to find the mesh with userData.isCarouselItem
-          while (clickedMesh.parent && clickedMesh.parent !== scene && !clickedMesh.userData?.isCarouselItem) {
-            clickedMesh = clickedMesh.parent as THREE.Mesh;
+          let clickedObject: THREE.Object3D | null = intersects[0].object;
+          let carouselItemMesh: THREE.Mesh | null = null;
+
+          while (clickedObject) {
+            if (clickedObject instanceof THREE.Mesh && clickedObject.userData?.isCarouselItem) {
+              carouselItemMesh = clickedObject;
+              break;
+            }
+            clickedObject = clickedObject.parent;
           }
-          if (clickedMesh.userData?.isCarouselItem && clickedMesh.userData.itemData && clickedMesh instanceof THREE.Mesh) {
-            console.log(`[Carousel] Clicked Item: ${clickedMesh.userData.itemData?.name || 'Unknown'}`);
-            onItemClick(clickedMesh.userData.itemData, clickedMesh);
+
+          if (carouselItemMesh && carouselItemMesh.userData.itemData) {
+            console.log(`[Carousel] Clicked Item: ${carouselItemMesh.userData.itemData?.name || 'Unknown'}`);
+            onItemClick(carouselItemMesh.userData.itemData, carouselItemMesh);
           } else {
-            console.log("[Carousel] Clicked, but no valid item data found on mesh or parents.");
+            console.log("[Carousel] Clicked, but no valid item data found on intersected mesh or its parents.");
           }
         } else {
           console.log("[Carousel] Clicked, but raycaster found no intersections with carousel items.");
@@ -322,9 +346,8 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel({ itemsData, onI
       }
       
       isDraggingRef.current = false;
-      appContext.setIsScrollLockActive(false);
+      appContext.setIsScrollLockActive(false); // Re-enable main TOD scroll
       
-      // Add a delay before re-enabling auto-rotate to prevent immediate rotation after drag
       setTimeout(() => {
         if (!isDraggingRef.current) autoRotateRef.current = true;
       }, 500);
@@ -338,20 +361,19 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel({ itemsData, onI
     
     console.log("[Carousel] Attaching pointerdown and touchstart to:", canvasElement);
     canvasElement.addEventListener('pointerdown', handlePointerDownInternal);
-    canvasElement.addEventListener('touchstart', handlePointerDownInternal, { passive: false }); // Explicitly passive: false for touchstart
+    canvasElement.addEventListener('touchstart', handlePointerDownInternal, { passive: false });
 
     return () => {
       console.log("[Carousel] Cleaning up event listeners from canvas.");
       canvasElement.removeEventListener('pointerdown', handlePointerDownInternal);
       canvasElement.removeEventListener('touchstart', handlePointerDownInternal);
       
-      // Clean up window listeners if component unmounts during a drag
       window.removeEventListener('pointermove', handlePointerMoveInternal);
       window.removeEventListener('pointerup', handlePointerUpInternal);
       window.removeEventListener('touchmove', handlePointerMoveInternal);
       window.removeEventListener('touchend', handlePointerUpInternal);
 
-      if (isDraggingRef.current) { // Reset states if unmounting during drag
+      if (isDraggingRef.current) {
           document.body.style.userSelect = '';
           appContext.setIsScrollLockActive(false);
           if (canvasElement.style.cursor === 'grabbing') canvasElement.style.cursor = 'grab';
@@ -361,13 +383,13 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel({ itemsData, onI
           }
       }
     };
-  }, [gl, onItemClick, camera, raycaster, scene, invalidate, appContext.setIsScrollLockActive]); // Dependencies should be stable
+  }, [gl, onItemClick, camera, raycaster, scene, invalidate, appContext.setIsScrollLockActive]);
 
   useFrame((state, delta) => {
     if (group.current) {
       if (autoRotateRef.current && !isDraggingRef.current) {
-        group.current.rotation.y += rotationSpeed * delta * 60; // Apply rotationSpeed consistently
-        groupRotationYRef.current = group.current.rotation.y; // Keep ref in sync
+        group.current.rotation.y += rotationSpeed * delta * 60;
+        groupRotationYRef.current = group.current.rotation.y;
       }
     }
   });
@@ -454,17 +476,16 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
           const h = parseFloat(parts[1]);
           const s = parseFloat(parts[2]);
           const l = parseFloat(parts[3]);
-          // Format for Three.js Color.setStyle (which CAN parse "hsl(h, s%, l%)")
-          const colorStringForThree = `hsl(${h}, ${s}%, ${l}%)`;
+          const colorStringForThree = `hsl(${h}, ${s}%, ${l}%)`; // Correct HSL format for Three.js
           setPointLightColor(colorStringForThree);
           console.log(`[EquipmentLocker] Set pointLightColor to: ${colorStringForThree} from var ${hslVarName}`);
         } else {
           console.warn(`[EquipmentLocker] Could not parse HSL string: '${computedHSLString}' from var ${hslVarName}. Defaulting light color.`);
-          setPointLightColor('hsl(0, 0%, 100%)'); // Default to white on parse error
+          setPointLightColor('hsl(0, 0%, 100%)');
         }
       } else {
         console.warn(`[EquipmentLocker] HSL variable ${hslVarName} not found. Defaulting light color.`);
-        setPointLightColor('hsl(0, 0%, 100%)'); // Default to white if var not found
+        setPointLightColor('hsl(0, 0%, 100%)');
       }
     }
   }, [currentGlobalTheme, themeVersion]);
@@ -489,7 +510,7 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
     openTODWindow(
       item.title || item.name,
       <div className="font-rajdhani p-4 text-center">
-        <h3 className="text-xl font-bold mb-2" style={{color: itemColorCssVar }}>{item.title || item.name} L{item.level}</h3>
+        <h3 className="text-xl font-bold mb-2" style={{color: itemColorCssVar }}>{item.title || item.name}</h3>
         <div className="w-32 h-32 mx-auto my-2 rounded bg-black/30 flex items-center justify-center">
           <img
             src={item.imageSrc || fallbackImageSrc}
@@ -540,7 +561,7 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
         <div
           id="locker-carousel-canvas-container"
           className="w-full flex-grow min-h-0 relative"
-          style={{ cursor: 'grab', touchAction: 'none' }} // touchAction: none is crucial for mobile
+          style={{ cursor: 'grab', touchAction: 'none' }}
         >
           {carouselItemsData.length > 0 ? (
             <Canvas
@@ -548,7 +569,7 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
               camera={{ position: [0, 0.5, carouselRadius * 2.25], fov: 60 }}
               shadows
               gl={{ antialias: true, alpha: true, preserveDrawingBuffer: false }}
-              style={{ background: 'transparent', pointerEvents: 'auto' }}
+              style={{ background: 'transparent', pointerEvents: 'auto' }} // Explicitly set pointerEvents: 'auto'
               onCreated={({ gl: canvasGl }) => {
                 canvasGl.setClearColor(0x000000, 0);
                 console.log("[Canvas] Created");
