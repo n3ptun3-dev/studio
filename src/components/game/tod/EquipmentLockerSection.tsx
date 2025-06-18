@@ -7,7 +7,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { useAppContext, type GameItemBase, type ItemLevel, type ItemCategory } from '@/contexts/AppContext';
-import { HolographicButton, HolographicPanel } from '@/components/game/shared/HolographicPanel'; // Correct import
+import { HolographicButton, HolographicPanel } from '@/components/game/shared/HolographicPanel';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ITEM_LEVEL_COLORS_CSS_VARS } from '@/lib/constants';
@@ -20,8 +20,8 @@ interface SectionProps {
 const itemWidth = 1;
 const itemHeight = 1.8;
 const carouselRadius = 3.5;
-const rotationSpeed = 0.0035;
-const CLICK_DRAG_THRESHOLD_SQUARED = 10 * 10; // Compare squared distances to avoid Math.sqrt
+const rotationSpeed = 0.0035; // Default auto-rotation speed
+const CLICK_DRAG_THRESHOLD_SQUARED = 10 * 10; 
 const CLICK_DURATION_THRESHOLD = 250; // ms
 
 const LEVEL_TO_BG_CLASS: Record<ItemLevel, string> = {
@@ -65,7 +65,7 @@ interface CarouselItemProps {
 
 function CarouselItem({ itemData, index, totalItems, carouselRadius }: CarouselItemProps) {
   const meshRef = useRef<THREE.Mesh>(null!);
-  const fallbackImageSrc = '/Spi vs Spi icon.png'; // Ensure this is in /public
+  const fallbackImageSrc = '/Spi vs Spi icon.png';
   const actualImageSrc = itemData.imageSrc || fallbackImageSrc;
 
   const angle = (index / totalItems) * Math.PI * 2;
@@ -76,27 +76,27 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius }: CarouselI
     if (meshRef.current) {
       meshRef.current.position.set(x, 0, z);
       meshRef.current.lookAt(new THREE.Vector3(0, 0, 0));
-      meshRef.current.rotation.y += Math.PI;
+      meshRef.current.rotation.y += Math.PI; // Make front face camera
       meshRef.current.userData = { itemData, isCarouselItem: true, id: itemData.id };
     }
   }, [x, z, itemData]);
 
   const itemLevelForColor = itemData.level || 1;
-  const itemColorCssVar = ITEM_LEVEL_COLORS_CSS_VARS[itemLevelForColor as ItemLevel] || 'var(--muted-color)';
+  const itemColorCssVar = ITEM_LEVEL_COLORS_CSS_VARS[itemLevelForColor as ItemLevel] || 'var(--level-1-color)';
   const cardBgClass = LEVEL_TO_BG_CLASS[itemLevelForColor as ItemLevel] || 'bg-muted/30';
 
   let detailContent = null;
-  const strengthVal = itemData.strength?.current ?? 0;
-  const maxStrengthVal = itemData.strength?.max ?? 100;
+  const strengthCurrent = itemData.strength?.current ?? 0;
+  const strengthMax = itemData.strength?.max ?? 100;
 
   switch (itemData.category) {
     case 'Hardware':
-      detailContent = <CardProgressBar label="Strength" current={strengthVal} max={maxStrengthVal} colorVar={itemColorCssVar} />;
+      detailContent = <CardProgressBar label="Strength" current={strengthCurrent} max={strengthMax} colorVar={itemColorCssVar} />;
       break;
     case 'Lock Fortifiers':
       if (itemData.type === 'Rechargeable') {
-        const currentCharges = itemData.currentCharges ?? strengthVal;
-        const maxCharges = itemData.maxCharges ?? maxStrengthVal;
+        const currentCharges = itemData.currentCharges ?? strengthCurrent;
+        const maxCharges = itemData.maxCharges ?? strengthMax;
         detailContent = <CardProgressBar label="Recharges" current={currentCharges} max={maxCharges} colorVar={itemColorCssVar} />;
       } else {
         detailContent = <p className="text-[9px] text-center font-semibold p-0.5 rounded bg-black/30 mt-1 mx-1" style={{color: itemColorCssVar}}>Single Use</p>;
@@ -104,23 +104,23 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius }: CarouselI
       break;
     case 'Nexus Upgrades':
       if (itemData.name === 'Security Camera') {
-        const currentAlerts = itemData.currentAlerts ?? itemData.level; // Assuming level implies maxAlerts for camera if not directly available
+        const currentAlerts = itemData.currentAlerts ?? itemData.level;
         const maxAlerts = itemData.maxAlerts ?? itemData.level;
         detailContent = <CardProgressBar label="Alerts" current={currentAlerts} max={maxAlerts} colorVar={itemColorCssVar} />;
       } else if (itemData.name === 'Emergency Repair System (ERS)') {
-        detailContent = <CardProgressBar label="ERS Strength" current={strengthVal} max={maxStrengthVal} colorVar={itemColorCssVar} />;
+        detailContent = <CardProgressBar label="ERS Strength" current={strengthCurrent} max={strengthMax} colorVar={itemColorCssVar} />;
+      } else if (itemData.name === 'Emergency Power Cell (EPC)') {
+        detailContent = <CardProgressBar label="EPC Strength" current={strengthCurrent} max={strengthMax} colorVar={itemColorCssVar} />;
       } else if (itemData.name.includes('Reinforced Foundation')) {
         detailContent = <p className="text-[9px] text-center font-semibold p-0.5 rounded bg-black/30 mt-1 mx-1" style={{color: itemColorCssVar}}>Permanent</p>;
-      } else if (itemData.name.includes('Emergency Power Cell (EPC)')) {
-         detailContent = <CardProgressBar label="EPC Strength" current={strengthVal} max={maxStrengthVal} colorVar={itemColorCssVar} />;
       }
       break;
     case 'Infiltration Gear':
       if (itemData.name === 'Pick' && itemData.level === 1) {
         detailContent = <p className="text-[9px] text-center font-semibold p-0.5 rounded bg-black/30 mt-1 mx-1" style={{color: itemColorCssVar}}>Basic Tool</p>;
       } else if (itemData.type === 'Rechargeable') {
-        const currentUses = itemData.currentUses ?? strengthVal;
-        const maxUses = itemData.maxUses ?? maxStrengthVal;
+        const currentUses = itemData.currentUses ?? strengthCurrent;
+        const maxUses = itemData.maxUses ?? strengthMax;
         detailContent = <CardProgressBar label="Uses Left" current={currentUses} max={maxUses} colorVar={itemColorCssVar} />;
       } else if (itemData.type === 'One-Time Use' || itemData.type === 'Consumable') {
         detailContent = <p className="text-[9px] text-center font-semibold p-0.5 rounded bg-black/30 mt-1 mx-1" style={{color: itemColorCssVar}}>Single Use</p>;
@@ -131,25 +131,24 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius }: CarouselI
       break;
     default:
       if (itemData.strength) {
-        detailContent = <CardProgressBar label="Status" current={strengthVal} max={maxStrengthVal} colorVar={itemColorCssVar} />;
+        detailContent = <CardProgressBar label="Status" current={strengthCurrent} max={strengthMax} colorVar={itemColorCssVar} />;
       }
   }
-
   return (
     <mesh ref={meshRef} userData={{ itemData, isCarouselItem: true, id: itemData.id }}>
       <planeGeometry args={[itemWidth, itemHeight]} />
-      <meshBasicMaterial transparent opacity={0} /> {/* Plane itself is invisible */}
+      <meshBasicMaterial transparent opacity={0} />
       <Html
         center
         transform
         prepend
-        occlude="blending"
+        occlude="blending" // occlude={false} or occlude="blending" can help with depth issues if they arise
         style={{ pointerEvents: 'none', width: `${itemWidth * 100}px`, height: `${itemHeight * 100}px` }}
       >
         <div
           className={cn(
             "w-full h-full rounded-lg border-2 flex flex-col items-center justify-start overflow-hidden",
-            cardBgClass
+            cardBgClass // Background color based on level
           )}
           style={{
             borderColor: itemColorCssVar,
@@ -158,7 +157,7 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius }: CarouselI
             boxShadow: `0 0 8px ${itemColorCssVar}`,
           }}
         >
-          <div className="w-full h-3/5 relative flex-shrink-0 bg-black/10">
+          <div className="w-full h-3/5 relative flex-shrink-0"> {/* Image takes 3/5 height */}
             <img
               src={actualImageSrc}
               alt={itemData.title || itemData.name}
@@ -168,14 +167,14 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius }: CarouselI
                 const target = e.currentTarget as HTMLImageElement;
                 if (target.src !== fallbackImageSrc) {
                   target.src = fallbackImageSrc;
-                  target.onerror = null; // Prevent infinite loop if fallback also fails
+                  target.onerror = null;
                 }
               }}
             />
           </div>
-          <div className="w-full p-1.5 flex flex-col justify-between flex-grow min-h-0">
+          <div className="w-full p-1.5 flex flex-col justify-between flex-grow min-h-0"> {/* Info area takes rest */}
             <p className="text-[10px] font-semibold text-center leading-tight mb-0.5 truncate" style={{ color: itemColorCssVar }}>
-              {itemData.title || itemData.name} {/* Display title, fallback to name. Level is part of title. */}
+              {itemData.title || itemData.name}
             </p>
             <div className="w-full text-xs space-y-0.5 overflow-y-auto scrollbar-hide flex-grow">
               {detailContent}
@@ -186,7 +185,6 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius }: CarouselI
     </mesh>
   );
 }
-
 interface EquipmentCarouselProps {
   itemsData: GameItemBase[];
   onItemClick: (item: GameItemBase, mesh: THREE.Mesh) => void;
@@ -194,8 +192,8 @@ interface EquipmentCarouselProps {
 
 const EquipmentCarousel = React.memo(function EquipmentCarousel({ itemsData, onItemClick }: EquipmentCarouselProps) {
   const group = useRef<THREE.Group>(null!);
-  const { camera, gl, raycaster, invalidate, scene } = useThree();
-  const appContext = useAppContext();
+  const { gl, camera, raycaster, scene, invalidate } = useThree();
+  const { setIsScrollLockActive } = useAppContext();
 
   const isDraggingRef = useRef(false);
   const autoRotateRef = useRef(true);
@@ -205,147 +203,165 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel({ itemsData, onI
   const groupRotationYRef = useRef(group.current ? group.current.rotation.y : 0);
   const accumulatedDeltaXRef = useRef(0);
 
-  const handleDragStart = useCallback((event: PointerEvent | TouchEvent) => {
-    if (!gl?.domElement) return;
-
-    let clientX = 0, clientY = 0;
-    if ('touches' in event) {
-      if (event.cancelable) event.preventDefault();
-      clientX = (event as TouchEvent).touches[0].clientX;
-      clientY = (event as TouchEvent).touches[0].clientY;
-    } else {
-      if ((event as PointerEvent).button !== 0) return;
-      clientX = (event as PointerEvent).clientX;
-      clientY = (event as PointerEvent).clientY;
-      (gl.domElement as HTMLElement).setPointerCapture((event as PointerEvent).pointerId);
-    }
-    // console.log(`[Carousel] Drag Start - Type: ${event.type}, X: ${clientX}`);
-
-    isDraggingRef.current = true;
-    autoRotateRef.current = false;
-    appContext.setIsScrollLockActive(true);
-    previousPointerXRef.current = clientX;
-    pointerDownCoords.current = { x: clientX, y: clientY };
-    accumulatedDeltaXRef.current = 0;
-    pointerDownTimeRef.current = performance.now();
-    gl.domElement.style.cursor = 'grabbing';
-    document.body.style.userSelect = 'none';
-
-    if ('touches' in event) {
-      window.addEventListener('touchmove', handleDragMove, { passive: false });
-      window.addEventListener('touchend', handleDragEnd, { passive: false });
-    } else {
-      window.addEventListener('pointermove', handleDragMove);
-      window.addEventListener('pointerup', handleDragEnd);
-    }
-  }, [gl, appContext, invalidate]); // Removed handleDragMove, handleDragEnd from deps as they are defined below and don't change
-
-  const handleDragMove = useCallback((event: PointerEvent | TouchEvent) => {
-    if (!isDraggingRef.current) return;
-    if (event.cancelable && event.type.startsWith('touch')) event.preventDefault();
-
-    let currentX = 0;
-    if ('touches' in event) {
-      currentX = (event as TouchEvent).touches[0].clientX;
-    } else {
-      currentX = (event as PointerEvent).clientX;
-    }
-
-    const deltaX = currentX - previousPointerXRef.current;
-    groupRotationYRef.current += deltaX * 0.005; // Rotation sensitivity
-    accumulatedDeltaXRef.current += Math.abs(deltaX);
-    previousPointerXRef.current = currentX;
-    // console.log(`[Carousel] Drag Move - DeltaX: ${deltaX}, New RotationY: ${groupRotationYRef.current.toFixed(2)}`);
-    invalidate();
-  }, [invalidate]);
-
-  const handleDragEnd = useCallback((event: PointerEvent | TouchEvent) => {
-    const dragDuration = performance.now() - pointerDownTimeRef.current;
-    let currentX = 0, currentY = 0;
-
-    if ('changedTouches' in event && (event as TouchEvent).changedTouches.length > 0) {
-      currentX = (event as TouchEvent).changedTouches[0].clientX;
-      currentY = (event as TouchEvent).changedTouches[0].clientY;
-    } else if ('clientX' in event) {
-      currentX = (event as PointerEvent).clientX;
-      currentY = (event as PointerEvent).clientY;
-    }
-    
-    const dragDistanceSquared = Math.pow(currentX - pointerDownCoords.current.x, 2) + Math.pow(currentY - pointerDownCoords.current.y, 2);
-    // console.log(`[Carousel] Drag End - AccumulatedX: ${accumulatedDeltaXRef.current}, DragDistSq: ${dragDistanceSquared.toFixed(0)}, Duration: ${dragDuration.toFixed(0)}`);
-
-    if (gl?.domElement) {
-      gl.domElement.style.cursor = 'grab';
-    }
-    document.body.style.userSelect = '';
-
-    if ('pointerId' in event && (event.target as HTMLElement).releasePointerCapture) {
-      (event.target as HTMLElement).releasePointerCapture((event as PointerEvent).pointerId);
-    }
-
-    const wasDragging = isDraggingRef.current;
-    isDraggingRef.current = false;
-    appContext.setIsScrollLockActive(false);
-
-    if (wasDragging && dragDistanceSquared < CLICK_DRAG_THRESHOLD_SQUARED && dragDuration < CLICK_DURATION_THRESHOLD) {
-      const rect = gl.domElement.getBoundingClientRect();
-      const clickPointer = new THREE.Vector2();
-      clickPointer.x = ((currentX - rect.left) / rect.width) * 2 - 1;
-      clickPointer.y = -((currentY - rect.top) / rect.height) * 2 + 1;
-      // console.log(`[Carousel] Click detected. Coords: (${clickPointer.x.toFixed(2)}, ${clickPointer.y.toFixed(2)})`);
-
-      raycaster.setFromCamera(clickPointer, camera);
-      const intersects = raycaster.intersectObjects(group.current.children, true);
-      // console.log(`[Carousel] Raycaster INTERSECTED count: ${intersects.length}`);
-
-      if (intersects.length > 0) {
-        let clickedMesh = intersects[0].object as THREE.Mesh; // Type assertion
-        while (clickedMesh.parent && clickedMesh.parent !== scene && !clickedMesh.userData?.isCarouselItem) {
-          clickedMesh = clickedMesh.parent as THREE.Mesh;
-        }
-
-        if (clickedMesh.userData?.isCarouselItem && clickedMesh.userData.itemData && clickedMesh instanceof THREE.Mesh) {
-          // console.log(`[Carousel] Raycaster INTERSECTED: ${clickedMesh.userData.itemData?.name || 'Unknown'}`);
-          onItemClick(clickedMesh.userData.itemData, clickedMesh);
-        }
-      }
-    }
-
-    setTimeout(() => {
-      if (!isDraggingRef.current) {
-        autoRotateRef.current = true;
-      }
-    }, 500);
-
-    window.removeEventListener('pointermove', handleDragMove);
-    window.removeEventListener('pointerup', handleDragEnd);
-    window.removeEventListener('touchmove', handleDragMove);
-    window.removeEventListener('touchend', handleDragEnd);
-  }, [gl, appContext, camera, raycaster, onItemClick, scene, invalidate]); // Include invalidate here
-
   useEffect(() => {
+    console.log("[Carousel] useEffect for listeners RUNNING. gl available:", !!gl?.domElement);
     const domElement = gl?.domElement;
-    if (!domElement) return;
+    if (!domElement) {
+      console.log("[Carousel] Canvas DOM element not available for listeners.");
+      return;
+    }
 
-    // console.log("[Carousel] Attaching event listeners to canvas.");
-    domElement.addEventListener('pointerdown', handleDragStart);
-    domElement.addEventListener('touchstart', handleDragStart, { passive: false });
+    const handlePointerDownInternal = (event: PointerEvent | TouchEvent) => {
+      let clientX = 0, clientY = 0;
+      let pointerId: number | undefined = undefined;
+
+      if ('touches' in event) {
+        if (event.cancelable) event.preventDefault();
+        clientX = (event as TouchEvent).touches[0].clientX;
+        clientY = (event as TouchEvent).touches[0].clientY;
+      } else {
+        if ((event as PointerEvent).button !== 0) return;
+        clientX = (event as PointerEvent).clientX;
+        clientY = (event as PointerEvent).clientY;
+        pointerId = (event as PointerEvent).pointerId;
+        (domElement as HTMLElement).setPointerCapture(pointerId);
+      }
+      console.log(`[Carousel] Drag Start - Type: ${event.type}, X: ${clientX}, Y: ${clientY}`);
+
+      isDraggingRef.current = true;
+      autoRotateRef.current = false;
+      setIsScrollLockActive(true);
+      previousPointerXRef.current = clientX;
+      pointerDownCoords.current = { x: clientX, y: clientY };
+      accumulatedDeltaXRef.current = 0;
+      pointerDownTimeRef.current = performance.now();
+      domElement.style.cursor = 'grabbing';
+      document.body.style.userSelect = 'none';
+
+      if ('touches' in event) {
+        window.addEventListener('touchmove', handlePointerMoveInternal, { passive: false });
+        window.addEventListener('touchend', handlePointerUpInternal, { passive: false });
+      } else {
+        window.addEventListener('pointermove', handlePointerMoveInternal);
+        window.addEventListener('pointerup', handlePointerUpInternal);
+      }
+    };
+
+    const handlePointerMoveInternal = (event: PointerEvent | TouchEvent) => {
+      if (!isDraggingRef.current) return;
+      if (event.cancelable && event.type.startsWith('touch')) event.preventDefault();
+
+      let currentX = 0;
+      if ('touches' in event) {
+        currentX = (event as TouchEvent).touches[0].clientX;
+      } else {
+        currentX = (event as PointerEvent).clientX;
+      }
+
+      const deltaX = currentX - previousPointerXRef.current;
+      groupRotationYRef.current += deltaX * 0.005;
+      accumulatedDeltaXRef.current += Math.abs(deltaX);
+      previousPointerXRef.current = currentX;
+      console.log(`[Carousel] Drag Move - DeltaX: ${deltaX.toFixed(2)}, New RotationY: ${groupRotationYRef.current.toFixed(2)}`);
+      invalidate(); // Request a re-render
+    };
+
+    const handlePointerUpInternal = (event: PointerEvent | TouchEvent) => {
+      const dragDuration = performance.now() - pointerDownTimeRef.current;
+      let currentX = 0, currentY = 0;
+      let pointerId: number | undefined = undefined;
+
+      if ('changedTouches' in event && (event as TouchEvent).changedTouches.length > 0) {
+        currentX = (event as TouchEvent).changedTouches[0].clientX;
+        currentY = (event as TouchEvent).changedTouches[0].clientY;
+      } else if ('clientX' in event) { // PointerEvent
+        currentX = (event as PointerEvent).clientX;
+        currentY = (event as PointerEvent).clientY;
+        pointerId = (event as PointerEvent).pointerId;
+      }
+      console.log(`[Carousel] Drag End - AccumulatedX: ${accumulatedDeltaXRef.current.toFixed(0)}, Duration: ${dragDuration.toFixed(0)}`);
+      
+      domElement.style.cursor = 'grab';
+      document.body.style.userSelect = '';
+
+      if (pointerId !== undefined && (domElement as HTMLElement).releasePointerCapture) {
+        (domElement as HTMLElement).releasePointerCapture(pointerId);
+      }
+      
+      const wasDragging = isDraggingRef.current; // Store before resetting
+      isDraggingRef.current = false; // Reset drag state *before* potential click logic
+      setIsScrollLockActive(false);
+
+
+      const dragDistanceSquared = Math.pow(currentX - pointerDownCoords.current.x, 2) + Math.pow(currentY - pointerDownCoords.current.y, 2);
+
+      if (wasDragging && dragDistanceSquared < CLICK_DRAG_THRESHOLD_SQUARED && dragDuration < CLICK_DURATION_THRESHOLD) {
+        const rect = domElement.getBoundingClientRect();
+        const clickPointer = new THREE.Vector2();
+        clickPointer.x = ((currentX - rect.left) / rect.width) * 2 - 1;
+        clickPointer.y = -((currentY - rect.top) / rect.height) * 2 + 1;
+        console.log(`[Carousel] Click detected. Canvas Coords: (${clickPointer.x.toFixed(2)}, ${clickPointer.y.toFixed(2)})`);
+
+        raycaster.setFromCamera(clickPointer, camera);
+        const intersects = raycaster.intersectObjects(group.current?.children || [], true);
+        console.log(`[Carousel] Raycaster INTERSECTED count: ${intersects.length}`);
+
+        if (intersects.length > 0) {
+          let clickedMesh = intersects[0].object as THREE.Mesh;
+          while (clickedMesh.parent && clickedMesh.parent !== scene && !clickedMesh.userData?.isCarouselItem) {
+            clickedMesh = clickedMesh.parent as THREE.Mesh;
+          }
+
+          if (clickedMesh.userData?.isCarouselItem && clickedMesh.userData.itemData && clickedMesh instanceof THREE.Mesh) {
+            console.log(`[Carousel] Clicked Item: ${clickedMesh.userData.itemData?.name || 'Unknown'}`);
+            onItemClick(clickedMesh.userData.itemData, clickedMesh);
+          } else {
+            console.log("[Carousel] Clicked, but no valid item data found on mesh or parents.");
+          }
+        } else {
+            console.log("[Carousel] Clicked, but raycaster found no intersections with carousel items.");
+        }
+      }
+
+      setTimeout(() => {
+        if (!isDraggingRef.current) { // Check again in case another drag started
+          autoRotateRef.current = true;
+        }
+      }, 500); // Delay before resuming auto-rotate
+
+      window.removeEventListener('pointermove', handlePointerMoveInternal);
+      window.removeEventListener('pointerup', handlePointerUpInternal);
+      window.removeEventListener('touchmove', handlePointerMoveInternal);
+      window.removeEventListener('touchend', handlePointerUpInternal);
+    };
+
+    console.log("[Carousel] Attaching event listeners to canvas.");
+    domElement.addEventListener('pointerdown', handlePointerDownInternal);
+    domElement.addEventListener('touchstart', handlePointerDownInternal, { passive: false });
 
     return () => {
-      // console.log("[Carousel] Cleaning up event listeners from canvas.");
-      domElement.removeEventListener('pointerdown', handleDragStart);
-      domElement.removeEventListener('touchstart', handleDragStart);
-      window.removeEventListener('pointermove', handleDragMove);
-      window.removeEventListener('pointerup', handleDragEnd);
-      window.removeEventListener('touchmove', handleDragMove);
-      window.removeEventListener('touchend', handleDragEnd);
+      console.log("[Carousel] Cleaning up DIRECT canvas event listeners.");
+      domElement.removeEventListener('pointerdown', handlePointerDownInternal);
+      domElement.removeEventListener('touchstart', handlePointerDownInternal);
+      // Ensure window listeners are also cleaned, especially if component unmounts mid-drag
+      window.removeEventListener('pointermove', handlePointerMoveInternal);
+      window.removeEventListener('pointerup', handlePointerUpInternal);
+      window.removeEventListener('touchmove', handlePointerMoveInternal);
+      window.removeEventListener('touchend', handlePointerUpInternal);
+
+      if (isDraggingRef.current) { // Cleanup if unmounting during a drag
+          document.body.style.userSelect = '';
+          setIsScrollLockActive(false);
+          if (domElement.style.cursor === 'grabbing') domElement.style.cursor = 'grab';
+      }
     };
-  }, [gl, handleDragStart, handleDragMove, handleDragEnd]);
+  }, [gl, onItemClick, camera, raycaster, scene, invalidate, setIsScrollLockActive]);
+
 
   useFrame((state, delta) => {
     if (group.current) {
       if (autoRotateRef.current && !isDraggingRef.current) {
-        groupRotationYRef.current += rotationSpeed * delta * 60;
+        groupRotationYRef.current += rotationSpeed * delta * 60; // Scale by delta for frame-rate independence
       }
       group.current.rotation.y = groupRotationYRef.current;
     }
@@ -367,7 +383,6 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel({ itemsData, onI
 });
 EquipmentCarousel.displayName = 'EquipmentCarousel';
 
-
 const Resizer = React.memo(() => {
   const { camera, gl } = useThree();
   const container = useMemo(() => typeof document !== 'undefined' ? document.getElementById('locker-carousel-canvas-container') : null, []);
@@ -388,21 +403,21 @@ const Resizer = React.memo(() => {
     };
 
     if (container) {
-        handleResize();
+        handleResize(); // Initial size set
         const resizeObserver = new ResizeObserver(handleResize);
         resizeObserver.observe(container);
         return () => {
-          if (container) resizeObserver.unobserve(container);
+          if (container) resizeObserver.unobserve(container); // Check container exists on cleanup
         };
     }
-  }, [camera, gl, container]);
+  }, [camera, gl, container]); // Only re-run if these stable refs/objects change
   return null;
 });
 Resizer.displayName = 'Resizer';
 
+const fallbackImageSrc = '/Spi vs Spi icon.png'; // Define globally or pass as prop if needed
 
 export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
-  // console.log("[EquipmentLockerSection] RENDER");
   const appContext = useAppContext();
   const {
     openTODWindow,
@@ -426,10 +441,9 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
   }, [playerInventory, getItemById]);
 
   const handleItemClick3D = useCallback((item: GameItemBase, mesh: THREE.Mesh) => {
-    // console.log(`[EquipmentLockerSection] handleItemClick3D triggered for item: ${item.name}`);
+    console.log(`[EquipmentLockerSection] handleItemClick3D triggered for item: ${item.name}`);
     const itemLevelForColor = item.level || 1;
-    const itemColorCssVar = ITEM_LEVEL_COLORS_CSS_VARS[itemLevelForColor as ItemLevel] || 'var(--muted-color)';
-    const fallbackImageSrc = '/Spi vs Spi icon.png';
+    const itemColorCssVar = ITEM_LEVEL_COLORS_CSS_VARS[itemLevelForColor as ItemLevel] || 'var(--level-1-color)';
 
     openTODWindow(
       item.title || item.name,
@@ -440,7 +454,7 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
             src={item.imageSrc || fallbackImageSrc}
             alt={item.title || item.name}
             className="max-w-full max-h-full object-contain"
-            data-ai-hint={item.dataAiHint || "item icon"} // Corrected: use item.dataAiHint
+            data-ai-hint={item.dataAiHint || "item icon"}
             onError={(e) => {
               const target = e.currentTarget as HTMLImageElement;
               if (target.src !== fallbackImageSrc) {
@@ -464,7 +478,6 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
     );
   }, [openTODWindow, closeTODWindow, currentGlobalTheme, themeVersion]);
 
-
   return (
     <div className="flex flex-col items-center justify-center p-4 md:p-6 h-full max-w-4xl mx-auto">
       <HolographicPanel
@@ -486,18 +499,18 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
         <div
           id="locker-carousel-canvas-container"
           className="w-full flex-grow min-h-0 relative"
-          style={{ cursor: 'grab', touchAction: 'none' }} // Added touchAction: 'none'
+          style={{ cursor: 'grab', touchAction: 'none' }}
         >
           {carouselItemsData.length > 0 ? (
             <Canvas
               id="locker-carousel-canvas"
               camera={{ position: [0, 0.5, carouselRadius * 2.25], fov: 60 }}
               shadows
-              gl={{ antialias: true, alpha: true, preserveDrawingBuffer: false }} // preserveDrawingBuffer false by default, good
+              gl={{ antialias: true, alpha: true, preserveDrawingBuffer: false }}
               style={{ background: 'transparent' }}
-              onCreated={({ gl }) => {
-                gl.setClearColor(0x000000, 0);
-                // console.log("[Canvas] Created");
+              onCreated={({ gl: canvasGl }) => { // Renamed gl to canvasGl to avoid conflict
+                canvasGl.setClearColor(0x000000, 0);
+                console.log("[Canvas] Created");
               }}
             >
               <ambientLight intensity={1.5} />
