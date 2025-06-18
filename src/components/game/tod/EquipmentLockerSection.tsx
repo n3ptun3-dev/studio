@@ -13,15 +13,11 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { ITEM_LEVEL_COLORS_CSS_VARS } from '@/lib/constants';
 import { ShoppingCart } from 'lucide-react';
 
-interface SectionProps {
-  parallaxOffset: number;
-}
-
 const itemWidth = 1;
 const itemHeight = 1.8;
 const carouselRadius = 3.5;
-const rotationSpeed = 0.0035; // Default auto-rotation speed
-const CLICK_DRAG_THRESHOLD_SQUARED = 10 * 10; 
+const rotationSpeed = 0.0035;
+const CLICK_DRAG_THRESHOLD_SQUARED = 10 * 10; // Pixels squared
 const CLICK_DURATION_THRESHOLD = 250; // ms
 
 const LEVEL_TO_BG_CLASS: Record<ItemLevel, string> = {
@@ -76,7 +72,7 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius }: CarouselI
     if (meshRef.current) {
       meshRef.current.position.set(x, 0, z);
       meshRef.current.lookAt(new THREE.Vector3(0, 0, 0));
-      meshRef.current.rotation.y += Math.PI; // Make front face camera
+      meshRef.current.rotation.y += Math.PI;
       meshRef.current.userData = { itemData, isCarouselItem: true, id: itemData.id };
     }
   }, [x, z, itemData]);
@@ -104,7 +100,7 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius }: CarouselI
       break;
     case 'Nexus Upgrades':
       if (itemData.name === 'Security Camera') {
-        const currentAlerts = itemData.currentAlerts ?? itemData.level;
+        const currentAlerts = itemData.currentAlerts ?? itemData.level; // Assuming level as placeholder for alerts
         const maxAlerts = itemData.maxAlerts ?? itemData.level;
         detailContent = <CardProgressBar label="Alerts" current={currentAlerts} max={maxAlerts} colorVar={itemColorCssVar} />;
       } else if (itemData.name === 'Emergency Repair System (ERS)') {
@@ -134,21 +130,22 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius }: CarouselI
         detailContent = <CardProgressBar label="Status" current={strengthCurrent} max={strengthMax} colorVar={itemColorCssVar} />;
       }
   }
+
   return (
     <mesh ref={meshRef} userData={{ itemData, isCarouselItem: true, id: itemData.id }}>
       <planeGeometry args={[itemWidth, itemHeight]} />
-      <meshBasicMaterial transparent opacity={0} />
+      <meshBasicMaterial transparent opacity={0} /> {/* Plane is invisible */}
       <Html
         center
         transform
         prepend
-        occlude="blending" // occlude={false} or occlude="blending" can help with depth issues if they arise
+        occlude="blending"
         style={{ pointerEvents: 'none', width: `${itemWidth * 100}px`, height: `${itemHeight * 100}px` }}
       >
         <div
           className={cn(
             "w-full h-full rounded-lg border-2 flex flex-col items-center justify-start overflow-hidden",
-            cardBgClass // Background color based on level
+            cardBgClass
           )}
           style={{
             borderColor: itemColorCssVar,
@@ -157,7 +154,7 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius }: CarouselI
             boxShadow: `0 0 8px ${itemColorCssVar}`,
           }}
         >
-          <div className="w-full h-3/5 relative flex-shrink-0"> {/* Image takes 3/5 height */}
+          <div className="w-full h-3/5 relative flex-shrink-0 bg-black/20">
             <img
               src={actualImageSrc}
               alt={itemData.title || itemData.name}
@@ -172,9 +169,9 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius }: CarouselI
               }}
             />
           </div>
-          <div className="w-full p-1.5 flex flex-col justify-between flex-grow min-h-0"> {/* Info area takes rest */}
+          <div className="w-full p-1.5 flex flex-col justify-between flex-grow min-h-0">
             <p className="text-[10px] font-semibold text-center leading-tight mb-0.5 truncate" style={{ color: itemColorCssVar }}>
-              {itemData.title || itemData.name}
+              {itemData.title || itemData.name} {/* Title already includes level */}
             </p>
             <div className="w-full text-xs space-y-0.5 overflow-y-auto scrollbar-hide flex-grow">
               {detailContent}
@@ -185,6 +182,7 @@ function CarouselItem({ itemData, index, totalItems, carouselRadius }: CarouselI
     </mesh>
   );
 }
+
 interface EquipmentCarouselProps {
   itemsData: GameItemBase[];
   onItemClick: (item: GameItemBase, mesh: THREE.Mesh) => void;
@@ -193,7 +191,8 @@ interface EquipmentCarouselProps {
 const EquipmentCarousel = React.memo(function EquipmentCarousel({ itemsData, onItemClick }: EquipmentCarouselProps) {
   const group = useRef<THREE.Group>(null!);
   const { gl, camera, raycaster, scene, invalidate } = useThree();
-  const { setIsScrollLockActive } = useAppContext();
+  const appContext = useAppContext();
+  const { setIsScrollLockActive } = appContext;
 
   const isDraggingRef = useRef(false);
   const autoRotateRef = useRef(true);
@@ -202,52 +201,15 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel({ itemsData, onI
   const pointerDownCoords = useRef({ x: 0, y: 0 });
   const groupRotationYRef = useRef(group.current ? group.current.rotation.y : 0);
   const accumulatedDeltaXRef = useRef(0);
+  const activePointerIdRef = useRef<number | null>(null);
+
+
+  const handlePointerMoveRef = useRef<(event: PointerEvent | TouchEvent) => void>(() => {});
+  const handlePointerUpRef = useRef<(event: PointerEvent | TouchEvent) => void>(() => {});
+
 
   useEffect(() => {
-    console.log("[Carousel] useEffect for listeners RUNNING. gl available:", !!gl?.domElement);
-    const domElement = gl?.domElement;
-    if (!domElement) {
-      console.log("[Carousel] Canvas DOM element not available for listeners.");
-      return;
-    }
-
-    const handlePointerDownInternal = (event: PointerEvent | TouchEvent) => {
-      let clientX = 0, clientY = 0;
-      let pointerId: number | undefined = undefined;
-
-      if ('touches' in event) {
-        if (event.cancelable) event.preventDefault();
-        clientX = (event as TouchEvent).touches[0].clientX;
-        clientY = (event as TouchEvent).touches[0].clientY;
-      } else {
-        if ((event as PointerEvent).button !== 0) return;
-        clientX = (event as PointerEvent).clientX;
-        clientY = (event as PointerEvent).clientY;
-        pointerId = (event as PointerEvent).pointerId;
-        (domElement as HTMLElement).setPointerCapture(pointerId);
-      }
-      console.log(`[Carousel] Drag Start - Type: ${event.type}, X: ${clientX}, Y: ${clientY}`);
-
-      isDraggingRef.current = true;
-      autoRotateRef.current = false;
-      setIsScrollLockActive(true);
-      previousPointerXRef.current = clientX;
-      pointerDownCoords.current = { x: clientX, y: clientY };
-      accumulatedDeltaXRef.current = 0;
-      pointerDownTimeRef.current = performance.now();
-      domElement.style.cursor = 'grabbing';
-      document.body.style.userSelect = 'none';
-
-      if ('touches' in event) {
-        window.addEventListener('touchmove', handlePointerMoveInternal, { passive: false });
-        window.addEventListener('touchend', handlePointerUpInternal, { passive: false });
-      } else {
-        window.addEventListener('pointermove', handlePointerMoveInternal);
-        window.addEventListener('pointerup', handlePointerUpInternal);
-      }
-    };
-
-    const handlePointerMoveInternal = (event: PointerEvent | TouchEvent) => {
+    handlePointerMoveRef.current = (event: PointerEvent | TouchEvent) => {
       if (!isDraggingRef.current) return;
       if (event.cancelable && event.type.startsWith('touch')) event.preventDefault();
 
@@ -255,6 +217,7 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel({ itemsData, onI
       if ('touches' in event) {
         currentX = (event as TouchEvent).touches[0].clientX;
       } else {
+        if (activePointerIdRef.current !== null && (event as PointerEvent).pointerId !== activePointerIdRef.current) return;
         currentX = (event as PointerEvent).clientX;
       }
 
@@ -263,40 +226,51 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel({ itemsData, onI
       accumulatedDeltaXRef.current += Math.abs(deltaX);
       previousPointerXRef.current = currentX;
       console.log(`[Carousel] Drag Move - DeltaX: ${deltaX.toFixed(2)}, New RotationY: ${groupRotationYRef.current.toFixed(2)}`);
-      invalidate(); // Request a re-render
+      invalidate();
     };
 
-    const handlePointerUpInternal = (event: PointerEvent | TouchEvent) => {
+    handlePointerUpRef.current = (event: PointerEvent | TouchEvent) => {
+      console.log("[Carousel] Pointer Up Fired. Event type:", event.type);
+      if (!isDraggingRef.current && (event.type === 'pointerup' && activePointerIdRef.current === null)) {
+        // This case can happen if pointerup fires without a corresponding pointerdown on this element (e.g. captured elsewhere)
+        // or if it's a touchend not related to our drag.
+        return;
+      }
+      if (event.type === 'pointerup' && activePointerIdRef.current !== null && (event as PointerEvent).pointerId !== activePointerIdRef.current) {
+        // If this pointerup is for a different pointer than the one that started the drag, ignore it.
+        return;
+      }
+
+
       const dragDuration = performance.now() - pointerDownTimeRef.current;
       let currentX = 0, currentY = 0;
-      let pointerId: number | undefined = undefined;
 
       if ('changedTouches' in event && (event as TouchEvent).changedTouches.length > 0) {
         currentX = (event as TouchEvent).changedTouches[0].clientX;
         currentY = (event as TouchEvent).changedTouches[0].clientY;
-      } else if ('clientX' in event) { // PointerEvent
+      } else if ('clientX' in event) {
         currentX = (event as PointerEvent).clientX;
         currentY = (event as PointerEvent).clientY;
-        pointerId = (event as PointerEvent).pointerId;
       }
       console.log(`[Carousel] Drag End - AccumulatedX: ${accumulatedDeltaXRef.current.toFixed(0)}, Duration: ${dragDuration.toFixed(0)}`);
       
-      domElement.style.cursor = 'grab';
+      if (gl?.domElement) gl.domElement.style.cursor = 'grab';
       document.body.style.userSelect = '';
 
-      if (pointerId !== undefined && (domElement as HTMLElement).releasePointerCapture) {
-        (domElement as HTMLElement).releasePointerCapture(pointerId);
+      if (event.type === 'pointerup' && activePointerIdRef.current !== null) {
+        gl?.domElement?.releasePointerCapture(activePointerIdRef.current);
       }
-      
-      const wasDragging = isDraggingRef.current; // Store before resetting
-      isDraggingRef.current = false; // Reset drag state *before* potential click logic
-      setIsScrollLockActive(false);
+      activePointerIdRef.current = null;
 
+
+      const wasDragging = isDraggingRef.current;
+      isDraggingRef.current = false;
+      setIsScrollLockActive(false);
 
       const dragDistanceSquared = Math.pow(currentX - pointerDownCoords.current.x, 2) + Math.pow(currentY - pointerDownCoords.current.y, 2);
 
       if (wasDragging && dragDistanceSquared < CLICK_DRAG_THRESHOLD_SQUARED && dragDuration < CLICK_DURATION_THRESHOLD) {
-        const rect = domElement.getBoundingClientRect();
+        const rect = gl.domElement.getBoundingClientRect();
         const clickPointer = new THREE.Vector2();
         clickPointer.x = ((currentX - rect.left) / rect.width) * 2 - 1;
         clickPointer.y = -((currentY - rect.top) / rect.height) * 2 + 1;
@@ -319,49 +293,100 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel({ itemsData, onI
             console.log("[Carousel] Clicked, but no valid item data found on mesh or parents.");
           }
         } else {
-            console.log("[Carousel] Clicked, but raycaster found no intersections with carousel items.");
+          console.log("[Carousel] Clicked, but raycaster found no intersections with carousel items.");
         }
       }
 
       setTimeout(() => {
-        if (!isDraggingRef.current) { // Check again in case another drag started
+        if (!isDraggingRef.current) {
           autoRotateRef.current = true;
         }
-      }, 500); // Delay before resuming auto-rotate
+      }, 500);
 
-      window.removeEventListener('pointermove', handlePointerMoveInternal);
-      window.removeEventListener('pointerup', handlePointerUpInternal);
-      window.removeEventListener('touchmove', handlePointerMoveInternal);
-      window.removeEventListener('touchend', handlePointerUpInternal);
+      window.removeEventListener('pointermove', handlePointerMoveRef.current);
+      window.removeEventListener('pointerup', handlePointerUpRef.current);
+      window.removeEventListener('touchmove', handlePointerMoveRef.current, { passive: false } as AddEventListenerOptions);
+      window.removeEventListener('touchend', handlePointerUpRef.current, { passive: false } as AddEventListenerOptions);
     };
+  }, [gl, setIsScrollLockActive, camera, raycaster, scene, onItemClick, invalidate]);
 
-    console.log("[Carousel] Attaching event listeners to canvas.");
+
+  useEffect(() => {
+    const domElement = gl?.domElement;
+    console.log("[Carousel] Main Effect: Attempting to attach event listeners. Canvas DOM element:", domElement);
+    if (!domElement) {
+        console.log("[Carousel] Main Effect: Canvas DOM element not available for listeners.");
+        return;
+    }
+
+    const handlePointerDownInternal = (event: PointerEvent | TouchEvent) => {
+        console.log("[Carousel] Pointer Down Fired. Event type:", event.type);
+        let clientX = 0, clientY = 0;
+
+        if ('touches' in event) {
+            if (event.cancelable) event.preventDefault();
+            clientX = (event as TouchEvent).touches[0].clientX;
+            clientY = (event as TouchEvent).touches[0].clientY;
+            // No pointerId for touch events generally, but this handler is generic
+        } else { // PointerEvent
+            if ((event as PointerEvent).button !== 0) return; // Only main button
+            clientX = (event as PointerEvent).clientX;
+            clientY = (event as PointerEvent).clientY;
+            activePointerIdRef.current = (event as PointerEvent).pointerId;
+            domElement.setPointerCapture(activePointerIdRef.current);
+        }
+        console.log(`[Carousel] Drag Start - Type: ${event.type}, X: ${clientX}, Y: ${clientY}`);
+
+        isDraggingRef.current = true;
+        autoRotateRef.current = false;
+        setIsScrollLockActive(true);
+        previousPointerXRef.current = clientX;
+        pointerDownCoords.current = { x: clientX, y: clientY };
+        accumulatedDeltaXRef.current = 0;
+        pointerDownTimeRef.current = performance.now();
+        domElement.style.cursor = 'grabbing';
+        document.body.style.userSelect = 'none';
+
+        if ('touches' in event) {
+            window.addEventListener('touchmove', handlePointerMoveRef.current, { passive: false });
+            window.addEventListener('touchend', handlePointerUpRef.current, { passive: false });
+        } else {
+            window.addEventListener('pointermove', handlePointerMoveRef.current);
+            window.addEventListener('pointerup', handlePointerUpRef.current);
+        }
+    };
+    
+    console.log("[Carousel] Main Effect: Attaching 'pointerdown' and 'touchstart' listeners to canvas.");
     domElement.addEventListener('pointerdown', handlePointerDownInternal);
     domElement.addEventListener('touchstart', handlePointerDownInternal, { passive: false });
 
     return () => {
-      console.log("[Carousel] Cleaning up DIRECT canvas event listeners.");
-      domElement.removeEventListener('pointerdown', handlePointerDownInternal);
-      domElement.removeEventListener('touchstart', handlePointerDownInternal);
-      // Ensure window listeners are also cleaned, especially if component unmounts mid-drag
-      window.removeEventListener('pointermove', handlePointerMoveInternal);
-      window.removeEventListener('pointerup', handlePointerUpInternal);
-      window.removeEventListener('touchmove', handlePointerMoveInternal);
-      window.removeEventListener('touchend', handlePointerUpInternal);
-
-      if (isDraggingRef.current) { // Cleanup if unmounting during a drag
-          document.body.style.userSelect = '';
-          setIsScrollLockActive(false);
-          if (domElement.style.cursor === 'grabbing') domElement.style.cursor = 'grab';
-      }
+        console.log("[Carousel] Main Effect: Cleaning up 'pointerdown' and 'touchstart' listeners from canvas.");
+        domElement.removeEventListener('pointerdown', handlePointerDownInternal);
+        domElement.removeEventListener('touchstart', handlePointerDownInternal, { passive: false } as AddEventListenerOptions);
+        
+        // Ensure window listeners are cleaned up if component unmounts mid-drag
+        window.removeEventListener('pointermove', handlePointerMoveRef.current);
+        window.removeEventListener('pointerup', handlePointerUpRef.current);
+        window.removeEventListener('touchmove', handlePointerMoveRef.current, { passive: false } as AddEventListenerOptions);
+        window.removeEventListener('touchend', handlePointerUpRef.current, { passive: false } as AddEventListenerOptions);
+        
+        if (isDraggingRef.current) { // Cleanup if unmounting during a drag
+            document.body.style.userSelect = '';
+            setIsScrollLockActive(false);
+            if (domElement.style.cursor === 'grabbing') domElement.style.cursor = 'grab';
+            if (activePointerIdRef.current !== null) {
+                 domElement.releasePointerCapture(activePointerIdRef.current);
+                 activePointerIdRef.current = null;
+            }
+        }
     };
-  }, [gl, onItemClick, camera, raycaster, scene, invalidate, setIsScrollLockActive]);
-
+  }, [gl, setIsScrollLockActive, invalidate]); // Dependencies for the main effect that attaches listeners
 
   useFrame((state, delta) => {
     if (group.current) {
       if (autoRotateRef.current && !isDraggingRef.current) {
-        groupRotationYRef.current += rotationSpeed * delta * 60; // Scale by delta for frame-rate independence
+        groupRotationYRef.current += rotationSpeed * delta * 60;
       }
       group.current.rotation.y = groupRotationYRef.current;
     }
@@ -403,19 +428,19 @@ const Resizer = React.memo(() => {
     };
 
     if (container) {
-        handleResize(); // Initial size set
+        handleResize();
         const resizeObserver = new ResizeObserver(handleResize);
         resizeObserver.observe(container);
         return () => {
-          if (container) resizeObserver.unobserve(container); // Check container exists on cleanup
+          if (container) resizeObserver.unobserve(container);
         };
     }
-  }, [camera, gl, container]); // Only re-run if these stable refs/objects change
+  }, [camera, gl, container]);
   return null;
 });
 Resizer.displayName = 'Resizer';
 
-const fallbackImageSrc = '/Spi vs Spi icon.png'; // Define globally or pass as prop if needed
+const fallbackImageSrc = '/Spi vs Spi icon.png';
 
 export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
   const appContext = useAppContext();
@@ -508,7 +533,7 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
               shadows
               gl={{ antialias: true, alpha: true, preserveDrawingBuffer: false }}
               style={{ background: 'transparent' }}
-              onCreated={({ gl: canvasGl }) => { // Renamed gl to canvasGl to avoid conflict
+              onCreated={({ gl: canvasGl }) => {
                 canvasGl.setClearColor(0x000000, 0);
                 console.log("[Canvas] Created");
               }}
@@ -534,3 +559,4 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
     </div>
   );
 }
+
