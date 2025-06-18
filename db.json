@@ -1,8 +1,7 @@
-
 {
   "players": [
     {
-      "id": "mock_pi_id_12345",
+      "id": "mock_pi_id_12344",
       "spyName": "N3PTUN3",
       "faction": "Cyphers",
       "stats": {
@@ -24,12 +23,70 @@
         "hasPlacedFirstLock": true
       },
       "inventory": {
-        "pick_l1": { "id": "pick_l1", "quantity": 11 },
-        "cypher_lock_l1": { "id": "cypher_lock_l1", "quantity": 4 },
-        "reinforced_deadbolt_l2": { "id": "reinforced_deadbolt_l2", "quantity": 2 },
-        "hydraulic_drill_l3": { "id": "hydraulic_drill_l3", "quantity": 3 },
-        "system_hack_l1": { "id": "system_hack_l1", "quantity": 1 },
-        "sonic_pulser_l3": { "id": "sonic_pulser_l3", "quantity": 1 }
+        "cypher_lock_l1": { "id": "cypher_lock_l1", "quantity": 1, "currentStrength": 100 },
+        "reinforced_deadbolt_l1": { "id": "reinforced_deadbolt_l1", "quantity": 1, "currentStrength": 100 },
+        "quantum_entanglement_lock_l1": { "id": "quantum_entanglement_lock_l1", "quantity": 1, "currentStrength": 100 },
+        "sonic_pulse_lock_l1": { "id": "sonic_pulse_lock_l1", "quantity": 1, "currentStrength": 100 },
+        "plasma_conduit_lock_l1": { "id": "plasma_conduit_lock_l1", "quantity": 1, "currentStrength": 100 },
+        "biometric_seal_l1": { "id": "biometric_seal_l1", "quantity": 1, "currentStrength": 100 },
+        "neural_network_lock_l1": { "id": "neural_network_lock_l1", "quantity": 1, "currentStrength": 100 },
+        "temporal_flux_lock_l1": { "id": "temporal_flux_lock_l1", "quantity": 1, "currentStrength": 100 },
+        "dummy_node_l1": { "id": "dummy_node_l1", "quantity": 1, "currentCharges": 1 },
+        "adaptive_shield_l1": { "id": "adaptive_shield_l1", "quantity": 1, "currentCharges": 100 },
+        "feedback_loop_l1": { "id": "feedback_loop_l1", "quantity": 1, "currentCharges": 100 },
+        "sonic_dampener_l1": { "id": "sonic_dampener_l1", "quantity": 1, "currentCharges": 100 },
+        "temporal_anchor_l1": { "id": "temporal_anchor_l1", "quantity": 1, "currentCharges": 100 },
+        "reactive_armor_l1": { "id": "reactive_armor_l1", "quantity": 1, "currentCharges": 1 },
+        "neural_feedback_spore_l1": { "id": "neural_feedback_spore_l1", "quantity": 1, "currentCharges": 100 },
+        "entanglement_field_inhibitor_l1": { "id": "entanglement_field_inhibitor_l1", "quantity": 1, "currentCharges": 100 },
+        "pick_l1": { "id": "pick_l1", "quantity": 1, "currentUses": 100 },
+        "hydraulic_drill_l1": { "id": "hydraulic_drill_l1", "quantity": 1, "currentUses": 100 },
+        "code_injector_l1": { "id": "code_injector_l1", "quantity": 1, "currentUses": 100 },
+        "sonic_pulser_l1": { "id": "sonic_pulser_l1", "quantity": 1, "currentUses": 100 },
+        "bio_scanner_override_l1": { "id": "bio_scanner_override_l1", "quantity": 1, "currentUses": 1 },
+        "temporal_dephaser_l1": { "id": "temporal_dephaser_l1", "quantity": 1, "currentUses": 100 },
+        "quantum_dephaser_l1": { "id": "quantum_dephaser_l1", "quantity": 1, "currentUses": 100 },
+        "universal_key_l1": { "id": "universal_key_l1", "quantity": 1, "currentUses": 100 },
+        "security_camera_l1": { "id": "security_camera_l1", "quantity": 1, "currentAlerts": 1 },
+        "reinforced_foundation_l1": { "id": "reinforced_foundation_l1", "quantity": 1 },
+        "ers_l1": { "id": "ers_l1", "quantity": 1, "currentStrength": 100 },
+        "epc_l1": { "id": "epc_l1", "quantity": 1, "currentStrength": 1 },
+        "system_hack_l1": { "id": "system_hack_l1", "quantity": 1, "currentUses": 1 },
+        "stealth_program_l1": { "id": "stealth_program_l1", "quantity": 1, "currentUses": 1 },
+        "stealth_program_l2": { "id": "stealth_program_l2", "quantity": 1, "currentUses": 1 },
+        "stealth_program_l3": { "id": "stealth_program_l3", "quantity": 1, "currentUses": 1 },
+        "stealth_program_l4": { "id": "stealth_program_l4", "quantity": 1, "currentUses": 1 },
+        "stealth_program_l5": { "id": "stealth_program_l5", "quantity": 1, "currentUses": 1 },
+        "stealth_program_l6": { "id": "stealth_program_l6", "quantity": 1, "currentUses": 1 },
+        "stealth_program_l7": { "id": "stealth_program_l7", "quantity": 1, "currentUses": 1 },
+        "stealth_program_l8": { "id": "stealth_program_l8", "quantity": 1, "currentUses": 1 },
+        "code_scrambler_l1": { "id": "code_scrambler_l1", "quantity": 1, "currentUses": 1 },
+        "code_scrambler_l2": { "id": "code_scrambler_l2", "quantity": 1, "currentUses": 1 },
+        "code_scrambler_l3": { "id": "code_scrambler_l3", "quantity": 1, "currentUses": 1 },
+        "code_scrambler_l4": { "id": "code_scrambler_l4", "quantity": 1, "currentUses": 1 },
+        "code_scrambler_l5": { "id": "code_scrambler_l5", "quantity": 1, "currentUses": 1 },
+        "code_scrambler_l6": { "id": "code_scrambler_l6", "quantity": 1, "currentUses": 1 },
+        "code_scrambler_l7": { "id": "code_scrambler_l7", "quantity": 1, "currentUses": 1 },
+        "code_scrambler_l8": { "id": "code_scrambler_l8", "quantity": 1, "currentUses": 1 },
+        "power_spike_l1": { "id": "power_spike_l1", "quantity": 1, "currentUses": 1 },
+        "power_spike_l2": { "id": "power_spike_l2", "quantity": 1, "currentUses": 1 },
+        "power_spike_l3": { "id": "power_spike_l3", "quantity": 1, "currentUses": 1 },
+        "power_spike_l4": { "id": "power_spike_l4", "quantity": 1, "currentUses": 1 },
+        "power_spike_l5": { "id": "power_spike_l5", "quantity": 1, "currentUses": 1 },
+        "power_spike_l6": { "id": "power_spike_l6", "quantity": 1, "currentUses": 1 },
+        "power_spike_l7": { "id": "power_spike_l7", "quantity": 1, "currentUses": 1 },
+        "power_spike_l8": { "id": "power_spike_l8", "quantity": 1, "currentUses": 1 },
+        "seismic_charge_l1": { "id": "seismic_charge_l1", "quantity": 1, "currentUses": 1 },
+        "seismic_charge_l2": { "id": "seismic_charge_l2", "quantity": 1, "currentUses": 1 },
+        "seismic_charge_l3": { "id": "seismic_charge_l3", "quantity": 1, "currentUses": 1 },
+        "seismic_charge_l4": { "id": "seismic_charge_l4", "quantity": 1, "currentUses": 1 },
+        "seismic_charge_l5": { "id": "seismic_charge_l5", "quantity": 1, "currentUses": 1 },
+        "seismic_charge_l6": { "id": "seismic_charge_l6", "quantity": 1, "currentUses": 1 },
+        "seismic_charge_l7": { "id": "seismic_charge_l7", "quantity": 1, "currentUses": 1 },
+        "seismic_charge_l8": { "id": "seismic_charge_l8", "quantity": 1, "currentUses": 1 },
+        "aesthetic_scheme_cyphers": { "id": "aesthetic_scheme_cyphers", "quantity": 1 },
+        "aesthetic_scheme_shadows": { "id": "aesthetic_scheme_shadows", "quantity": 1 },
+        "aesthetic_scheme_terminal_green": { "id": "aesthetic_scheme_terminal_green", "quantity": 1 }
       },
       "vault": [
         { "id": "lock_slot_0", "type": "lock", "item": null },
@@ -42,18 +99,5 @@
         { "id": "upgrade_slot_3", "type": "upgrade", "item": null }
       ]
     }
-  ],
-  "items": [
-    { "itemId": "item_stealth_suit", "name": "Stealth Suit", "description": "Increases stealth.", "stats": { "stealthBoost": 5 }, "price": 100 },
-    { "itemId": "item_hacking_tool", "name": "Hacking Tool", "description": "Helps with hacking.", "stats": { "hackingBoost": 3 }, "price": 75 },
-    { "itemId": "item_strength_boost", "name": "Strength Boost", "description": "Temporarily increases strength.", "stats": { "strengthBoost": 7 }, "price": 50 }
-  ],
-  "droppedItems": [],
-  "messages": [],
-  "dailyTeamCodes": {
-    "Cyphers": "CYPHERCODE123",
-    "Shadows": "SHADOWCODE456",
-    "Observer": "OBSERVERCODE789"
-  }
+  ]
 }
-
