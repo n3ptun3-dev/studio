@@ -11,22 +11,24 @@ import { useAppContext, type GameItemBase, type ItemLevel, type ItemCategory, ty
 import { HolographicButton, HolographicPanel } from '@/components/game/shared/HolographicPanel';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/contexts/ThemeContext';
-import { ITEM_LEVEL_COLORS_CSS_VARS, XP_THRESHOLDS } from '@/lib/constants';
-import { SHOP_CATEGORIES as APP_SHOP_CATEGORIES, getItemById as getBaseItemByIdFromGameItems } from '@/lib/game-items';
+import { ITEM_LEVEL_COLORS_CSS_VARS } from '@/lib/constants';
+import { SHOP_CATEGORIES as APP_SHOP_CATEGORIES, getItemById as getBaseItemByIdFromGameItems } from '@/lib/game-items'; // Corrected import
 import { ShoppingCart, ArrowLeft } from 'lucide-react';
 
+// Carousel Constants
 const ITEM_WIDTH = 1.2;
 const ITEM_HEIGHT = 1.9;
 const ROTATION_SPEED = 0.0035;
-const CLICK_DRAG_THRESHOLD_SQUARED = 10 * 10;
-const CLICK_DURATION_THRESHOLD = 250;
-const AUTO_ROTATE_RESUME_DELAY = 3000;
+const CLICK_DRAG_THRESHOLD_SQUARED = 10 * 10; // Pixels squared
+const CLICK_DURATION_THRESHOLD = 250; // Milliseconds
+const AUTO_ROTATE_RESUME_DELAY = 3000; // Milliseconds
 
+// Constants for dynamic radius and camera calculations
 const MIN_RADIUS_FOR_TWO_ITEMS = 1.4;
-const CARD_SPACING_FACTOR = 1.7;
-const CAMERA_DISTANCE_FROM_FRONT_CARD = 5.0;
+const CARD_SPACING_FACTOR = 1.7; // Increased to spread cards more with higher count
+const CAMERA_DISTANCE_FROM_FRONT_CARD = 5.0; // Increased to pull camera back
 const MIN_CAMERA_Z = 3.5;
-const INITIAL_CAROUSEL_TARGET_COUNT = 8;
+const INITIAL_CAROUSEL_TARGET_COUNT = 8; // If total items <= this, show individuals/itemLevelStacks directly
 
 const LEVEL_TO_BG_CLASS: Record<ItemLevel, string> = {
   1: 'bg-level-1/30',
@@ -62,13 +64,15 @@ const CardProgressBar: React.FC<{ label?: string; current: number; max: number; 
 CardProgressBar.displayName = 'CardProgressBar';
 
 export interface DisplayItem {
-  id: string;
-  baseItem: GameItemBase | null;
+  id: string; // Unique ID for this display item (can be category_name, item_base_name_lX, or player_inv_item_id_instance_Y)
+  baseItem: GameItemBase | null; // Actual GameItemBase if it's an individual or itemLevelStack
   title: string;
   quantityInStack: number;
   imageSrc: string;
-  colorVar: string;
-  levelForVisuals: ItemLevel;
+  colorVar: string; // CSS variable string
+  levelForVisuals: ItemLevel; // Level to use for colorVar and image if it's a stack
+  
+  // For individual items or specific instances within an expanded stack
   instanceCurrentStrength?: number;
   instanceMaxStrength?: number;
   instanceCurrentCharges?: number;
@@ -77,18 +81,23 @@ export interface DisplayItem {
   instanceMaxUses?: number;
   instanceCurrentAlerts?: number;
   instanceMaxAlerts?: number;
+
+  // For aggregated stacks (category, itemType)
   aggregateCurrentStrength?: number;
   aggregateMaxStrength?: number;
   aggregateCurrentCharges?: number;
   aggregateMaxCharges?: number;
+
   stackType: 'category' | 'itemType' | 'itemLevel' | 'individual';
-  itemCategory?: ItemCategory;
-  itemBaseName?: string;
-  itemLevel?: ItemLevel;
-  originalPlayerInventoryItemId?: string;
+  itemCategory?: ItemCategory; // Set if stackType is 'category' or deeper
+  itemBaseName?: string; // Set if stackType is 'itemType' or deeper (e.g., "Cypher Lock")
+  itemLevel?: ItemLevel; // Set if stackType is 'itemLevel' or 'individual'
+  
+  originalPlayerInventoryItemId?: string; // The ID from PlayerInventory (e.g. "cypher_lock_l1") for itemLevel or individual
   dataAiHint?: string;
-  path: string[];
+  path: string[]; // The path to this item in the hierarchy, e.g., ['Hardware', 'Cypher Lock', 'cypher_lock_l1']
 }
+
 
 interface CarouselItemProps {
   displayItem: DisplayItem;
@@ -100,7 +109,7 @@ interface CarouselItemProps {
 const CarouselItem = React.memo(function CarouselItem({ displayItem, index, totalItems, carouselRadius }: CarouselItemProps) {
   const meshRef = useRef<THREE.Mesh>(null!);
   const { baseItem, quantityInStack, title, imageSrc, colorVar: itemColorCssVar, levelForVisuals } = displayItem;
-  const fallbackImageSrc = '/Spi vs Spi icon.png';
+  const fallbackImageSrc = '/Spi vs Spi icon.png'; // Ensure this path is correct
   const actualImageSrc = imageSrc || fallbackImageSrc;
 
   useLayoutEffect(() => {
@@ -129,11 +138,9 @@ const CarouselItem = React.memo(function CarouselItem({ displayItem, index, tota
   let maxVal = 0;
   let progressBarLabel: string | undefined = undefined;
 
-  if (displayItem.stackType === 'individual' || (displayItem.stackType === 'itemLevel' && displayItem.baseItem)) {
+  if (displayItem.stackType === 'individual') {
+    // For individual items, prioritize instance values, then baseItem.strength.current, then baseItem.strength.max
     if (baseItem) {
-      currentVal = displayItem.instanceCurrentStrength ?? displayItem.instanceCurrentCharges ?? displayItem.instanceCurrentUses ?? displayItem.instanceCurrentAlerts ?? baseItem.strength?.current ?? 0;
-      maxVal = displayItem.instanceMaxStrength ?? displayItem.instanceMaxCharges ?? displayItem.instanceMaxUses ?? displayItem.instanceMaxAlerts ?? baseItem.strength?.max ?? 100;
-
       if (baseItem.category === 'Lock Fortifiers' && baseItem.type === 'Rechargeable') {
         currentVal = displayItem.instanceCurrentCharges ?? baseItem.currentCharges ?? (baseItem as any).maxCharges ?? 0;
         maxVal = displayItem.instanceMaxCharges ?? (baseItem as any).maxCharges ?? 100;
@@ -144,24 +151,38 @@ const CarouselItem = React.memo(function CarouselItem({ displayItem, index, tota
         progressBarLabel = "Uses";
       } else if (baseItem.category === 'Nexus Upgrades' && baseItem.name === 'Security Camera') {
         currentVal = displayItem.instanceCurrentAlerts ?? baseItem.currentAlerts ?? (baseItem as any).maxAlerts ?? 0;
-        maxVal = displayItem.instanceMaxAlerts ?? (baseItem as any).maxAlerts ?? levelForVisuals;
+        maxVal = displayItem.instanceMaxAlerts ?? (baseItem as any).maxAlerts ?? levelForVisuals; // Max alerts often scale with level
         progressBarLabel = "Alerts";
-      } else {
+      } else { // Default to strength for Hardware, ERS, EPC etc.
         currentVal = displayItem.instanceCurrentStrength ?? baseItem.strength?.current ?? baseItem.strength?.max ?? 0;
         maxVal = displayItem.instanceMaxStrength ?? baseItem.strength?.max ?? 100;
         progressBarLabel = "Strength";
       }
     }
+  } else if (displayItem.stackType === 'itemLevel') { // An itemLevel stack (e.g. 4x Cypher Lock L1)
+    if (baseItem) { // baseItem here is the representative L1 item of the stack
+      if (baseItem.category === 'Lock Fortifiers' && baseItem.type === 'Rechargeable') {
+        currentVal = displayItem.aggregateCurrentCharges ?? 0;
+        maxVal = displayItem.aggregateMaxCharges ?? (quantityInStack > 0 ? quantityInStack * ((baseItem as any).maxCharges ?? 100) : 100);
+        progressBarLabel = "Total Charges";
+      } else { // Default to strength for Hardware etc.
+        currentVal = displayItem.aggregateCurrentStrength ?? 0;
+        maxVal = displayItem.aggregateMaxStrength ?? (quantityInStack > 0 ? quantityInStack * (baseItem.strength?.max ?? 100) : 100);
+        progressBarLabel = "Total Strength";
+      }
+    }
   } else if (displayItem.stackType === 'category' || displayItem.stackType === 'itemType') {
+    // For category or itemType stacks, use aggregate values
     currentVal = displayItem.aggregateCurrentStrength ?? displayItem.aggregateCurrentCharges ?? 0;
-    maxVal = displayItem.aggregateMaxStrength ?? displayItem.aggregateMaxCharges ?? (quantityInStack > 0 ? quantityInStack * 100 : 100);
-    progressBarLabel = displayItem.aggregateCurrentStrength !== undefined ? "Integrity" : "Charge";
+    maxVal = displayItem.aggregateMaxStrength ?? displayItem.aggregateMaxCharges ?? (quantityInStack > 0 ? quantityInStack * 100 : 100); // Simplified max for categories/types
+    progressBarLabel = displayItem.aggregateCurrentStrength !== undefined ? "Avg. Integrity" : "Avg. Charge";
   }
+
 
   const isSingleUseType = displayItem.baseItem?.type === 'One-Time Use' || displayItem.baseItem?.type === 'Consumable';
   const isPermanentType = displayItem.baseItem?.type === 'Permanent';
 
-  if (displayItem.stackType === 'individual' || (displayItem.stackType === 'itemLevel' && displayItem.baseItem)) {
+  if (displayItem.stackType === 'individual') {
     if (isSingleUseType) {
       detailContent = <p className="text-[9px] text-center font-semibold p-0.5 rounded bg-black/30 mt-auto mx-1" style={{ color: itemColorCssVar }}>Single Use</p>;
     } else if (isPermanentType) {
@@ -169,7 +190,8 @@ const CarouselItem = React.memo(function CarouselItem({ displayItem, index, tota
     } else if (progressBarLabel && maxVal > 0) {
       detailContent = <CardProgressBar label={progressBarLabel} current={currentVal} max={maxVal} colorVar={itemColorCssVar} />;
     }
-  } else if ((displayItem.stackType === 'category' || displayItem.stackType === 'itemType') && maxVal > 0) {
+  } else if ((displayItem.stackType === 'category' || displayItem.stackType === 'itemType' || displayItem.stackType === 'itemLevel') && maxVal > 0) {
+    // Show progress for itemLevel stacks as well
     detailContent = <CardProgressBar label={progressBarLabel || "Status"} current={currentVal} max={maxVal} colorVar={itemColorCssVar} />;
   }
 
@@ -179,6 +201,7 @@ const CarouselItem = React.memo(function CarouselItem({ displayItem, index, tota
       <meshBasicMaterial transparent opacity={0} />
       <Html
         center
+        distanceFactor={10} // Added for perspective scaling
         style={{ pointerEvents: 'none', width: `${ITEM_WIDTH * 100}px`, height: `${ITEM_HEIGHT * 100}px` }}
       >
         <div
@@ -189,11 +212,11 @@ const CarouselItem = React.memo(function CarouselItem({ displayItem, index, tota
           style={{
             borderColor: itemColorCssVar,
             fontFamily: 'var(--font-rajdhani)',
-            color: `hsl(var(--foreground-hsl))`,
+            color: `hsl(var(--foreground-hsl))`, // Use a theme-based foreground
             boxShadow: `0 0 5px ${itemColorCssVar}`,
           }}
         >
-          {quantityInStack > 1 && displayItem.stackType !== 'individual' && (
+          {quantityInStack > 1 && ( // Show quantity only if it's a stack of more than one
             <div
               className="absolute top-1 right-1 bg-primary text-primary-foreground text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full z-10 shadow-md"
               style={{ borderColor: itemColorCssVar, borderWidth: '1px' }}
@@ -201,22 +224,22 @@ const CarouselItem = React.memo(function CarouselItem({ displayItem, index, tota
               {quantityInStack}
             </div>
           )}
-          <div className="w-full h-3/5 relative flex-shrink-0">
+          <div className="w-full h-3/5 relative flex-shrink-0"> {/* Image container */}
             <img
               src={actualImageSrc}
               alt={title}
-              className="w-full h-full object-fill"
+              className="w-full h-full object-fill" // Changed to object-fill to ensure it covers
               data-ai-hint={displayItem.dataAiHint || "item icon"}
               onError={(e) => {
                 const target = e.currentTarget as HTMLImageElement;
-                if (target.src !== fallbackImageSrc) {
+                if (target.src !== fallbackImageSrc) { // Prevent infinite loop if fallback also fails
                   target.src = fallbackImageSrc;
-                  target.onerror = null;
+                  target.onerror = null; // Important to remove onerror after trying fallback
                 }
               }}
             />
           </div>
-          <div className="w-full px-1 py-0.5 flex flex-col justify-between flex-grow min-h-0">
+          <div className="w-full px-1 py-0.5 flex flex-col justify-between flex-grow min-h-0"> {/* Text and progress bar area */}
             <p className="text-[10px] font-semibold text-center leading-tight mb-0.5" style={{ color: itemColorCssVar }}>
               {title}
             </p>
@@ -268,7 +291,7 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
         clientY = touchEvent.touches[0].clientY;
       } else {
         const pointerEvent = event as PointerEvent;
-        if (pointerEvent.button !== 0) return;
+        if (pointerEvent.button !== 0) return; // Only main button
         clientX = pointerEvent.clientX;
         clientY = pointerEvent.clientY;
         activePointerId = pointerEvent.pointerId;
@@ -276,14 +299,14 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
       }
 
       isDraggingRef.current = true;
-      autoRotateRef.current = false;
+      autoRotateRef.current = false; // Pause rotation on drag start
       if (autoRotateTimeoutRef.current) clearTimeout(autoRotateTimeoutRef.current);
       appContext.setIsScrollLockActive(true);
       accumulatedDeltaX = 0;
       pointerDownTime = performance.now();
       pointerDownCoords = { x: clientX, y: clientY };
       canvasElement.style.cursor = 'grabbing';
-      document.body.style.userSelect = 'none';
+      document.body.style.userSelect = 'none'; // Prevent text selection
 
       const moveEventName = isTouchEvent ? 'touchmove' : 'pointermove';
       const upEventName = isTouchEvent ? 'touchend' : 'pointerup';
@@ -303,22 +326,24 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
         currentX = touchEvent.touches[0].clientX;
       } else {
         const pointerEvent = event as PointerEvent;
-        if (activePointerId !== null && pointerEvent.pointerId !== activePointerId) return;
+        if (activePointerId !== null && pointerEvent.pointerId !== activePointerId) return; // Only track the captured pointer
         currentX = pointerEvent.clientX;
       }
 
       const deltaX = currentX - pointerDownCoords.x;
-      pointerDownCoords.x = currentX;
+      pointerDownCoords.x = currentX; // Update for next move
       accumulatedDeltaX += Math.abs(deltaX);
 
       if (group.current) {
-        const rotationAmount = deltaX * 0.005;
+        const rotationAmount = deltaX * 0.005; // Adjust sensitivity as needed
         if (itemsToDisplay.length === 1 && group.current.children[0]) {
+          // Single item spins on its own Y-axis
           (group.current.children[0] as THREE.Mesh).rotation.y += rotationAmount;
         } else if (itemsToDisplay.length > 1) {
+          // Carousel spins
           group.current.rotation.y += rotationAmount;
         }
-        invalidate();
+        invalidate(); // Request a re-render
       }
     };
 
@@ -342,7 +367,7 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
       }
       
       canvasElement.style.cursor = 'grab';
-      document.body.style.userSelect = '';
+      document.body.style.userSelect = ''; // Re-enable text selection
       if (event.type === 'pointerup' && activePointerId !== null) {
         try { (event.target as HTMLElement)?.releasePointerCapture?.(activePointerId); } catch (e) { /* ignore */ }
       }
@@ -353,6 +378,7 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
       let clickedItemViaRaycast: DisplayItem | null = null;
       let clickedMeshViaRaycast: THREE.Mesh | null = null;
 
+      // Only perform raycast for click if it wasn't a significant drag and was quick enough
       if (!wasSignificantDrag && wasQuickEnoughForClick) {
         const rect = canvasElement.getBoundingClientRect();
         const pointerVector = new THREE.Vector2(
@@ -371,7 +397,7 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
             if (obj?.userData?.isCarouselItem && obj instanceof THREE.Mesh) {
               clickedMeshViaRaycast = obj;
               clickedItemViaRaycast = obj.userData.displayItem;
-              break;
+              break; // Found the clicked item
             }
           }
         }
@@ -382,13 +408,11 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
 
       if (clickedItemViaRaycast && clickedMeshViaRaycast) {
         onItemClick(clickedItemViaRaycast, clickedMeshViaRaycast);
-        // Do not immediately resume auto-rotation if an item was clicked,
-        // as onItemClick might open a TOD window which should pause rotation.
-        // The TOD window open/close logic will handle rotation resume.
+        // autoRotateRef is handled by onItemClick based on whether a TOD window is opened
       } else {
         // If it was just a drag or a click on empty space, resume rotation after delay
         if (autoRotateTimeoutRef.current) clearTimeout(autoRotateTimeoutRef.current);
-        if (!appContext.isTODWindowOpen) {
+        if (!appContext.isTODWindowOpen) { // Only resume if no TOD window is open
           autoRotateTimeoutRef.current = setTimeout(() => {
             if (!isDraggingRef.current && !appContext.isTODWindowOpen) {
               autoRotateRef.current = true;
@@ -404,7 +428,7 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
     };
 
     canvasElement.addEventListener('pointerdown', handlePointerDownInternal);
-    canvasElement.addEventListener('touchstart', handlePointerDownInternal, { passive: false });
+    canvasElement.addEventListener('touchstart', handlePointerDownInternal, { passive: false }); // passive: false for preventDefault
 
     return () => {
       canvasElement.removeEventListener('pointerdown', handlePointerDownInternal);
@@ -414,17 +438,19 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
       window.removeEventListener('touchmove', handlePointerMoveInternal);
       window.removeEventListener('touchend', handlePointerUpInternal);
       if (autoRotateTimeoutRef.current) clearTimeout(autoRotateTimeoutRef.current);
+      // Ensure cleanup if component unmounts during a drag
       if (isDraggingRef.current) {
         document.body.style.userSelect = '';
         appContext.setIsScrollLockActive(false);
-        if (canvasElement.style.cursor === 'grabbing') canvasElement.style.cursor = 'grab';
+        if(canvasElement.style.cursor === 'grabbing') canvasElement.style.cursor = 'grab';
         if (activePointerId !== null) {
-          try { canvasElement.releasePointerCapture(activePointerId); } catch (e) {/* ignore */}
-          activePointerId = null;
+            try { canvasElement.releasePointerCapture(activePointerId); } catch(e) {/*ignore*/}
+            activePointerId = null;
         }
       }
     };
   }, [gl, onItemClick, camera, raycaster, scene, invalidate, events, appContext.setIsScrollLockActive, appContext.isTODWindowOpen, autoRotateRef, isDraggingRef, autoRotateTimeoutRef, itemsToDisplay.length]);
+
 
   useFrame((state, delta) => {
     if (group.current && autoRotateRef.current && !isDraggingRef.current && !appContext.isTODWindowOpen) {
@@ -440,7 +466,7 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
     <group ref={group}>
       {itemsToDisplay.map((item, index) => (
         <CarouselItem
-          key={item.id}
+          key={item.id} // Ensure stable keys for re-renders
           displayItem={item}
           index={index}
           totalItems={itemsToDisplay.length}
@@ -475,7 +501,7 @@ const Resizer = React.memo(function Resizer() {
     };
 
     if (container) {
-      handleResize();
+      handleResize(); // Initial size
       const resizeObserver = new ResizeObserver(handleResize);
       resizeObserver.observe(container);
       return () => {
@@ -488,6 +514,7 @@ const Resizer = React.memo(function Resizer() {
 });
 Resizer.displayName = 'Resizer';
 
+
 interface SectionProps {
   parallaxOffset: number;
 }
@@ -498,9 +525,10 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
     openTODWindow,
     closeTODWindow,
     playerInventory,
-    getItemById,
+    getItemById, // Make sure this is from AppContext
     openSpyShop,
     isTODWindowOpen,
+    playerSpyName
   } = appContext;
 
   const { theme: currentGlobalTheme, themeVersion } = useTheme();
@@ -510,7 +538,7 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
   const autoRotateRef = useRef(true);
   const isDraggingRef = useRef(false);
   const autoRotateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const todOpenedByLockerRef = useRef(false);
+  const todOpenedByLockerRef = useRef(false); // Tracks if the locker specifically opened the TOD
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -527,32 +555,32 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
           const l = parseFloat(parts[3]);
           setPointLightColor(`hsl(${h}, ${s}%, ${l}%)`);
         } else {
-          setPointLightColor('hsl(0, 0%, 100%)');
+          setPointLightColor('hsl(0, 0%, 100%)'); // Fallback
         }
       } else {
-        setPointLightColor('hsl(0, 0%, 100%)');
+        setPointLightColor('hsl(0, 0%, 100%)'); // Fallback
       }
     }
   }, [currentGlobalTheme, themeVersion]);
 
   const aggregatePlayerItems = useCallback(() => {
-    const itemsToDisplay: DisplayItem[] = [];
     const currentPathLevel = expandedStackPath.length;
+    const inventoryArray = Object.entries(playerInventory)
+      .map(([key, val]) => ({ invKey: key, invDetails: val, baseDef: getItemById(val.id) }))
+      .filter(item => item.baseDef && item.invDetails.quantity > 0) as Array<{ invKey: string; invDetails: PlayerInventoryItem; baseDef: GameItemBase }>;
 
     const createIndividualDisplayItem = (
-      invItemKey: string,
       invItemDetails: PlayerInventoryItem,
+      baseDef: GameItemBase,
       path: string[],
       instanceIndex: number
-    ): DisplayItem | null => {
-      const baseDef = getItemById(invItemDetails.id);
-      if (!baseDef) return null;
+    ): DisplayItem => {
       return {
-        id: `${invItemDetails.id}_instance_${instanceIndex}`,
+        id: `${invItemDetails.id}_instance_${instanceIndex}_${path.join('_')}`, // Ensure unique ID
         baseItem: baseDef,
         title: baseDef.title || baseDef.name,
         quantityInStack: 1,
-        imageSrc: baseDef.imageSrc || '/Spi vs Spi icon.png',
+        imageSrc: baseDef.tileImageSrc || baseDef.imageSrc || '/Spi vs Spi icon.png',
         colorVar: ITEM_LEVEL_COLORS_CSS_VARS[baseDef.level] || 'var(--level-1-color)',
         levelForVisuals: baseDef.level,
         instanceCurrentStrength: invItemDetails.currentStrength,
@@ -569,201 +597,208 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
         itemLevel: baseDef.level,
         originalPlayerInventoryItemId: invItemDetails.id,
         dataAiHint: baseDef.dataAiHint,
-        path: [...path, `${invItemDetails.id}_instance_${instanceIndex}`],
+        path: path,
       };
     };
-    
-    const createItemStack = (
-        items: Array<{ invKey: string; invDetails: PlayerInventoryItem; baseDef: GameItemBase }>,
-        stackIdPrefix: string,
-        stackTitle: string,
-        stackType: 'category' | 'itemType' | 'itemLevel',
-        path: string[],
-        itemCategoryForStack?: ItemCategory,
-        itemBaseNameForStack?: string
-      ): DisplayItem | null => {
-        if (items.length === 0) return null;
-    
-        let highestLevelItem = items[0].baseDef;
-        let totalQuantity = 0;
-        let aggCurrentStrength = 0, aggMaxStrength = 0;
-        let aggCurrentCharges = 0, aggMaxCharges = 0;
-    
-        items.forEach(item => {
-          totalQuantity += item.invDetails.quantity;
-          if (item.baseDef.level > highestLevelItem.level) {
-            highestLevelItem = item.baseDef;
-          }
-          aggCurrentStrength += (item.invDetails.currentStrength ?? item.baseDef.strength?.current ?? item.baseDef.strength?.max ?? 0) * item.invDetails.quantity;
-          aggMaxStrength += (item.baseDef.strength?.max ?? 100) * item.invDetails.quantity;
-          aggCurrentCharges += (item.invDetails.currentCharges ?? (item.baseDef as any).currentCharges ?? (item.baseDef as any).maxCharges ?? 0) * item.invDetails.quantity;
-          aggMaxCharges += ((item.baseDef as any).maxCharges ?? 100) * item.invDetails.quantity;
-        });
-    
-        const uniqueIdPart = path.join('_') || stackTitle.replace(/\s+/g, '_');
-    
-        return {
-          id: `${stackIdPrefix}_${uniqueIdPart}`,
-          baseItem: stackType === 'itemLevel' ? highestLevelItem : null,
-          title: stackTitle,
-          quantityInStack: totalQuantity,
-          imageSrc: highestLevelItem.tileImageSrc || highestLevelItem.imageSrc || '/Spi vs Spi icon.png',
-          colorVar: ITEM_LEVEL_COLORS_CSS_VARS[highestLevelItem.level] || 'var(--level-1-color)',
-          levelForVisuals: highestLevelItem.level,
-          aggregateCurrentStrength: aggCurrentStrength,
-          aggregateMaxStrength: aggMaxStrength,
-          aggregateCurrentCharges: aggCurrentCharges,
-          aggregateMaxCharges: aggMaxCharges,
-          stackType: stackType,
-          itemCategory: itemCategoryForStack || highestLevelItem.category,
-          itemBaseName: itemBaseNameForStack || (stackType !== 'category' ? highestLevelItem.name : undefined),
-          itemLevel: stackType === 'itemLevel' ? highestLevelItem.level : undefined,
-          originalPlayerInventoryItemId: stackType === 'itemLevel' ? highestLevelItem.id : undefined, // For itemLevel stacks, this is the base ID like "cypher_lock_l1"
-          dataAiHint: highestLevelItem.dataAiHint || stackTitle.toLowerCase(),
-          path: path,
-        };
-      };
 
-    const inventoryArray = Object.entries(playerInventory)
-        .map(([key, val]) => ({ invKey: key, invDetails: val, baseDef: getItemById(val.id) }))
-        .filter(item => item.baseDef && item.invDetails.quantity > 0) as Array<{ invKey: string; invDetails: PlayerInventoryItem; baseDef: GameItemBase }>;
+    const createAggregatedStack = (
+      items: Array<{ invKey: string; invDetails: PlayerInventoryItem; baseDef: GameItemBase }>,
+      stackIdPrefix: string,
+      stackTitle: string,
+      stackType: 'category' | 'itemType' | 'itemLevel',
+      path: string[],
+      itemCategoryForStack?: ItemCategory,
+      itemBaseNameForStack?: string
+    ): DisplayItem | null => {
+      if (items.length === 0) return null;
 
-    if (currentPathLevel === 0) { // Initial view
-        const totalPhysicalItems = inventoryArray.reduce((sum, item) => sum + item.invDetails.quantity, 0);
-        if (totalPhysicalItems <= INITIAL_CAROUSEL_TARGET_COUNT && totalPhysicalItems > 0) {
-            // Show itemLevel stacks or individuals
-            const itemLevelStacks: Record<string, Array<{ invKey: string; invDetails: PlayerInventoryItem; baseDef: GameItemBase }>> = {};
-            inventoryArray.forEach(item => {
-                if (!itemLevelStacks[item.invDetails.id]) itemLevelStacks[item.invDetails.id] = [];
-                itemLevelStacks[item.invDetails.id].push(item);
-            });
-            Object.values(itemLevelStacks).forEach(itemsOfSameId => {
-                if (itemsOfSameId.length > 0) {
-                    const first = itemsOfSameId[0];
-                    if (first.invDetails.quantity > 1) {
-                        const stack = createItemStack(itemsOfSameId, 'itemLevelStack', first.baseDef.title || first.baseDef.name, 'itemLevel', [first.baseDef.category, first.baseDef.name, first.invDetails.id], first.baseDef.category, first.baseDef.name);
-                        if (stack) itemsToDisplay.push(stack);
-                    } else {
-                        const individual = createIndividualDisplayItem(first.invKey, first.invDetails, [first.baseDef.category, first.baseDef.name, first.invDetails.id], 0);
-                        if (individual) itemsToDisplay.push(individual);
-                    }
-                }
-            });
-        } else if (inventoryArray.length > 0) {
-            // Show category stacks
-            APP_SHOP_CATEGORIES.slice(0, 6).forEach(catInfo => {
-                const itemsInThisCategory = inventoryArray.filter(item => item.baseDef.category === catInfo.name);
-                if (itemsInThisCategory.length > 0) {
-                    const stack = createItemStack(itemsInThisCategory, 'cat', catInfo.name, 'category', [catInfo.name as ItemCategory], catInfo.name as ItemCategory);
-                    if (stack) itemsToDisplay.push(stack);
-                }
-            });
+      let highestLevelItem = items[0].baseDef;
+      let totalQuantity = 0;
+      let aggCurrentStrength = 0, aggMaxStrength = 0;
+      let aggCurrentCharges = 0, aggMaxCharges = 0;
+      // Could add aggregates for uses/alerts if needed for category/itemType stacks
+
+      items.forEach(item => {
+        totalQuantity += item.invDetails.quantity;
+        if (item.baseDef.level > highestLevelItem.level) {
+          highestLevelItem = item.baseDef;
         }
-    } else if (currentPathLevel === 1) { // Expanding a category
-        const categoryToExpand = expandedStackPath[0] as ItemCategory;
-        // Add item type stacks from the expanded category
-        const itemsInExpandedCategory = inventoryArray.filter(item => item.baseDef.category === categoryToExpand);
-        const groupedByBaseName: Record<string, typeof inventoryArray> = {};
-        itemsInExpandedCategory.forEach(item => {
-            if (!groupedByBaseName[item.baseDef.name]) groupedByBaseName[item.baseDef.name] = [];
-            groupedByBaseName[item.baseDef.name].push(item);
-        });
-        Object.entries(groupedByBaseName).forEach(([baseName, items]) => {
-            const stack = createItemStack(items, 'itemType', baseName, 'itemType', [categoryToExpand, baseName], categoryToExpand, baseName);
-            if (stack) itemsToDisplay.push(stack);
-        });
-        // Add other top-level category stacks
-        APP_SHOP_CATEGORIES.slice(0, 6).forEach(catInfo => {
-            if (catInfo.name !== categoryToExpand) {
-                const itemsInThisCategory = inventoryArray.filter(item => item.baseDef.category === catInfo.name);
-                if (itemsInThisCategory.length > 0) {
-                    const stack = createItemStack(itemsInThisCategory, 'cat', catInfo.name, 'category', [catInfo.name as ItemCategory], catInfo.name as ItemCategory);
-                    if (stack) itemsToDisplay.push(stack);
-                }
-            }
-        });
-    } else if (currentPathLevel === 2) { // Expanding an item type
-        const categoryToExpand = expandedStackPath[0] as ItemCategory;
-        const itemTypeToExpand = expandedStackPath[1]; // Base name of the item type
-        // Add item level stacks from the expanded item type
-        const itemsOfExpandedType = inventoryArray.filter(item => item.baseDef.category === categoryToExpand && item.baseDef.name === itemTypeToExpand);
-        itemsOfExpandedType.forEach(item => { // Each 'item' here is a specific level (e.g., L1, L2)
-             if (item.invDetails.quantity > 1) {
-                const stack = createItemStack([item], 'itemLevelStack', item.baseDef.title || item.baseDef.name, 'itemLevel', [categoryToExpand, itemTypeToExpand, item.invDetails.id], categoryToExpand, itemTypeToExpand);
-                if (stack) itemsToDisplay.push(stack);
-            } else {
-                const individual = createIndividualDisplayItem(item.invKey, item.invDetails, [categoryToExpand, itemTypeToExpand, item.invDetails.id], 0);
-                if (individual) itemsToDisplay.push(individual);
-            }
-        });
-        // Add other item type stacks from the same category
-        const itemsInSameCategory = inventoryArray.filter(item => item.baseDef.category === categoryToExpand && item.baseDef.name !== itemTypeToExpand);
-        const otherGroupedByBaseName: Record<string, typeof inventoryArray> = {};
-        itemsInSameCategory.forEach(item => {
-            if (!otherGroupedByBaseName[item.baseDef.name]) otherGroupedByBaseName[item.baseDef.name] = [];
-            otherGroupedByBaseName[item.baseDef.name].push(item);
-        });
-        Object.entries(otherGroupedByBaseName).forEach(([baseName, items]) => {
-            const stack = createItemStack(items, 'itemType', baseName, 'itemType', [categoryToExpand, baseName], categoryToExpand, baseName);
-            if (stack) itemsToDisplay.push(stack);
-        });
-        // Add other top-level category stacks
-        APP_SHOP_CATEGORIES.slice(0, 6).forEach(catInfo => {
-            if (catInfo.name !== categoryToExpand) {
-                const itemsInThisCategory = inventoryArray.filter(item => item.baseDef.category === catInfo.name);
-                if (itemsInThisCategory.length > 0) {
-                    const stack = createItemStack(itemsInThisCategory, 'cat', catInfo.name, 'category', [catInfo.name as ItemCategory], catInfo.name as ItemCategory);
-                    if (stack) itemsToDisplay.push(stack);
-                }
-            }
-        });
-    } else if (currentPathLevel === 3) { // Expanding an item level stack
-        const categoryToExpand = expandedStackPath[0] as ItemCategory;
-        const itemTypeToExpand = expandedStackPath[1];
-        const itemLevelIdToExpand = expandedStackPath[2]; // This is the specific ID like "cypher_lock_l1"
+        // Aggregate based on player's instance data if available
+        aggCurrentStrength += (item.invDetails.currentStrength ?? item.baseDef.strength?.current ?? item.baseDef.strength?.max ?? 0) * item.invDetails.quantity;
+        aggMaxStrength += (item.baseDef.strength?.max ?? 100) * item.invDetails.quantity;
         
-        const itemToExpandDetails = inventoryArray.find(item => item.invDetails.id === itemLevelIdToExpand);
-        if (itemToExpandDetails) {
-            for (let i = 0; i < itemToExpandDetails.invDetails.quantity; i++) {
-                const individual = createIndividualDisplayItem(itemToExpandDetails.invKey, itemToExpandDetails.invDetails, [...expandedStackPath], i);
-                if (individual) itemsToDisplay.push(individual);
+        aggCurrentCharges += (item.invDetails.currentCharges ?? (item.baseDef as any).currentCharges ?? (item.baseDef as any).maxCharges ?? 0) * item.invDetails.quantity;
+        aggMaxCharges += ((item.baseDef as any).maxCharges ?? 100) * item.invDetails.quantity;
+      });
+
+      const uniqueIdPart = path.join('_') || stackTitle.replace(/\s+/g, '_');
+      return {
+        id: `${stackIdPrefix}_${uniqueIdPart}`,
+        baseItem: stackType === 'itemLevel' ? highestLevelItem : null,
+        title: stackTitle,
+        quantityInStack: totalQuantity,
+        imageSrc: highestLevelItem.tileImageSrc || highestLevelItem.imageSrc || '/Spi vs Spi icon.png',
+        colorVar: ITEM_LEVEL_COLORS_CSS_VARS[highestLevelItem.level] || 'var(--level-1-color)',
+        levelForVisuals: highestLevelItem.level,
+        aggregateCurrentStrength: aggCurrentStrength,
+        aggregateMaxStrength: aggMaxStrength,
+        aggregateCurrentCharges: aggCurrentCharges,
+        aggregateMaxCharges: aggMaxCharges,
+        stackType: stackType,
+        itemCategory: itemCategoryForStack || highestLevelItem.category,
+        itemBaseName: itemBaseNameForStack || (stackType !== 'category' ? highestLevelItem.name : undefined),
+        itemLevel: stackType === 'itemLevel' ? highestLevelItem.level : undefined,
+        originalPlayerInventoryItemId: stackType === 'itemLevel' ? highestLevelItem.id : undefined,
+        dataAiHint: highestLevelItem.dataAiHint || stackTitle.toLowerCase().split(' ').slice(0,2).join(' '),
+        path: path,
+      };
+    };
+
+    let focusedItems: DisplayItem[] = [];
+    let contextualItems: DisplayItem[] = [];
+
+    // --- LEVEL 0: Initial View (Smart Stacking) ---
+    if (currentPathLevel === 0) {
+      const totalIndividualPhysicalItems = inventoryArray.reduce((sum, item) => sum + item.invDetails.quantity, 0);
+
+      if (totalIndividualPhysicalItems <= INITIAL_CAROUSEL_TARGET_COUNT && totalIndividualPhysicalItems > 0) {
+        // Show itemLevel stacks or individuals directly
+        const itemLevelStacksMap: Record<string, Array<{ invKey: string; invDetails: PlayerInventoryItem; baseDef: GameItemBase }>> = {};
+        inventoryArray.forEach(item => {
+          if (!itemLevelStacksMap[item.invDetails.id]) itemLevelStacksMap[item.invDetails.id] = [];
+          itemLevelStacksMap[item.invDetails.id].push(item);
+        });
+        Object.values(itemLevelStacksMap).forEach(itemsOfSameId => {
+          if (itemsOfSameId.length > 0) {
+            const first = itemsOfSameId[0];
+            if (first.invDetails.quantity > 1) { // If an item ID has quantity > 1, stack it
+              const stack = createAggregatedStack(itemsOfSameId, 'itemLevel', first.baseDef.title || first.baseDef.name, 'itemLevel', [first.baseDef.category, first.baseDef.name, first.invDetails.id], first.baseDef.category, first.baseDef.name);
+              if (stack) focusedItems.push(stack);
+            } else { // Quantity is 1, show as individual
+              const individual = createIndividualDisplayItem(first.invDetails, first.baseDef, [first.baseDef.category, first.baseDef.name, first.invDetails.id], 0);
+              focusedItems.push(individual);
             }
-        }
-        // Add other item level stacks from the same item type
-        const itemsOfSameType = inventoryArray.filter(item => item.baseDef.category === categoryToExpand && item.baseDef.name === itemTypeToExpand && item.invDetails.id !== itemLevelIdToExpand);
-        itemsOfSameType.forEach(item => {
-             if (item.invDetails.quantity > 1) {
-                const stack = createItemStack([item], 'itemLevelStack', item.baseDef.title || item.baseDef.name, 'itemLevel', [categoryToExpand, itemTypeToExpand, item.invDetails.id], categoryToExpand, itemTypeToExpand);
-                if (stack) itemsToDisplay.push(stack);
-            } else {
-                const individual = createIndividualDisplayItem(item.invKey, item.invDetails, [categoryToExpand, itemTypeToExpand, item.invDetails.id], 0);
-                if (individual) itemsToDisplay.push(individual);
-            }
+          }
         });
-         // Add other item type stacks from the same category
-        const itemsInSameCategory = inventoryArray.filter(item => item.baseDef.category === categoryToExpand && item.baseDef.name !== itemTypeToExpand);
-        const otherGroupedByBaseName: Record<string, typeof inventoryArray> = {};
-        itemsInSameCategory.forEach(item => {
-            if (!otherGroupedByBaseName[item.baseDef.name]) otherGroupedByBaseName[item.baseDef.name] = [];
-            otherGroupedByBaseName[item.baseDef.name].push(item);
-        });
-        Object.entries(otherGroupedByBaseName).forEach(([baseName, items]) => {
-            const stack = createItemStack(items, 'itemType', baseName, 'itemType', [categoryToExpand, baseName], categoryToExpand, baseName);
-            if (stack) itemsToDisplay.push(stack);
-        });
-        // Add other top-level category stacks
+      } else if (inventoryArray.length > 0) { // More than 8 items, show category stacks
         APP_SHOP_CATEGORIES.slice(0, 6).forEach(catInfo => {
-            if (catInfo.name !== categoryToExpand) {
-                const itemsInThisCategory = inventoryArray.filter(item => item.baseDef.category === catInfo.name);
-                if (itemsInThisCategory.length > 0) {
-                    const stack = createItemStack(itemsInThisCategory, 'cat', catInfo.name, 'category', [catInfo.name as ItemCategory], catInfo.name as ItemCategory);
-                    if (stack) itemsToDisplay.push(stack);
-                }
-            }
+          const itemsInThisCategory = inventoryArray.filter(item => item.baseDef.category === catInfo.name);
+          if (itemsInThisCategory.length > 0) {
+            const stack = createAggregatedStack(itemsInThisCategory, 'category', catInfo.name, 'category', [catInfo.name as ItemCategory], catInfo.name as ItemCategory);
+            if (stack) focusedItems.push(stack);
+          }
         });
+      }
+    }
+    // --- LEVEL 1: Expanding a Category Stack ---
+    else if (currentPathLevel === 1) {
+      const categoryToExpand = expandedStackPath[0] as ItemCategory;
+      // Focused: ItemType stacks from the expanded category
+      const itemsInExpandedCategory = inventoryArray.filter(item => item.baseDef.category === categoryToExpand);
+      const groupedByBaseName: Record<string, typeof inventoryArray> = {};
+      itemsInExpandedCategory.forEach(item => {
+        if (!groupedByBaseName[item.baseDef.name]) groupedByBaseName[item.baseDef.name] = [];
+        groupedByBaseName[item.baseDef.name].push(item);
+      });
+      Object.entries(groupedByBaseName).forEach(([baseName, items]) => {
+        const stack = createAggregatedStack(items, 'itemType', baseName, 'itemType', [categoryToExpand, baseName], categoryToExpand, baseName);
+        if (stack) focusedItems.push(stack);
+      });
+      // Contextual: Other top-level category stacks
+      APP_SHOP_CATEGORIES.slice(0, 6).forEach(catInfo => {
+        if (catInfo.name !== categoryToExpand) {
+          const itemsInThisCategory = inventoryArray.filter(item => item.baseDef.category === catInfo.name);
+          if (itemsInThisCategory.length > 0) {
+            const stack = createAggregatedStack(itemsInThisCategory, 'category', catInfo.name, 'category', [catInfo.name as ItemCategory], catInfo.name as ItemCategory);
+            if (stack) contextualItems.push(stack);
+          }
+        }
+      });
+    }
+    // --- LEVEL 2: Expanding an ItemType Stack ---
+    else if (currentPathLevel === 2) {
+      const categoryContext = expandedStackPath[0] as ItemCategory;
+      const itemTypeToExpand = expandedStackPath[1]; // Base name
+      // Focused: ItemLevel stacks (or individuals if qty=1) from the expanded item type
+      const itemsOfExpandedType = inventoryArray.filter(item => item.baseDef.category === categoryContext && item.baseDef.name === itemTypeToExpand);
+      itemsOfExpandedType.forEach(item => { // Each 'item' is a specific level (e.g., cypher_lock_l1)
+        if (item.invDetails.quantity > 1) {
+          const stack = createAggregatedStack([item], 'itemLevel', item.baseDef.title || item.baseDef.name, 'itemLevel', [categoryContext, itemTypeToExpand, item.invDetails.id], categoryContext, itemTypeToExpand);
+          if (stack) focusedItems.push(stack);
+        } else {
+          const individual = createIndividualDisplayItem(item.invDetails, item.baseDef, [categoryContext, itemTypeToExpand, item.invDetails.id], 0);
+          focusedItems.push(individual);
+        }
+      });
+      // Contextual: Other ItemType stacks from the same category, and other Category stacks
+      const otherItemTypesInCategory = inventoryArray.filter(item => item.baseDef.category === categoryContext && item.baseDef.name !== itemTypeToExpand);
+      const groupedOtherItemTypes: Record<string, typeof inventoryArray> = {};
+      otherItemTypesInCategory.forEach(item => {
+        if(!groupedOtherItemTypes[item.baseDef.name]) groupedOtherItemTypes[item.baseDef.name] = [];
+        groupedOtherItemTypes[item.baseDef.name].push(item);
+      });
+      Object.entries(groupedOtherItemTypes).forEach(([baseName, items]) => {
+        const stack = createAggregatedStack(items, 'itemType', baseName, 'itemType', [categoryContext, baseName], categoryContext, baseName);
+        if (stack) contextualItems.push(stack);
+      });
+      APP_SHOP_CATEGORIES.slice(0, 6).forEach(catInfo => {
+        if (catInfo.name !== categoryContext) {
+          const itemsInThisCategory = inventoryArray.filter(item => item.baseDef.category === catInfo.name);
+          if (itemsInThisCategory.length > 0) {
+            const stack = createAggregatedStack(itemsInThisCategory, 'category', catInfo.name, 'category', [catInfo.name as ItemCategory], catInfo.name as ItemCategory);
+            if (stack) contextualItems.push(stack);
+          }
+        }
+      });
+    }
+    // --- LEVEL 3: Expanding an ItemLevel Stack ---
+    else if (currentPathLevel === 3) {
+      const categoryContext = expandedStackPath[0] as ItemCategory;
+      const itemTypeContext = expandedStackPath[1];
+      const itemLevelIdToExpand = expandedStackPath[2]; // e.g., "cypher_lock_l1"
+      // Focused: Individual items from the expanded itemLevel stack
+      const itemToExpandDetails = inventoryArray.find(item => item.invDetails.id === itemLevelIdToExpand);
+      if (itemToExpandDetails) {
+        for (let i = 0; i < itemToExpandDetails.invDetails.quantity; i++) {
+          const individual = createIndividualDisplayItem(itemToExpandDetails.invDetails, itemToExpandDetails.baseDef, [...expandedStackPath], i); // Path is important for unique ID
+          focusedItems.push(individual);
+        }
+      }
+      // Contextual: Other itemLevel stacks from same itemType, other itemType stacks, other category stacks
+      const otherItemLevelsInType = inventoryArray.filter(item => item.baseDef.category === categoryContext && item.baseDef.name === itemTypeContext && item.invDetails.id !== itemLevelIdToExpand);
+      otherItemLevelsInType.forEach(item => {
+        if (item.invDetails.quantity > 1) {
+          const stack = createAggregatedStack([item], 'itemLevel', item.baseDef.title || item.baseDef.name, 'itemLevel', [categoryContext, itemTypeContext, item.invDetails.id], categoryContext, itemTypeContext);
+          if (stack) contextualItems.push(stack);
+        } else {
+          const individual = createIndividualDisplayItem(item.invDetails, item.baseDef, [categoryContext, itemTypeContext, item.invDetails.id], 0);
+          contextualItems.push(individual);
+        }
+      });
+      const otherItemTypesInCategory = inventoryArray.filter(item => item.baseDef.category === categoryContext && item.baseDef.name !== itemTypeContext);
+      const groupedOtherItemTypes: Record<string, typeof inventoryArray> = {};
+        otherItemTypesInCategory.forEach(item => {
+        if(!groupedOtherItemTypes[item.baseDef.name]) groupedOtherItemTypes[item.baseDef.name] = [];
+        groupedOtherItemTypes[item.baseDef.name].push(item);
+      });
+      Object.entries(groupedOtherItemTypes).forEach(([baseName, items]) => {
+        const stack = createAggregatedStack(items, 'itemType', baseName, 'itemType', [categoryContext, baseName], categoryContext, baseName);
+        if (stack) contextualItems.push(stack);
+      });
+      APP_SHOP_CATEGORIES.slice(0, 6).forEach(catInfo => {
+        if (catInfo.name !== categoryContext) {
+          const itemsInThisCategory = inventoryArray.filter(item => item.baseDef.category === catInfo.name);
+          if (itemsInThisCategory.length > 0) {
+            const stack = createAggregatedStack(itemsInThisCategory, 'category', catInfo.name, 'category', [catInfo.name as ItemCategory], catInfo.name as ItemCategory);
+            if (stack) contextualItems.push(stack);
+          }
+        }
+      });
     }
 
-    return itemsToDisplay.sort((a, b) => {
+    const combined = [...focusedItems, ...contextualItems];
+    // Simple sort: category, then itemType, then itemLevel, then individual
+    return combined.sort((a, b) => {
         const typeOrderValue = (type: DisplayItem['stackType']) => ({ 'category': 0, 'itemType': 1, 'itemLevel': 2, 'individual': 3 }[type]);
         if (typeOrderValue(a.stackType) !== typeOrderValue(b.stackType)) {
             return typeOrderValue(a.stackType) - typeOrderValue(b.stackType);
@@ -778,10 +813,10 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
   const { dynamicCarouselRadius, dynamicCameraZ } = useMemo(() => {
     const numItems = carouselDisplayItems.length;
     let radius = 0;
-    if (numItems === 1) radius = 0;
+    if (numItems === 1) radius = 0; // Single item at center
     else if (numItems === 2) radius = MIN_RADIUS_FOR_TWO_ITEMS;
     else if (numItems > 2) {
-      const circumference = numItems * (ITEM_WIDTH + CARD_SPACING_FACTOR);
+      const circumference = numItems * (ITEM_WIDTH + CARD_SPACING_FACTOR); // Add spacing between cards
       radius = Math.max(MIN_RADIUS_FOR_TWO_ITEMS, circumference / (2 * Math.PI));
     }
     const cameraZ = Math.max(MIN_CAMERA_Z, radius + CAMERA_DISTANCE_FROM_FRONT_CARD);
@@ -791,9 +826,10 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
   const handleCarouselItemClick = useCallback((clickedDisplayItem: DisplayItem, mesh: THREE.Mesh) => {
     if (clickedDisplayItem.stackType === 'individual') {
       if (clickedDisplayItem.baseItem) {
-        todOpenedByLockerRef.current = true;
-        autoRotateRef.current = false;
+        todOpenedByLockerRef.current = true; // Mark that locker is opening this TOD
+        autoRotateRef.current = false; // Stop rotation
         if (autoRotateTimeoutRef.current) clearTimeout(autoRotateTimeoutRef.current);
+
         openTODWindow(
           clickedDisplayItem.baseItem.title || clickedDisplayItem.baseItem.name,
           <div className="font-rajdhani p-4 text-center">
@@ -812,61 +848,66 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
           { showCloseButton: true, explicitTheme: currentGlobalTheme, themeVersion }
         );
       }
-    } else { // It's a stack
+    } else { // It's a stack, expand it
       setExpandedStackPath(clickedDisplayItem.path);
-      // Clicking a stack does not stop auto-rotation
+      // Do NOT stop auto-rotation when a stack is clicked
     }
   }, [openTODWindow, closeTODWindow, currentGlobalTheme, themeVersion, setExpandedStackPath, todOpenedByLockerRef, autoRotateRef, autoRotateTimeoutRef]);
 
   const handleBackClick = () => {
     setExpandedStackPath(prev => prev.slice(0, -1));
-    // Clicking back does not stop auto-rotation
+    // Do NOT stop auto-rotation on back click
   };
-
+  
+  // Effect to handle TOD window open/close for rotation
   useEffect(() => {
     if (isTODWindowOpen && todOpenedByLockerRef.current) {
+      // TOD was opened by locker item click
       if (autoRotateTimeoutRef.current) clearTimeout(autoRotateTimeoutRef.current);
       autoRotateRef.current = false;
     } else if (!isTODWindowOpen && todOpenedByLockerRef.current) {
+      // TOD opened by locker was just closed
       if (autoRotateTimeoutRef.current) clearTimeout(autoRotateTimeoutRef.current);
       autoRotateTimeoutRef.current = setTimeout(() => {
-        if (!isDraggingRef.current && !appContext.isTODWindowOpen) {
+        if (!isDraggingRef.current && !appContext.isTODWindowOpen) { // Check again before resuming
           autoRotateRef.current = true;
         }
       }, AUTO_ROTATE_RESUME_DELAY);
-      todOpenedByLockerRef.current = false;
+      todOpenedByLockerRef.current = false; // Reset flag
     }
-  }, [isTODWindowOpen, appContext.isTODWindowOpen]);
+  }, [isTODWindowOpen, appContext.isTODWindowOpen]); // Dependencies
 
+  // Effect to reset expandedStackPath when section scrolls out of view
   useEffect(() => {
     const currentSectionRef = sectionRef.current;
     if (!currentSectionRef) return;
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (!entry.isIntersecting && expandedStackPath.length > 0) {
-          setExpandedStackPath([]);
-          if (!appContext.isTODWindowOpen) {
-            autoRotateRef.current = true;
-          }
+          setExpandedStackPath([]); // Reset to top-level view
+          // Rotation is handled by TOD window state and dragging, no need to force it here
+          // unless specifically desired.
         }
-      }, { threshold: 0.1 }
+      },
+      { threshold: 0.1 } // Trigger if less than 10% is visible
     );
+
     observer.observe(currentSectionRef);
     return () => {
-      if (currentSectionRef) observer.unobserve(currentSectionRef);
+      if (currentSectionRef) {
+        observer.unobserve(currentSectionRef);
+      }
     };
-  }, [expandedStackPath, appContext.isTODWindowOpen]);
+  }, [expandedStackPath, appContext.isTODWindowOpen]); // Re-check when path changes
 
   const currentStackTitle = useMemo(() => {
-    if (expandedStackPath.length === 0) return "Equipment Locker";
+    if (expandedStackPath.length === 0) return playerSpyName ? `${playerSpyName}'s Locker` : "Equipment Locker";
     const lastPathSegment = expandedStackPath[expandedStackPath.length - 1];
-    // For category or itemType stacks, the lastPathSegment is the name.
-    // For itemLevel stacks, it might be an ID like "cypher_lock_l1".
     const itemDef = getItemById(lastPathSegment) || getBaseItemByIdFromGameItems(lastPathSegment);
     if (itemDef) return itemDef.title || itemDef.name;
-    // Fallback for category/itemType names that are not full item IDs
     return lastPathSegment.replace(/_/g, ' ').replace(/-/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-  }, [expandedStackPath, getItemById]);
+  }, [expandedStackPath, getItemById, playerSpyName]);
 
   return (
     <div ref={sectionRef} className="flex flex-col items-center justify-center p-4 md:p-6 h-full max-w-4xl mx-auto">
@@ -885,7 +926,7 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
               <ArrowLeft className="w-5 h-5 icon-glow" />
             </HolographicButton>
           ) : (
-            <div className="w-9 h-9"></div>
+            <div className="w-9 h-9"></div> // Placeholder for spacing if no back button
           )}
           <h2 className="text-xl md:text-2xl font-orbitron holographic-text text-center flex-grow whitespace-nowrap overflow-hidden text-ellipsis px-2">
             {currentStackTitle}
@@ -900,19 +941,19 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
           </HolographicButton>
         </div>
         <div
-          id="locker-carousel-canvas-container"
-          className="w-full flex-grow min-h-0 relative"
-          style={{ cursor: 'grab', touchAction: 'none' }}
+          id="locker-carousel-canvas-container" // Ensure this ID is present for Resizer
+          className="w-full flex-grow min-h-0 relative" // Ensure it takes available space
+          style={{ cursor: 'grab', touchAction: 'none' }} // For touch devices
         >
           {carouselDisplayItems.length > 0 ? (
             <Canvas
               id="locker-carousel-canvas"
-              camera={{ position: [0, 0, dynamicCameraZ], fov: 50 }}
+              camera={{ position: [0, 0, dynamicCameraZ], fov: 50 }} // Corrected camera position
               shadows
               gl={{ antialias: true, alpha: true, preserveDrawingBuffer: false }}
-              style={{ background: 'transparent' }}
+              style={{ background: 'transparent' }} // Ensure canvas itself is transparent
               onCreated={({ gl: canvasGl }) => {
-                canvasGl.setClearColor(0x000000, 0);
+                canvasGl.setClearColor(0x000000, 0); // Transparent background for WebGL
               }}
             >
               <ambientLight intensity={1.5} />
@@ -943,4 +984,3 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
     </div>
   );
 }
-
