@@ -14,17 +14,17 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { ITEM_LEVEL_COLORS_CSS_VARS } from '@/lib/constants';
 import { ShoppingCart } from 'lucide-react';
 
-const ITEM_WIDTH = 1; // Base width of a card for layout calculations
+const ITEM_WIDTH = 1;
 const ITEM_HEIGHT = 1.7;
 const ROTATION_SPEED = 0.0035;
-const CLICK_DRAG_THRESHOLD_SQUARED = 10 * 10; // (10px)^2
-const CLICK_DURATION_THRESHOLD = 250; // ms
+const CLICK_DRAG_THRESHOLD_SQUARED = 10 * 10;
+const CLICK_DURATION_THRESHOLD = 250;
 
-// Constants for dynamic radius and camera calculations
+// Constants for dynamic radius and camera calculations - User adjusted
 const MIN_RADIUS_FOR_TWO_ITEMS = 1.4;
-const CARD_SPACING_FACTOR = 1.7;
+const CARD_SPACING_FACTOR = 1.7; // Increased for more spacing as items grow
 const CAMERA_DISTANCE_FROM_FRONT_CARD = 5.0;
-const MIN_CAMERA_Z = 3.5; // Absolute minimum camera Z to prevent clipping if radius is tiny
+const MIN_CAMERA_Z = 3.5;
 
 
 const LEVEL_TO_BG_CLASS: Record<ItemLevel, string> = {
@@ -60,17 +60,26 @@ const CardProgressBar: React.FC<{ label?: string; current: number; max: number; 
 });
 CardProgressBar.displayName = 'CardProgressBar';
 
+interface CarouselDisplayItem {
+  baseItem: GameItemBase;
+  quantityInStack: number; // If > 1, it's a stack. If 1, it could be a single item or an instance from an expanded stack.
+  isInstance: boolean;     // True if this card is an individual instance from an expanded stack.
+  instanceKey: string;     // Unique key for React (e.g., item.id + "-instance-" + i)
+  originalPlayerInventoryItemId: string; // The ID from playerInventory (e.g. "pick_l1")
+}
+
 interface CarouselItemProps {
-  itemData: GameItemBase;
+  displayItem: CarouselDisplayItem; // Changed from itemData
   index: number;
   totalItems: number;
   carouselRadius: number;
 }
 
-const CarouselItem = React.memo(function CarouselItem({ itemData, index, totalItems, carouselRadius }: CarouselItemProps) {
+const CarouselItem = React.memo(function CarouselItem({ displayItem, index, totalItems, carouselRadius }: CarouselItemProps) {
   const meshRef = useRef<THREE.Mesh>(null!);
+  const { baseItem, quantityInStack, isInstance } = displayItem;
   const fallbackImageSrc = '/Spi vs Spi icon.png';
-  const actualImageSrc = itemData.imageSrc || fallbackImageSrc;
+  const actualImageSrc = baseItem.imageSrc || fallbackImageSrc;
 
   useLayoutEffect(() => {
     if (meshRef.current) {
@@ -82,61 +91,61 @@ const CarouselItem = React.memo(function CarouselItem({ itemData, index, totalIt
         const z = carouselRadius * Math.cos(angle);
         meshRef.current.position.set(x, 0, z);
       }
-      meshRef.current.userData = { itemData, isCarouselItem: true, id: itemData.id };
+      // Store the whole displayItem in userData for click handling
+      meshRef.current.userData = { displayItem, isCarouselItem: true, id: displayItem.instanceKey };
     }
-  }, [index, totalItems, carouselRadius, itemData]);
+  }, [index, totalItems, carouselRadius, displayItem]);
 
   useFrame(({ camera }) => {
     if (meshRef.current) {
-      // Make the card always face the camera
       meshRef.current.lookAt(camera.position);
     }
   });
 
-  const itemLevelForColor = itemData.level || 1;
+  const itemLevelForColor = baseItem.level || 1;
   const itemColorCssVar = ITEM_LEVEL_COLORS_CSS_VARS[itemLevelForColor as ItemLevel] || 'var(--level-1-color)';
   const cardBgClass = LEVEL_TO_BG_CLASS[itemLevelForColor as ItemLevel] || 'bg-muted/30';
 
   let detailContent = null;
-  const strengthCurrent = itemData.strength?.current ?? 0;
-  const strengthMax = itemData.strength?.max ?? 100;
+  const strengthCurrent = baseItem.strength?.current ?? 0;
+  const strengthMax = baseItem.strength?.max ?? 100;
 
-  switch (itemData.category) {
+  switch (baseItem.category) {
     case 'Hardware':
       detailContent = <CardProgressBar label="Strength" current={strengthCurrent} max={strengthMax} colorVar={itemColorCssVar} />;
       break;
     case 'Lock Fortifiers':
-      if (itemData.type === 'Rechargeable') {
-        const currentCharges = itemData.currentCharges ?? itemData.strength?.current ?? 0;
-        const maxCharges = itemData.maxCharges ?? itemData.strength?.max ?? 100;
+      if (baseItem.type === 'Rechargeable') {
+        const currentCharges = baseItem.currentCharges ?? baseItem.strength?.current ?? 0;
+        const maxCharges = baseItem.maxCharges ?? baseItem.strength?.max ?? 100;
         detailContent = <CardProgressBar label="Recharges" current={currentCharges} max={maxCharges} colorVar={itemColorCssVar} />;
       } else {
         detailContent = <p className="text-[9px] text-center font-semibold p-0.5 rounded bg-black/30 mt-auto mx-1" style={{color: itemColorCssVar}}>Single Use</p>;
       }
       break;
     case 'Nexus Upgrades':
-      if (itemData.name === 'Security Camera') {
-        const currentAlerts = itemData.currentAlerts ?? itemData.strength?.current ?? 0;
-        const maxAlerts = itemData.maxAlerts ?? itemData.strength?.max ?? itemData.level ?? 1;
+      if (baseItem.name === 'Security Camera') {
+        const currentAlerts = baseItem.currentAlerts ?? baseItem.strength?.current ?? 0;
+        const maxAlerts = baseItem.maxAlerts ?? baseItem.strength?.max ?? baseItem.level ?? 1;
         detailContent = <CardProgressBar label="Alerts" current={currentAlerts} max={maxAlerts} colorVar={itemColorCssVar} />;
-      } else if (itemData.name === 'Emergency Repair System (ERS)') {
+      } else if (baseItem.name === 'Emergency Repair System (ERS)') {
         detailContent = <CardProgressBar label="Reserve Str." current={strengthCurrent} max={strengthMax} colorVar={itemColorCssVar} />;
-      } else if (itemData.name === 'Emergency Power Cell (EPC)') {
-         const currentEPCStrength = itemData.currentStrength ?? itemData.strength?.current ?? itemData.level ?? 0;
-         const maxEPCStrength = itemData.maxStrength ?? itemData.strength?.max ?? itemData.level ?? 1;
+      } else if (baseItem.name === 'Emergency Power Cell (EPC)') {
+         const currentEPCStrength = baseItem.currentStrength ?? baseItem.strength?.current ?? baseItem.level ?? 0;
+         const maxEPCStrength = baseItem.maxStrength ?? baseItem.strength?.max ?? baseItem.level ?? 1;
         detailContent = <CardProgressBar label="Strength" current={currentEPCStrength} max={maxEPCStrength} colorVar={itemColorCssVar} />;
-      } else if (itemData.name?.includes('Reinforced Foundation')) {
+      } else if (baseItem.name?.includes('Reinforced Foundation')) {
          detailContent = <p className="text-[9px] text-center font-semibold p-0.5 rounded bg-black/30 mt-auto mx-1" style={{color: itemColorCssVar}}>Permanent</p>;
       }
       break;
     case 'Infiltration Gear':
-      if (itemData.name === 'Pick' && itemData.level === 1) {
+      if (baseItem.name === 'Pick' && baseItem.level === 1) {
         detailContent = <p className="text-[9px] text-center font-semibold p-0.5 rounded bg-black/30 mt-auto mx-1" style={{color: itemColorCssVar}}>Basic Tool</p>;
-      } else if (itemData.type === 'Rechargeable') {
-        const currentUses = itemData.currentUses ?? itemData.strength?.current ?? 0;
-        const maxUses = itemData.maxUses ?? itemData.strength?.max ?? 100;
+      } else if (baseItem.type === 'Rechargeable') {
+        const currentUses = baseItem.currentUses ?? baseItem.strength?.current ?? 0;
+        const maxUses = baseItem.maxUses ?? baseItem.strength?.max ?? 100;
         detailContent = <CardProgressBar label="Uses Left" current={currentUses} max={maxUses} colorVar={itemColorCssVar} />;
-      } else if (itemData.type === 'One-Time Use' || itemData.type === 'Consumable') {
+      } else if (baseItem.type === 'One-Time Use' || baseItem.type === 'Consumable') {
         detailContent = <p className="text-[9px] text-center font-semibold p-0.5 rounded bg-black/30 mt-auto mx-1" style={{color: itemColorCssVar}}>Single Use</p>;
       }
       break;
@@ -147,13 +156,13 @@ const CarouselItem = React.memo(function CarouselItem({ itemData, index, totalIt
       detailContent = null;
       break;
     default:
-      if (itemData.strength) {
+      if (baseItem.strength) {
         detailContent = <CardProgressBar label="Status" current={strengthCurrent} max={strengthMax} colorVar={itemColorCssVar} />;
       }
   }
 
   return (
-    <mesh ref={meshRef} userData={{ itemData, isCarouselItem: true, id: itemData.id }}>
+    <mesh ref={meshRef} userData={{ displayItem, isCarouselItem: true, id: displayItem.instanceKey }}>
       <planeGeometry args={[ITEM_WIDTH, ITEM_HEIGHT]} />
       <meshBasicMaterial transparent opacity={0} />
       <Html
@@ -165,7 +174,7 @@ const CarouselItem = React.memo(function CarouselItem({ itemData, index, totalIt
       >
         <div
           className={cn(
-            "w-full h-full rounded-md border flex flex-col items-center justify-start overflow-hidden",
+            "w-full h-full rounded-md border flex flex-col items-center justify-start overflow-hidden relative", // Added relative for badge positioning
             cardBgClass
           )}
           style={{
@@ -175,12 +184,20 @@ const CarouselItem = React.memo(function CarouselItem({ itemData, index, totalIt
             boxShadow: `0 0 5px ${itemColorCssVar}`,
           }}
         >
+          {quantityInStack > 1 && !isInstance && ( // Show badge only for stacks, not individual instances
+            <div
+              className="absolute top-1 right-1 bg-primary text-primary-foreground text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full z-10 shadow-md"
+              style={{ borderColor: itemColorCssVar, borderWidth: '1px' }}
+            >
+              {quantityInStack}
+            </div>
+          )}
           <div className="w-full h-3/5 relative flex-shrink-0">
             <img
               src={actualImageSrc}
-              alt={itemData.title || itemData.name}
+              alt={baseItem.title || baseItem.name}
               className="w-full h-full object-fill"
-              data-ai-hint={itemData.dataAiHint || "item icon"}
+              data-ai-hint={baseItem.dataAiHint || "item icon"}
               onError={(e) => {
                 const target = e.currentTarget as HTMLImageElement;
                 if (target.src !== fallbackImageSrc) {
@@ -190,9 +207,9 @@ const CarouselItem = React.memo(function CarouselItem({ itemData, index, totalIt
               }}
             />
           </div>
-          <div className="w-full px-1.5 py-1 flex flex-col justify-between flex-grow min-h-0">
+          <div className="w-full px-1 py-0.5 flex flex-col justify-between flex-grow min-h-0">
             <p className="text-[10px] font-semibold text-center leading-tight mb-0.5" style={{ color: itemColorCssVar }}>
-              {itemData.title}
+              {baseItem.title} {/* Use pre-formatted title */}
             </p>
             <div className="w-full text-xs space-y-0.5 overflow-y-auto scrollbar-hide flex-grow mt-auto">
               {detailContent}
@@ -206,13 +223,13 @@ const CarouselItem = React.memo(function CarouselItem({ itemData, index, totalIt
 CarouselItem.displayName = 'CarouselItem';
 
 interface EquipmentCarouselProps {
-  itemsData: GameItemBase[];
-  onItemClick: (item: GameItemBase, mesh: THREE.Mesh) => void;
+  itemsToDisplay: CarouselDisplayItem[]; // Changed from itemsData
+  onItemClick: (displayItem: CarouselDisplayItem, mesh: THREE.Mesh) => void; // Pass the whole displayItem
   carouselRadius: number;
 }
 
 const EquipmentCarousel = React.memo(function EquipmentCarousel(props: EquipmentCarouselProps) {
-  const { itemsData, onItemClick, carouselRadius } = props;
+  const { itemsToDisplay, onItemClick, carouselRadius } = props;
   const group = useRef<THREE.Group>(null!);
   const { gl, camera, raycaster, scene, invalidate } = useThree();
   const appContext = useAppContext();
@@ -221,27 +238,23 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
   const autoRotateRef = useRef(true);
   const accumulatedDeltaXRef = useRef(0);
   const pointerDownTimeRef = useRef(0);
-  const pointerDownCoords = useRef({ x: 0, y: 0 }); // For both pointer and touch
-  const activePointerIdRef = useRef<number | null>(null); // For pointer events only
-
+  const pointerDownCoords = useRef({ x: 0, y: 0 });
+  const activePointerIdRef = useRef<number | null>(null);
 
   useEffect(() => {
-    console.log("[Carousel] useEffect for listeners executing. gl.domElement:", gl?.domElement);
     const canvasElement = gl?.domElement;
     if (!canvasElement) {
       console.log("[Carousel] Canvas DOM element not available yet.");
       return;
     }
-
-    // Explicitly set pointer events on the canvas if it's not already 'auto'
+    // console.log("[Carousel] useEffect for listeners executing. gl.domElement:", canvasElement);
     if (canvasElement.style.pointerEvents !== 'auto') {
-        console.log("[Carousel] Set canvas pointerEvents to 'auto'");
-        canvasElement.style.pointerEvents = 'auto';
+      // console.log("[Carousel] Set canvas pointerEvents to 'auto'");
+      canvasElement.style.pointerEvents = 'auto';
     }
 
-
     const handlePointerDownInternal = (event: PointerEvent | TouchEvent) => {
-      console.log("[Carousel] handlePointerDownInternal INVOKED. Event type:", event.type);
+      // console.log("[Carousel] handlePointerDownInternal INVOKED. Event type:", event.type);
       let clientX: number, clientY: number;
 
       if (event.type.startsWith('touch')) {
@@ -250,10 +263,9 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
         if (touchEvent.cancelable) event.preventDefault();
         clientX = touchEvent.touches[0].clientX;
         clientY = touchEvent.touches[0].clientY;
-        // For touch, we don't manage activePointerIdRef or pointer capture in the same way
       } else {
         const pointerEvent = event as PointerEvent;
-        if (pointerEvent.button !== 0) return; // Only main button
+        if (pointerEvent.button !== 0) return;
         clientX = pointerEvent.clientX;
         clientY = pointerEvent.clientY;
         activePointerIdRef.current = pointerEvent.pointerId;
@@ -271,12 +283,11 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
       pointerDownTimeRef.current = performance.now();
       pointerDownCoords.current = { x: clientX, y: clientY };
       canvasElement.style.cursor = 'grabbing';
-      document.body.style.userSelect = 'none'; // Prevent text selection during drag
+      document.body.style.userSelect = 'none';
 
       const moveEventName = event.type.startsWith('touch') ? 'touchmove' : 'pointermove';
       const upEventName = event.type.startsWith('touch') ? 'touchend' : 'pointerup';
 
-      // Add move and up listeners to window to capture events outside canvas
       window.addEventListener(moveEventName, handlePointerMoveInternal, { passive: !event.type.startsWith('touch') });
       window.addEventListener(upEventName, handlePointerUpInternal, { passive: false });
     };
@@ -288,7 +299,7 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
       if (event.type.startsWith('touch')) {
         const touchEvent = event as TouchEvent;
         if (touchEvent.touches.length === 0) return;
-         if (touchEvent.cancelable) event.preventDefault();
+        if (touchEvent.cancelable) event.preventDefault();
         currentX = touchEvent.touches[0].clientX;
       } else {
         const pointerEvent = event as PointerEvent;
@@ -297,24 +308,24 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
       }
 
       const deltaX = currentX - pointerDownCoords.current.x;
-      pointerDownCoords.current.x = currentX; // Update for next move
-      accumulatedDeltaXRef.current += Math.abs(deltaX); // Track total drag distance
+      pointerDownCoords.current.x = currentX;
+      accumulatedDeltaXRef.current += Math.abs(deltaX);
 
       if (group.current) {
-        const rotationAmount = deltaX * 0.005; // Sensitivity factor
-        if (itemsData.length === 1 && group.current.children[0]) {
+        const rotationAmount = deltaX * 0.005;
+        if (itemsToDisplay.length === 1 && group.current.children[0]) {
           (group.current.children[0] as THREE.Mesh).rotation.y += rotationAmount;
-        } else if (itemsData.length > 1) {
+        } else if (itemsToDisplay.length > 1) {
           group.current.rotation.y += rotationAmount;
         }
-        invalidate(); // Request a re-render from R3F
+        invalidate();
       }
     };
 
     const handlePointerUpInternal = (event: PointerEvent | TouchEvent) => {
-      console.log("[Carousel] handlePointerUpInternal INVOKED. Event type:", event.type);
+      // console.log("[Carousel] handlePointerUpInternal INVOKED. Event type:", event.type);
       if (!isDraggingRef.current && (event.type === 'pointerup' && activePointerIdRef.current === null) && !(event.type.startsWith('touch'))) {
-          return; // Avoid processing if not dragging and it's a pointerup without an active pointer (could be other buttons)
+          return;
       }
 
       const dragDuration = performance.now() - pointerDownTimeRef.current;
@@ -333,19 +344,18 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
       }
 
       canvasElement.style.cursor = 'grab';
-      document.body.style.userSelect = ''; // Re-enable text selection
+      document.body.style.userSelect = '';
 
       if (event.type === 'pointerup' && activePointerIdRef.current !== null) {
         try { canvasElement.releasePointerCapture(activePointerIdRef.current); } catch (e) { /* ignore */ }
       }
       activePointerIdRef.current = null;
 
-
       const wasSignificantDrag = accumulatedDeltaXRef.current > Math.sqrt(CLICK_DRAG_THRESHOLD_SQUARED);
       const wasQuickEnoughForClick = dragDuration < CLICK_DURATION_THRESHOLD;
 
       if (!wasSignificantDrag && wasQuickEnoughForClick) {
-        console.log("[Carousel] Click detected. Coords for raycast:", clickClientX, clickClientY);
+        // console.log("[Carousel] Click detected. Coords for raycast:", clickClientX, clickClientY);
         const rect = canvasElement.getBoundingClientRect();
         const pointerVector = new THREE.Vector2(
           ((clickClientX - rect.left) / rect.width) * 2 - 1,
@@ -353,7 +363,7 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
         );
         raycaster.setFromCamera(pointerVector, camera);
         const intersects = raycaster.intersectObjects(group.current?.children || [], true);
-        console.log(`[Carousel] Raycaster INTERSECTED count: ${intersects.length}`);
+        // console.log(`[Carousel] Raycaster INTERSECTED count: ${intersects.length}`);
 
         if (intersects.length > 0) {
           let clickedMesh: THREE.Mesh | null = null;
@@ -367,47 +377,43 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
               break;
             }
           }
-          if (clickedMesh && clickedMesh.userData.itemData) {
-            console.log(`[Carousel] Clicked Item: ${clickedMesh.userData.itemData?.name || 'Unknown'}`);
-            onItemClick(clickedMesh.userData.itemData, clickedMesh);
+          if (clickedMesh && clickedMesh.userData.displayItem) { // Check for displayItem
+            // console.log(`[Carousel] Clicked Item: ${clickedMesh.userData.displayItem.baseItem?.name || 'Unknown'}`);
+            onItemClick(clickedMesh.userData.displayItem, clickedMesh); // Pass displayItem
           } else {
-            console.log("[Carousel] Clicked, but no valid item data found on intersected mesh or its parents.");
+            // console.log("[Carousel] Clicked, but no valid item data found on intersected mesh or its parents.");
           }
         }
       } else {
-         console.log(`[Carousel] Drag detected or click too long. Acc Delta: ${accumulatedDeltaXRef.current.toFixed(0)}, Duration: ${dragDuration.toFixed(0)}ms`);
+        //  console.log(`[Carousel] Drag detected or click too long. Acc Delta: ${accumulatedDeltaXRef.current.toFixed(0)}, Duration: ${dragDuration.toFixed(0)}ms`);
       }
       
       isDraggingRef.current = false;
       appContext.setIsScrollLockActive(false);
 
-      // Clean up window event listeners
       const moveEventName = event.type.startsWith('touch') ? 'touchmove' : 'pointermove';
       const upEventName = event.type.startsWith('touch') ? 'touchend' : 'pointerup';
       window.removeEventListener(moveEventName, handlePointerMoveInternal);
       window.removeEventListener(upEventName, handlePointerUpInternal);
 
-      // Delay re-enabling auto-rotate to prevent immediate spin after drag
       setTimeout(() => {
         if (!isDraggingRef.current) autoRotateRef.current = true;
       }, 300);
     };
 
-    console.log("[Carousel] Main Effect: Attaching 'pointerdown' and 'touchstart' listeners to canvas.");
+    // console.log("[Carousel] Main Effect: Attaching 'pointerdown' and 'touchstart' listeners to canvas.");
     canvasElement.addEventListener('pointerdown', handlePointerDownInternal);
     canvasElement.addEventListener('touchstart', handlePointerDownInternal, { passive: false });
 
     return () => {
-      console.log("[Carousel] Cleaning up event listeners from canvas.");
+      // console.log("[Carousel] Cleaning up event listeners from canvas.");
       canvasElement.removeEventListener('pointerdown', handlePointerDownInternal);
       canvasElement.removeEventListener('touchstart', handlePointerDownInternal);
-      // Ensure window listeners are also cleaned up if the component unmounts mid-drag
       window.removeEventListener('pointermove', handlePointerMoveInternal);
       window.removeEventListener('pointerup', handlePointerUpInternal);
       window.removeEventListener('touchmove', handlePointerMoveInternal);
       window.removeEventListener('touchend', handlePointerUpInternal);
       
-      // Reset styles and states if unmounting mid-drag
       if (isDraggingRef.current) {
           document.body.style.userSelect = '';
           appContext.setIsScrollLockActive(false);
@@ -418,14 +424,13 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
           }
       }
     };
-  }, [gl, onItemClick, camera, raycaster, scene, invalidate, appContext.setIsScrollLockActive, itemsData.length]); // Added itemsData.length
-
+  }, [gl, onItemClick, camera, raycaster, scene, invalidate, appContext.setIsScrollLockActive, itemsToDisplay.length]);
 
   useFrame((state, delta) => {
     if (group.current && autoRotateRef.current && !isDraggingRef.current) {
-      if (itemsData.length === 1 && group.current.children[0]) {
+      if (itemsToDisplay.length === 1 && group.current.children[0]) {
         (group.current.children[0] as THREE.Mesh).rotation.y += ROTATION_SPEED * delta * 60;
-      } else if (itemsData.length > 1) {
+      } else if (itemsToDisplay.length > 1) {
         group.current.rotation.y += ROTATION_SPEED * delta * 60;
       }
     }
@@ -433,12 +438,12 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
 
   return (
     <group ref={group}>
-      {itemsData.map((item, index) => (
+      {itemsToDisplay.map((item, index) => (
         <CarouselItem
-          key={item.id || `item-${index}`}
-          itemData={item}
+          key={item.instanceKey} // Use instanceKey for React key
+          displayItem={item}
           index={index}
-          totalItems={itemsData.length}
+          totalItems={itemsToDisplay.length}
           carouselRadius={carouselRadius}
         />
       ))}
@@ -470,21 +475,21 @@ const Resizer = React.memo(function Resizer() {
     };
 
     if (container) {
-        handleResize(); // Initial resize
+        handleResize();
         const resizeObserver = new ResizeObserver(handleResize);
         resizeObserver.observe(container);
         return () => {
           if (container) resizeObserver.unobserve(container);
         };
     }
-  }, [camera, gl]); // Rerun if camera or gl instance changes
+  }, [camera, gl]);
 
   return null;
 });
 Resizer.displayName = 'Resizer';
 
 
-const fallbackImageSrc = '/Spi vs Spi icon.png'; // Fallback for item images
+const fallbackImageSrc = '/Spi vs Spi icon.png';
 
 interface SectionProps {
   parallaxOffset: number;
@@ -502,10 +507,12 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
 
   const { theme: currentGlobalTheme, themeVersion } = useTheme();
   const [pointLightColor, setPointLightColor] = useState<THREE.ColorRepresentation>('hsl(0, 0%, 100%)');
+  const [expandedStackItemId, setExpandedStackItemId] = useState<string | null>(null);
+  const sectionRef = useRef<HTMLDivElement>(null); // Ref for IntersectionObserver
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      let hslVarName = '--accent-hsl'; // Default for terminal-green or neutral
+      let hslVarName = '--accent-hsl';
       if (currentGlobalTheme === 'cyphers' || currentGlobalTheme === 'shadows') {
         hslVarName = '--primary-hsl';
       }
@@ -517,87 +524,149 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
           const h = parseFloat(parts[1]);
           const s = parseFloat(parts[2]);
           const l = parseFloat(parts[3]);
-          const colorStringForThree = `hsl(${h}, ${s}%, ${l}%)`; // Add commas
+          const colorStringForThree = `hsl(${h}, ${s}%, ${l}%)`;
           setPointLightColor(colorStringForThree);
-          console.log(`[EquipmentLocker] Set pointLightColor to: ${colorStringForThree} from var ${hslVarName}`);
+          // console.log(`[EquipmentLocker] Set pointLightColor to: ${colorStringForThree} from var ${hslVarName}`);
         } else {
-          console.warn(`[EquipmentLocker] Could not parse HSL string: '${computedHSLStringRaw}' from var ${hslVarName}. Defaulting light color.`);
-          setPointLightColor('hsl(0, 0%, 100%)'); // Default to white
+          // console.warn(`[EquipmentLocker] Could not parse HSL string: '${computedHSLStringRaw}' from var ${hslVarName}. Defaulting light color.`);
+          setPointLightColor('hsl(0, 0%, 100%)');
         }
       } else {
-        console.warn(`[EquipmentLocker] HSL variable ${hslVarName} not found. Defaulting light color.`);
-        setPointLightColor('hsl(0, 0%, 100%)'); // Default to white
+        // console.warn(`[EquipmentLocker] HSL variable ${hslVarName} not found. Defaulting light color.`);
+        setPointLightColor('hsl(0, 0%, 100%)');
       }
     }
-  }, [currentGlobalTheme, themeVersion]); // Re-run when theme or its version changes
+  }, [currentGlobalTheme, themeVersion]);
 
-  const carouselItemsData = useMemo(() => {
+  // Logic to derive items for carousel display
+  const carouselDisplayItems = useMemo((): CarouselDisplayItem[] => {
     if (typeof playerInventory !== 'object' || playerInventory === null || typeof getItemById !== 'function') {
       return [];
     }
-    const inventoryItems = Object.values(playerInventory) as { id: string; quantity: number }[];
-    return inventoryItems
-      .filter(item => item.quantity > 0)
-      .map(item => getItemById(item.id))
-      .filter((item): item is GameItemBase => !!item);
-  }, [playerInventory, getItemById]);
+
+    const displayItems: CarouselDisplayItem[] = [];
+    const inventoryEntries = Object.entries(playerInventory);
+
+    inventoryEntries.forEach(([playerInvItemId, invItemDetails]) => {
+      if (invItemDetails.quantity <= 0) return;
+
+      const baseItem = getItemById(playerInvItemId); // playerInvItemId is like "pick_l1"
+      if (!baseItem) return;
+
+      if (expandedStackItemId === playerInvItemId && invItemDetails.quantity > 1) {
+        // Expand this stack
+        for (let i = 0; i < invItemDetails.quantity; i++) {
+          displayItems.push({
+            baseItem: { ...baseItem }, // Create a copy for each instance
+            quantityInStack: 1, // Individual instance
+            isInstance: true,
+            instanceKey: `${playerInvItemId}-instance-${i}`,
+            originalPlayerInventoryItemId: playerInvItemId,
+          });
+        }
+      } else {
+        // Show as a stack (or single item if quantity is 1)
+        displayItems.push({
+          baseItem,
+          quantityInStack: invItemDetails.quantity,
+          isInstance: false,
+          instanceKey: playerInvItemId, // Base item ID can be the key for stacks
+          originalPlayerInventoryItemId: playerInvItemId,
+        });
+      }
+    });
+    return displayItems;
+  }, [playerInventory, getItemById, expandedStackItemId]);
+
 
   const { dynamicCarouselRadius, dynamicCameraZ } = useMemo(() => {
-    const numItems = carouselItemsData.length;
+    const numItems = carouselDisplayItems.length; // Use the length of items being displayed
     let radius = 0;
     if (numItems === 1) {
       radius = 0;
     } else if (numItems === 2) {
       radius = MIN_RADIUS_FOR_TWO_ITEMS;
     } else if (numItems > 2) {
-      // Calculate circumference based on number of items, item width, and spacing
       const circumference = numItems * (ITEM_WIDTH + CARD_SPACING_FACTOR);
       radius = Math.max(MIN_RADIUS_FOR_TWO_ITEMS, circumference / (2 * Math.PI));
     }
     const cameraZ = Math.max(MIN_CAMERA_Z, radius + CAMERA_DISTANCE_FROM_FRONT_CARD);
     return { dynamicCarouselRadius: radius, dynamicCameraZ: cameraZ };
-  }, [carouselItemsData.length]);
+  }, [carouselDisplayItems.length]);
 
-  const handleItemClick3D = useCallback((item: GameItemBase, mesh: THREE.Mesh) => {
-    console.log(`[EquipmentLockerSection] handleItemClick3D triggered for item: ${item.name}`);
-    const itemLevelForColor = item.level || 1;
-    const itemColorCssVar = ITEM_LEVEL_COLORS_CSS_VARS[itemLevelForColor as ItemLevel] || 'var(--level-1-color)';
+  const handleCarouselItemClick = useCallback((clickedDisplayItem: CarouselDisplayItem, mesh: THREE.Mesh) => {
+    // console.log(`[EquipmentLockerSection] handleCarouselItemClick triggered for item: ${clickedDisplayItem.baseItem.name}`);
+    
+    if (!clickedDisplayItem.isInstance && clickedDisplayItem.quantityInStack > 1) {
+      // Clicked on a stack, expand it
+      setExpandedStackItemId(clickedDisplayItem.originalPlayerInventoryItemId);
+    } else {
+      // Clicked on an individual item (either a single or an instance from an expanded stack)
+      // Open TOD window with details
+      const itemToShowDetails = clickedDisplayItem.baseItem;
+      const itemLevelForColor = itemToShowDetails.level || 1;
+      const itemColorCssVar = ITEM_LEVEL_COLORS_CSS_VARS[itemLevelForColor as ItemLevel] || 'var(--level-1-color)';
 
-    openTODWindow(
-      item.title || item.name,
-      <div className="font-rajdhani p-4 text-center">
-        <h3 className="text-xl font-bold mb-2" style={{color: itemColorCssVar }}>{item.title || item.name}</h3>
-        <div className="w-32 h-32 mx-auto my-2 rounded bg-black/30 flex items-center justify-center">
-          <img
-            src={item.imageSrc || fallbackImageSrc}
-            alt={item.title || item.name}
-            className="max-w-full max-h-full object-contain"
-            data-ai-hint={item.dataAiHint || "item icon"}
-            onError={(e) => {
-              const target = e.currentTarget as HTMLImageElement;
-              if (target.src !== fallbackImageSrc) {
-                target.src = fallbackImageSrc;
-                target.onerror = null;
-              }
-            }}
-          />
-        </div>
-        <p className="text-muted-foreground mb-1 text-sm">{item.description}</p>
-        <p className="text-xs text-muted-foreground/80">Cost: {item.cost} ELINT</p>
-        {item.strength && <p className="text-xs text-muted-foreground/80">Strength: {item.strength.current}/{item.strength.max}</p>}
-        {item.resistance && <p className="text-xs text-muted-foreground/80">Resistance: {item.resistance.current}/{item.resistance.max}</p>}
-        <HolographicButton onClick={closeTODWindow} className="mt-4" explicitTheme={currentGlobalTheme}>Close</HolographicButton>
-      </div>,
-      {
-        showCloseButton: true,
-        explicitTheme: currentGlobalTheme,
-        themeVersion: themeVersion,
-      }
+      openTODWindow(
+        itemToShowDetails.title || itemToShowDetails.name,
+        <div className="font-rajdhani p-4 text-center">
+          <h3 className="text-xl font-bold mb-2" style={{color: itemColorCssVar }}>{itemToShowDetails.title || itemToShowDetails.name}</h3>
+          <div className="w-32 h-32 mx-auto my-2 rounded bg-black/30 flex items-center justify-center">
+            <img
+              src={itemToShowDetails.imageSrc || fallbackImageSrc}
+              alt={itemToShowDetails.title || itemToShowDetails.name}
+              className="max-w-full max-h-full object-contain"
+              data-ai-hint={itemToShowDetails.dataAiHint || "item icon"}
+              onError={(e) => {
+                const target = e.currentTarget as HTMLImageElement;
+                if (target.src !== fallbackImageSrc) {
+                  target.src = fallbackImageSrc;
+                  target.onerror = null;
+                }
+              }}
+            />
+          </div>
+          <p className="text-muted-foreground mb-1 text-sm">{itemToShowDetails.description}</p>
+          <p className="text-xs text-muted-foreground/80">Cost: {itemToShowDetails.cost} ELINT</p>
+          {itemToShowDetails.strength && <p className="text-xs text-muted-foreground/80">Strength: {itemToShowDetails.strength.current}/{itemToShowDetails.strength.max}</p>}
+          {itemToShowDetails.resistance && <p className="text-xs text-muted-foreground/80">Resistance: {itemToShowDetails.resistance.current}/{itemToShowDetails.resistance.max}</p>}
+          <HolographicButton onClick={closeTODWindow} className="mt-4" explicitTheme={currentGlobalTheme}>Close</HolographicButton>
+        </div>,
+        {
+          showCloseButton: true,
+          explicitTheme: currentGlobalTheme,
+          themeVersion: themeVersion,
+        }
+      );
+    }
+  }, [openTODWindow, closeTODWindow, currentGlobalTheme, themeVersion, setExpandedStackItemId]);
+
+  // IntersectionObserver to collapse stack when section scrolls out of view
+  useEffect(() => {
+    const currentSectionRef = sectionRef.current;
+    if (!currentSectionRef) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting && expandedStackItemId !== null) {
+          // console.log("[EquipmentLocker] Scrolled out of view, collapsing stack.");
+          setExpandedStackItemId(null);
+        }
+      },
+      { threshold: 0.1 } // Trigger if less than 10% is visible
     );
-  }, [openTODWindow, closeTODWindow, currentGlobalTheme, themeVersion]);
+
+    observer.observe(currentSectionRef);
+    return () => {
+      if (currentSectionRef) {
+        observer.unobserve(currentSectionRef);
+      }
+    };
+  }, [expandedStackItemId]);
+
 
   return (
-    <div className="flex flex-col items-center justify-center p-4 md:p-6 h-full max-w-4xl mx-auto">
+    <div ref={sectionRef} className="flex flex-col items-center justify-center p-4 md:p-6 h-full max-w-4xl mx-auto">
       <HolographicPanel
         className="w-full h-full flex flex-col items-center p-2 md:p-4 overflow-hidden"
         explicitTheme={currentGlobalTheme}
@@ -618,16 +687,16 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
           className="w-full flex-grow min-h-0 relative"
           style={{ cursor: 'grab', touchAction: 'none' }}
         >
-          {carouselItemsData.length > 0 ? (
+          {carouselDisplayItems.length > 0 ? (
             <Canvas
               id="locker-carousel-canvas"
               camera={{ position: [0, 0.5, dynamicCameraZ], fov: 60 }}
               shadows
               gl={{ antialias: true, alpha: true, preserveDrawingBuffer: false }}
-              style={{ background: 'transparent', pointerEvents: 'auto' }} // Crucially ensure pointerEvents: 'auto'
+              style={{ background: 'transparent', pointerEvents: 'auto' }}
               onCreated={({ gl: canvasGl }) => {
-                canvasGl.setClearColor(0x000000, 0); // Transparent background
-                console.log("[Canvas] Created");
+                canvasGl.setClearColor(0x000000, 0);
+                // console.log("[Canvas] Created");
               }}
             >
               <ambientLight intensity={1.5} />
@@ -635,8 +704,8 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
               <pointLight position={[-5, -5, -10]} intensity={0.5} color={pointLightColor} />
               <pointLight position={[0, 10, 0]} intensity={0.3} />
               <EquipmentCarousel
-                itemsData={carouselItemsData}
-                onItemClick={handleItemClick3D}
+                itemsToDisplay={carouselDisplayItems}
+                onItemClick={handleCarouselItemClick}
                 carouselRadius={dynamicCarouselRadius}
               />
               <Resizer />
@@ -649,7 +718,7 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
           )}
         </div>
          <p className="text-center text-xs text-muted-foreground mt-2 flex-shrink-0 px-2">
-            {carouselItemsData.length > 0 ? "Drag to rotate. Click item for details." : ""}
+            {carouselDisplayItems.length > 0 ? (expandedStackItemId ? "Click item for details." : "Drag to rotate. Click stack to expand or item for details.") : ""}
           </p>
       </HolographicPanel>
     </div>

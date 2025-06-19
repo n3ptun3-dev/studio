@@ -19,8 +19,8 @@ export interface Player {
 
 
 const DEFAULT_PLAYER_STATS_FOR_NEW_PLAYER: PlayerStats = {
-  xp: 0, level: 1, // Start at level 1
-  elintReserves: 500, // Start with some ELINT
+  xp: 0, level: 0,
+  elintReserves: 0, 
   elintTransferred: 0,
   successfulVaultInfiltrations: 0,
   successfulLockInfiltrations: 0,
@@ -33,7 +33,7 @@ const DEFAULT_PLAYER_STATS_FOR_NEW_PLAYER: PlayerStats = {
   elintTransferredToHQCyle: 0,
   successfulInterferences: 0,
   elintSpentSpyShop: 0,
-  hasPlacedFirstLock: false, // New players haven't placed a lock
+  hasPlacedFirstLock: false,
 };
 
 export function initializePlayerData(): void {
