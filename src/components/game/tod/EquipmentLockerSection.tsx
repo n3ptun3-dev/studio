@@ -12,24 +12,24 @@ import { HolographicButton, HolographicPanel } from '@/components/game/shared/Ho
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ITEM_LEVEL_COLORS_CSS_VARS } from '@/lib/constants';
-import { SHOP_CATEGORIES as APP_SHOP_CATEGORIES } from '@/lib/game-items'; // Correct import
+import { SHOP_CATEGORIES as APP_SHOP_CATEGORIES, getItemById as getBaseItemDefinitionById } from '@/lib/game-items';
 import { ShoppingCart, ArrowLeft } from 'lucide-react';
 
 
 const ITEM_WIDTH = 1;
 const ITEM_HEIGHT = 1.7;
 const ROTATION_SPEED = 0.0035;
-const CLICK_DRAG_THRESHOLD_SQUARED = 10 * 10; // Pixels^2
-const CLICK_DURATION_THRESHOLD = 250; // ms
-const AUTO_ROTATE_RESUME_DELAY = 3000; // ms
+const CLICK_DRAG_THRESHOLD_SQUARED = 10 * 10;
+const CLICK_DURATION_THRESHOLD = 250;
+const AUTO_ROTATE_RESUME_DELAY = 3000;
 
-// Constants for dynamic radius and camera calculations - User adjusted
+// Constants for dynamic radius and camera calculations
 const MIN_RADIUS_FOR_TWO_ITEMS = 1.4;
-const CARD_SPACING_FACTOR = 1.7; // How much extra space per card for circumference calculation
+const CARD_SPACING_FACTOR = 1.7;
 const CAMERA_DISTANCE_FROM_FRONT_CARD = 5.0;
 const MIN_CAMERA_Z = 3.5;
 
-const INITIAL_CAROUSEL_TARGET_COUNT = 8; // If player has <= this many *individual physical* items, show them directly.
+const INITIAL_CAROUSEL_TARGET_COUNT = 8;
 
 const LEVEL_TO_BG_CLASS: Record<ItemLevel, string> = {
   1: 'bg-level-1/30',
@@ -55,7 +55,7 @@ const CardProgressBar: React.FC<{ label?: string; current: number; max: number; 
           className="h-full rounded-full"
           style={{
             width: `${percentage}%`,
-            backgroundColor: colorVar, // Use the direct CSS variable string
+            backgroundColor: colorVar,
           }}
         />
       </div>
@@ -64,16 +64,22 @@ const CardProgressBar: React.FC<{ label?: string; current: number; max: number; 
 });
 CardProgressBar.displayName = 'CardProgressBar';
 
-interface DisplayItem {
-  id: string; // Unique key for React
-  baseItem: GameItemBase | null; // Populated for itemLevel/individual, null for category/itemType stacks
+export interface DisplayItem {
+  id: string;
+  baseItem: GameItemBase | null;
   title: string;
   quantityInStack: number;
   imageSrc: string;
-  colorVar: string; // CSS variable string for item color
-  levelForVisuals: ItemLevel; // Highest level in stack for card theming
-
-  // For progress aggregation in stacks (category or itemType)
+  colorVar: string;
+  levelForVisuals: ItemLevel;
+  instanceCurrentStrength?: number;
+  instanceMaxStrength?: number;
+  instanceCurrentCharges?: number;
+  instanceMaxCharges?: number;
+  instanceCurrentUses?: number;
+  instanceMaxUses?: number;
+  instanceCurrentAlerts?: number;
+  instanceMaxAlerts?: number;
   aggregateCurrentStrength?: number;
   aggregateMaxStrength?: number;
   aggregateCurrentCharges?: number;
@@ -82,21 +88,13 @@ interface DisplayItem {
   aggregateMaxUses?: number;
   aggregateCurrentAlerts?: number;
   aggregateMaxAlerts?: number;
-
-  // Instance-specific values (for individual cards or itemLevelStacks representing specific inventory entries)
-  instanceCurrentStrength?: number;
-  instanceCurrentCharges?: number;
-  instanceCurrentUses?: number;
-  instanceCurrentAlerts?: number;
-
-  // Stacking metadata
   stackType: 'category' | 'itemType' | 'itemLevel' | 'individual';
-  itemCategory?: ItemCategory; // For category stacks
-  itemBaseName?: string; // For itemType stacks (e.g., "Cypher Lock")
-  originalPlayerInventoryItemId?: string; // For itemLevel and individual stacks (e.g., "cypher_lock_l1")
+  itemCategory?: ItemCategory;
+  itemBaseName?: string;
+  originalPlayerInventoryItemId?: string;
+  itemLevel?: ItemLevel;
   dataAiHint?: string;
 }
-
 
 interface CarouselItemProps {
   displayItem: DisplayItem;
@@ -108,7 +106,7 @@ interface CarouselItemProps {
 const CarouselItem = React.memo(function CarouselItem({ displayItem, index, totalItems, carouselRadius }: CarouselItemProps) {
   const meshRef = useRef<THREE.Mesh>(null!);
   const { baseItem, quantityInStack, title, imageSrc, colorVar: itemColorCssVar, levelForVisuals } = displayItem;
-  const fallbackImageSrc = '/Spi vs Spi icon.png'; // Make sure this path is correct
+  const fallbackImageSrc = '/Spi vs Spi icon.png';
   const actualImageSrc = imageSrc || fallbackImageSrc;
 
   useLayoutEffect(() => {
@@ -132,39 +130,40 @@ const CarouselItem = React.memo(function CarouselItem({ displayItem, index, tota
   });
 
   const cardBgClass = LEVEL_TO_BG_CLASS[levelForVisuals] || 'bg-muted/30';
-
   let detailContent = null;
   let currentVal = 0;
   let maxVal = 0;
   let progressBarLabel: string | undefined = undefined;
 
   if (displayItem.stackType === 'individual' || displayItem.stackType === 'itemLevel') {
-    const itemToQuery = displayItem.baseItem; // For itemLevelStack, baseItem should be the representative
-    currentVal = displayItem.instanceCurrentStrength ?? itemToQuery?.strength?.current ?? 0;
-    maxVal = itemToQuery?.strength?.max ?? 100;
-    progressBarLabel = "Strength";
+    const itemToQuery = displayItem.baseItem;
+    if (itemToQuery) {
+      currentVal = displayItem.instanceCurrentStrength ?? itemToQuery.strength?.current ?? itemToQuery.strength?.max ?? 0;
+      maxVal = displayItem.instanceMaxStrength ?? itemToQuery.strength?.max ?? 100;
+      progressBarLabel = "Strength";
 
-    if (itemToQuery?.category === 'Lock Fortifiers' && itemToQuery.type === 'Rechargeable') {
-      currentVal = displayItem.instanceCurrentCharges ?? itemToQuery?.currentCharges ?? 0;
-      maxVal = itemToQuery?.maxCharges ?? 100;
-      progressBarLabel = "Charges";
-    } else if (itemToQuery?.category === 'Infiltration Gear' && (itemToQuery.type === 'Rechargeable' || itemToQuery.type === 'Consumable')) {
-      currentVal = displayItem.instanceCurrentUses ?? itemToQuery?.currentUses ?? 0;
-      maxVal = itemToQuery?.maxUses ?? (itemToQuery.type === 'Consumable' ? 1 : 100);
-      progressBarLabel = "Uses";
-    } else if (itemToQuery?.category === 'Nexus Upgrades' && itemToQuery.name === 'Security Camera') {
-      currentVal = displayItem.instanceCurrentAlerts ?? itemToQuery?.currentAlerts ?? 0;
-      maxVal = itemToQuery?.maxAlerts ?? levelForVisuals;
-      progressBarLabel = "Alerts";
-    } else if (itemToQuery?.category === 'Nexus Upgrades' && (itemToQuery.name === 'Emergency Repair System (ERS)' || itemToQuery.name === 'Emergency Power Cell (EPC)')) {
-        currentVal = displayItem.instanceCurrentStrength ?? itemToQuery?.strength?.current ?? 0;
-        maxVal = itemToQuery?.strength?.max ?? 100;
-        progressBarLabel = "Strength";
+      if (itemToQuery.category === 'Lock Fortifiers' && itemToQuery.type === 'Rechargeable') {
+        currentVal = displayItem.instanceCurrentCharges ?? (itemToQuery as any).currentCharges ?? (itemToQuery as any).maxCharges ?? 0;
+        maxVal = displayItem.instanceMaxCharges ?? (itemToQuery as any).maxCharges ?? 100;
+        progressBarLabel = "Charges";
+      } else if (itemToQuery.category === 'Infiltration Gear' && (itemToQuery.type === 'Rechargeable' || itemToQuery.type === 'Consumable')) {
+        currentVal = displayItem.instanceCurrentUses ?? (itemToQuery as any).currentUses ?? (itemToQuery as any).maxUses ?? 0;
+        maxVal = displayItem.instanceMaxUses ?? (itemToQuery as any).maxUses ?? ((itemToQuery.type === 'Consumable' || itemToQuery.type === 'One-Time Use') ? 1 : 100);
+        progressBarLabel = "Uses";
+      } else if (itemToQuery.category === 'Nexus Upgrades' && itemToQuery.name === 'Security Camera') {
+        currentVal = displayItem.instanceCurrentAlerts ?? (itemToQuery as any).currentAlerts ?? (itemToQuery as any).maxAlerts ?? 0;
+        maxVal = displayItem.instanceMaxAlerts ?? (itemToQuery as any).maxAlerts ?? levelForVisuals;
+        progressBarLabel = "Alerts";
+      } else if (itemToQuery.category === 'Nexus Upgrades' && (itemToQuery.name === 'Emergency Repair System (ERS)' || itemToQuery.name === 'Emergency Power Cell (EPC)')) {
+          currentVal = displayItem.instanceCurrentStrength ?? itemToQuery.strength?.current ?? itemToQuery.strength?.max ?? 0;
+          maxVal = displayItem.instanceMaxStrength ?? itemToQuery.strength?.max ?? 100;
+          progressBarLabel = "Strength";
+      }
     }
   } else if (displayItem.stackType === 'category' || displayItem.stackType === 'itemType') {
     currentVal = displayItem.aggregateCurrentStrength ?? 0;
     maxVal = displayItem.aggregateMaxStrength ?? (quantityInStack > 0 ? quantityInStack * 100 : 100);
-    progressBarLabel = "Integrity"; // More generic for aggregate stacks
+    progressBarLabel = "Integrity";
   }
 
   const isSingleUseType = displayItem.baseItem?.type === 'One-Time Use' || displayItem.baseItem?.type === 'Consumable';
@@ -239,7 +238,6 @@ const CarouselItem = React.memo(function CarouselItem({ displayItem, index, tota
   );
 });
 CarouselItem.displayName = 'CarouselItem';
-
 
 interface EquipmentCarouselProps {
   itemsToDisplay: DisplayItem[];
@@ -398,14 +396,13 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
       isDraggingRef.current = false;
       appContext.setIsScrollLockActive(false);
       if (autoRotateTimeoutRef.current) clearTimeout(autoRotateTimeoutRef.current);
-      if (!appContext.isTODWindowOpen) { // Check if TOD window is NOT open
+      if (!appContext.isTODWindowOpen) {
          autoRotateTimeoutRef.current = setTimeout(() => {
-            if (!isDraggingRef.current && !appContext.isTODWindowOpen) { // Double check
+            if (!isDraggingRef.current && !appContext.isTODWindowOpen) {
                  autoRotateRef.current = true;
             }
         }, AUTO_ROTATE_RESUME_DELAY);
       }
-
 
       const moveEventName = isTouchEvent ? 'touchmove' : 'pointermove';
       const upEventName = isTouchEvent ? 'touchend' : 'pointerup';
@@ -461,7 +458,6 @@ const EquipmentCarousel = React.memo(function EquipmentCarousel(props: Equipment
 });
 EquipmentCarousel.displayName = 'EquipmentCarousel';
 
-
 const Resizer = React.memo(function Resizer() {
   const { camera, gl } = useThree();
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -511,7 +507,7 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
     getItemById,
     openSpyShop,
     isTODWindowOpen,
-    todWindowTitle, // To check if the locker opened the TOD window
+    todWindowTitle,
   } = appContext;
 
   const { theme: currentGlobalTheme, themeVersion } = useTheme();
@@ -523,7 +519,6 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
   const isDraggingRef = useRef(false);
   const [todOpenedByLocker, setTodOpenedByLocker] = useState(false);
 
-
   useEffect(() => {
     if (typeof window !== 'undefined') {
       let hslVarName = '--accent-hsl';
@@ -532,7 +527,7 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
       }
       const computedHSLStringRaw = getComputedStyle(document.documentElement).getPropertyValue(hslVarName).trim();
       if (computedHSLStringRaw) {
-        const parts = computedHSLStringRaw.match(/(\d+)\s*,\s*(\d+)%?\s*,\s*(\d+)%?/); // Adjusted regex for commas
+        const parts = computedHSLStringRaw.match(/(\d+)\s*,\s*(\d+)%?\s*,\s*(\d+)%?/);
         if (parts && parts.length === 4) {
           const h = parseFloat(parts[1]);
           const s = parseFloat(parts[2]);
@@ -548,7 +543,7 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
                  const colorStringForThree = `hsl(${h}, ${s}%, ${l}%)`;
                  setPointLightColor(colorStringForThree);
             } else {
-                setPointLightColor('hsl(0, 0%, 100%)'); // Default if regex fails
+                setPointLightColor('hsl(0, 0%, 100%)');
             }
         }
       } else {
@@ -557,311 +552,261 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
     }
   }, [currentGlobalTheme, themeVersion]);
 
-
-  const carouselDisplayItems = useMemo((): DisplayItem[] => {
-    const itemsToDisplay: DisplayItem[] = [];
+  const inventoryEntries = useMemo(() => {
     if (typeof playerInventory !== 'object' || playerInventory === null || typeof getItemById !== 'function') {
       return [];
     }
+    return Object.values(playerInventory).filter(deets => deets.quantity > 0);
+  }, [playerInventory, getItemById]);
 
-    const inventoryEntries = Object.values(playerInventory).filter(deets => deets.quantity > 0);
-    const getBaseItemById = getItemById; // Alias for clarity within this scope
 
+  const otherTopLevelItemsForPathLevel1 = useMemo((): DisplayItem[] => {
+    const tempItems: DisplayItem[] = [];
+    if (expandedStackPath.length !== 1) return tempItems;
+    const categoryToExpand = expandedStackPath[0] as ItemCategory;
+
+    const totalIndividualPhysicalItems = inventoryEntries.reduce((sum, item) => sum + item.quantity, 0);
+    if (totalIndividualPhysicalItems <= INITIAL_CAROUSEL_TARGET_COUNT && totalIndividualPhysicalItems > 0) {
+      inventoryEntries.forEach(invItemDetails => {
+        const baseDef = getItemById(invItemDetails.id);
+        if (baseDef && baseDef.category !== categoryToExpand) {
+          tempItems.push({
+            id: invItemDetails.id, baseItem: baseDef, title: baseDef.title || baseDef.name, quantityInStack: invItemDetails.quantity,
+            imageSrc: baseDef.imageSrc || '/Spi vs Spi icon.png', colorVar: ITEM_LEVEL_COLORS_CSS_VARS[baseDef.level] || 'var(--level-1-color)',
+            levelForVisuals: baseDef.level,
+            instanceCurrentStrength: invItemDetails.currentStrength, instanceMaxStrength: baseDef.strength?.max,
+            instanceCurrentCharges: invItemDetails.currentCharges, instanceMaxCharges: (baseDef as any).maxCharges,
+            instanceCurrentUses: invItemDetails.currentUses, instanceMaxUses: (baseDef as any).maxUses,
+            instanceCurrentAlerts: invItemDetails.currentAlerts, instanceMaxAlerts: (baseDef as any).maxAlerts,
+            stackType: invItemDetails.quantity > 1 ? 'itemLevel' : 'individual', itemCategory: baseDef.category, itemBaseName: baseDef.name,
+            itemLevel: baseDef.level, originalPlayerInventoryItemId: invItemDetails.id, dataAiHint: baseDef.dataAiHint,
+          });
+        }
+      });
+    } else if (totalIndividualPhysicalItems > 0) {
+      APP_SHOP_CATEGORIES.slice(0, 6).forEach(catInfo => {
+        if (catInfo.name !== categoryToExpand) {
+          const itemsInThisCategory = inventoryEntries.filter(invDeets => getItemById(invDeets.id)?.category === catInfo.name);
+          if (itemsInThisCategory.length > 0) {
+            let highestLevel = 0 as ItemLevel; let representativeItemForCat: GameItemBase | null = null; let totalQuantityInCategory = 0;
+            let aggCurrentStrength = 0; let aggMaxStrength = 0;
+            itemsInThisCategory.forEach(invItem => { const baseDef = getItemById(invItem.id); if (baseDef) { totalQuantityInCategory += invItem.quantity; if (baseDef.level > highestLevel) { highestLevel = baseDef.level; representativeItemForCat = baseDef; } aggCurrentStrength += (invItem.currentStrength ?? baseDef.strength?.current ?? 0) * invItem.quantity; aggMaxStrength += (baseDef.strength?.max ?? 100) * invItem.quantity; } });
+            if (representativeItemForCat) tempItems.push({ id: `${catInfo.name}-categoryStack`, baseItem: null, title: catInfo.name, quantityInStack: totalQuantityInCategory, imageSrc: representativeItemForCat.tileImageSrc || representativeItemForCat.imageSrc || '/Spi vs Spi icon.png', colorVar: ITEM_LEVEL_COLORS_CSS_VARS[highestLevel] || 'var(--level-1-color)', levelForVisuals: highestLevel, aggregateCurrentStrength: aggCurrentStrength, aggregateMaxStrength: aggMaxStrength, stackType: 'category', itemCategory: catInfo.name as ItemCategory, dataAiHint: representativeItemForCat.dataAiHint || catInfo.name.toLowerCase() });
+          }
+        }
+      });
+    }
+    return tempItems;
+  }, [inventoryEntries, getItemById, expandedStackPath]);
+
+  const otherContextItemsForPathLevel2 = useMemo((): DisplayItem[] => {
+    const tempItems: DisplayItem[] = [];
+    if (expandedStackPath.length !== 2) return tempItems;
+    const categoryName = expandedStackPath[0] as ItemCategory;
+    const itemBaseNameToExpand = expandedStackPath[1];
+
+    const totalIndividualPhysicalItems = inventoryEntries.reduce((sum, item) => sum + item.quantity, 0);
+    if (totalIndividualPhysicalItems > INITIAL_CAROUSEL_TARGET_COUNT) {
+      APP_SHOP_CATEGORIES.slice(0, 6).forEach(catInfo => {
+        if (catInfo.name !== categoryName) {
+          const itemsInThisCategory = inventoryEntries.filter(invDeets => getItemById(invDeets.id)?.category === catInfo.name);
+          if (itemsInThisCategory.length > 0) {
+            let highestLevel = 0 as ItemLevel; let representativeItemForCat: GameItemBase | null = null; let totalQuantityInCategory = 0;
+            let aggCurrentStrength = 0; let aggMaxStrength = 0;
+            itemsInThisCategory.forEach(invItem => { const baseDef = getItemById(invItem.id); if (baseDef) { totalQuantityInCategory += invItem.quantity; if (baseDef.level > highestLevel) { highestLevel = baseDef.level; representativeItemForCat = baseDef; } aggCurrentStrength += (invItem.currentStrength ?? baseDef.strength?.current ?? 0) * invItem.quantity; aggMaxStrength += (baseDef.strength?.max ?? 100) * invItem.quantity; } });
+            if (representativeItemForCat) tempItems.push({ id: `${catInfo.name}-categoryStack`, baseItem: null, title: catInfo.name, quantityInStack: totalQuantityInCategory, imageSrc: representativeItemForCat.tileImageSrc || representativeItemForCat.imageSrc || '/Spi vs Spi icon.png', colorVar: ITEM_LEVEL_COLORS_CSS_VARS[highestLevel] || 'var(--level-1-color)', levelForVisuals: highestLevel, aggregateCurrentStrength: aggCurrentStrength, aggregateMaxStrength: aggMaxStrength, stackType: 'category', itemCategory: catInfo.name as ItemCategory, dataAiHint: representativeItemForCat.dataAiHint || catInfo.name.toLowerCase() });
+          }
+        }
+      });
+    }
+
+    const itemsInExpandedCategory = inventoryEntries.filter(invDeets => getItemById(invDeets.id)?.category === categoryName);
+    const groupedByItemBaseName: Record<string, PlayerInventoryItem[]> = {};
+    itemsInExpandedCategory.forEach(invItemDetails => { const baseDef = getItemById(invItemDetails.id); if (baseDef) { if (!groupedByItemBaseName[baseDef.name]) groupedByItemBaseName[baseDef.name] = []; groupedByItemBaseName[baseDef.name].push(invItemDetails); } });
+    Object.entries(groupedByItemBaseName).forEach(([baseName, invItemsForType]) => {
+      if (baseName !== itemBaseNameToExpand) {
+        let highestLevel = 0 as ItemLevel; let representativeItem: GameItemBase | null = null; let totalQuantity = 0;
+        let aggCurrentStrength = 0; let aggMaxStrength = 0;
+        invItemsForType.forEach(invItem => { const baseDef = getItemById(invItem.id); if (baseDef) { totalQuantity += invItem.quantity; if (baseDef.level > highestLevel) { highestLevel = baseDef.level; representativeItem = baseDef; } aggCurrentStrength += (invItem.currentStrength ?? baseDef.strength?.current ?? 0) * invItem.quantity; aggMaxStrength += (baseDef.strength?.max ?? 100) * invItem.quantity; } });
+        if (representativeItem) tempItems.push({ id: `${categoryName}-${baseName}-itemTypeStack`, baseItem: null, title: baseName, quantityInStack: totalQuantity, imageSrc: representativeItem.imageSrc || '/Spi vs Spi icon.png', colorVar: ITEM_LEVEL_COLORS_CSS_VARS[highestLevel] || 'var(--level-1-color)', levelForVisuals: highestLevel, aggregateCurrentStrength: aggCurrentStrength, aggregateMaxStrength: aggMaxStrength, stackType: 'itemType', itemCategory: categoryName, itemBaseName: baseName, dataAiHint: representativeItem.dataAiHint });
+      }
+    });
+    return tempItems;
+  }, [inventoryEntries, getItemById, expandedStackPath]);
+
+  const otherContextItemsForPathLevel3 = useMemo((): DisplayItem[] => {
+    const tempItems: DisplayItem[] = [];
+    if (expandedStackPath.length !== 3) return tempItems;
+    const categoryName = expandedStackPath[0] as ItemCategory;
+    const itemBaseName = expandedStackPath[1];
+    const itemLevelIdToExpand = expandedStackPath[2];
+
+    const totalIndividualPhysicalItems = inventoryEntries.reduce((sum, item) => sum + item.quantity, 0);
+    if (totalIndividualPhysicalItems > INITIAL_CAROUSEL_TARGET_COUNT) {
+      APP_SHOP_CATEGORIES.slice(0, 6).forEach(catInfo => {
+        if (catInfo.name !== categoryName) {
+          const itemsInThisCategory = inventoryEntries.filter(invDeets => getItemById(invDeets.id)?.category === catInfo.name);
+          if (itemsInThisCategory.length > 0) {
+            let highestLevel = 0 as ItemLevel; let representativeItemForCat: GameItemBase | null = null; let totalQuantityInCategory = 0;
+            let aggCurrentStrength = 0; let aggMaxStrength = 0;
+            itemsInThisCategory.forEach(invItem => { const baseDef = getItemById(invItem.id); if (baseDef) { totalQuantityInCategory += invItem.quantity; if (baseDef.level > highestLevel) { highestLevel = baseDef.level; representativeItemForCat = baseDef; } aggCurrentStrength += (invItem.currentStrength ?? baseDef.strength?.current ?? 0) * invItem.quantity; aggMaxStrength += (baseDef.strength?.max ?? 100) * invItem.quantity; } });
+            if (representativeItemForCat) tempItems.push({ id: `${catInfo.name}-categoryStack`, baseItem: null, title: catInfo.name, quantityInStack: totalQuantityInCategory, imageSrc: representativeItemForCat.tileImageSrc || representativeItemForCat.imageSrc || '/Spi vs Spi icon.png', colorVar: ITEM_LEVEL_COLORS_CSS_VARS[highestLevel] || 'var(--level-1-color)', levelForVisuals: highestLevel, aggregateCurrentStrength: aggCurrentStrength, aggregateMaxStrength: aggMaxStrength, stackType: 'category', itemCategory: catInfo.name as ItemCategory, dataAiHint: representativeItemForCat.dataAiHint || catInfo.name.toLowerCase() });
+          }
+        }
+      });
+    }
+    
+    const itemsInExpandedCategory = inventoryEntries.filter(invDeets => getItemById(invDeets.id)?.category === categoryName);
+    const groupedByItemBaseName: Record<string, PlayerInventoryItem[]> = {};
+    itemsInExpandedCategory.forEach(invItemDetails => { const baseDef = getItemById(invItemDetails.id); if (baseDef) { if (!groupedByItemBaseName[baseDef.name]) groupedByItemBaseName[baseDef.name] = []; groupedByItemBaseName[baseDef.name].push(invItemDetails); } });
+    Object.entries(groupedByItemBaseName).forEach(([baseNameFromGroup, invItemsForType]) => {
+      if (baseNameFromGroup !== itemBaseName) {
+        let highestLevel = 0 as ItemLevel; let representativeItem: GameItemBase | null = null; let totalQuantity = 0;
+        let aggCurrentStrength = 0; let aggMaxStrength = 0;
+        invItemsForType.forEach(invItem => { const baseDef = getItemById(invItem.id); if (baseDef) { totalQuantity += invItem.quantity; if (baseDef.level > highestLevel) { highestLevel = baseDef.level; representativeItem = baseDef; } aggCurrentStrength += (invItem.currentStrength ?? baseDef.strength?.current ?? 0) * invItem.quantity; aggMaxStrength += (baseDef.strength?.max ?? 100) * invItem.quantity; } });
+        if (representativeItem) tempItems.push({ id: `${categoryName}-${baseNameFromGroup}-itemTypeStack`, baseItem: null, title: baseNameFromGroup, quantityInStack: totalQuantity, imageSrc: representativeItem.imageSrc || '/Spi vs Spi icon.png', colorVar: ITEM_LEVEL_COLORS_CSS_VARS[highestLevel] || 'var(--level-1-color)', levelForVisuals: highestLevel, aggregateCurrentStrength: aggCurrentStrength, aggregateMaxStrength: aggMaxStrength, stackType: 'itemType', itemCategory: categoryName, itemBaseName: baseNameFromGroup, dataAiHint: representativeItem.dataAiHint });
+      } else {
+        invItemsForType.forEach(invItem => {
+          const baseDef = getItemById(invItem.id);
+          if (baseDef && invItem.id !== itemLevelIdToExpand) {
+            tempItems.push({
+              id: invItem.id, baseItem: baseDef, title: baseDef.title || baseDef.name, quantityInStack: invItem.quantity,
+              imageSrc: baseDef.imageSrc || '/Spi vs Spi icon.png', colorVar: ITEM_LEVEL_COLORS_CSS_VARS[baseDef.level] || 'var(--level-1-color)',
+              levelForVisuals: baseDef.level,
+              instanceCurrentStrength: invItem.currentStrength, instanceMaxStrength: baseDef.strength?.max,
+              instanceCurrentCharges: invItem.currentCharges, instanceMaxCharges: (baseDef as any).maxCharges,
+              instanceCurrentUses: invItem.currentUses, instanceMaxUses: (baseDef as any).maxUses,
+              instanceCurrentAlerts: invItem.currentAlerts, instanceMaxAlerts: (baseDef as any).maxAlerts,
+              stackType: invItem.quantity > 1 ? 'itemLevel' : 'individual', itemCategory: categoryName, itemBaseName: baseNameFromGroup,
+              itemLevel: baseDef.level, originalPlayerInventoryItemId: invItem.id, dataAiHint: baseDef.dataAiHint,
+            });
+          }
+        });
+      }
+    });
+    return tempItems;
+  }, [inventoryEntries, getItemById, expandedStackPath]);
+
+
+  const carouselDisplayItems = useMemo((): DisplayItem[] => {
+    const itemsToDisplay: DisplayItem[] = [];
     const currentPathLevel = expandedStackPath.length;
 
     if (currentPathLevel === 0) { // Initial View: Smart or Category Stacks
       const totalIndividualPhysicalItems = inventoryEntries.reduce((sum, item) => sum + item.quantity, 0);
 
       if (totalIndividualPhysicalItems <= INITIAL_CAROUSEL_TARGET_COUNT && totalIndividualPhysicalItems > 0) {
-        // Show itemLevel or individual stacks
         inventoryEntries.forEach(invItemDetails => {
-          const baseDef = getBaseItemById(invItemDetails.id);
+          const baseDef = getItemById(invItemDetails.id);
           if (baseDef) {
-            itemsToDisplay.push({
-              id: invItemDetails.id, // Use the specific item ID like "cypher_lock_l1"
-              baseItem: baseDef,
-              title: baseDef.title || baseDef.name,
-              quantityInStack: invItemDetails.quantity,
-              imageSrc: baseDef.imageSrc || '/Spi vs Spi icon.png',
-              colorVar: ITEM_LEVEL_COLORS_CSS_VARS[baseDef.level] || 'var(--level-1-color)',
-              levelForVisuals: baseDef.level,
-              instanceCurrentStrength: invItemDetails.currentStrength,
-              instanceCurrentCharges: invItemDetails.currentCharges,
-              instanceCurrentUses: invItemDetails.currentUses,
-              instanceCurrentAlerts: invItemDetails.currentAlerts,
-              stackType: invItemDetails.quantity > 1 ? 'itemLevel' : 'individual',
-              itemCategory: baseDef.category,
-              itemBaseName: baseDef.name,
-              itemLevel: baseDef.level,
-              originalPlayerInventoryItemId: invItemDetails.id,
-              dataAiHint: baseDef.dataAiHint,
-            });
+            for (let i = 0; i < invItemDetails.quantity; i++) { // Create one card per quantity for this view
+              itemsToDisplay.push({
+                id: `${invItemDetails.id}-instance-${i}`,
+                baseItem: baseDef,
+                title: baseDef.title || baseDef.name,
+                quantityInStack: 1, // Each card is an individual instance
+                imageSrc: baseDef.imageSrc || '/Spi vs Spi icon.png',
+                colorVar: ITEM_LEVEL_COLORS_CSS_VARS[baseDef.level] || 'var(--level-1-color)',
+                levelForVisuals: baseDef.level,
+                instanceCurrentStrength: invItemDetails.currentStrength, instanceMaxStrength: baseDef.strength?.max,
+                instanceCurrentCharges: invItemDetails.currentCharges, instanceMaxCharges: (baseDef as any).maxCharges,
+                instanceCurrentUses: invItemDetails.currentUses, instanceMaxUses: (baseDef as any).maxUses,
+                instanceCurrentAlerts: invItemDetails.currentAlerts, instanceMaxAlerts: (baseDef as any).maxAlerts,
+                stackType: 'individual',
+                itemCategory: baseDef.category,
+                itemBaseName: baseDef.name,
+                itemLevel: baseDef.level,
+                originalPlayerInventoryItemId: invItemDetails.id,
+                dataAiHint: baseDef.dataAiHint,
+              });
+            }
           }
         });
       } else if (totalIndividualPhysicalItems > 0) {
-        // Show Category Stacks
         APP_SHOP_CATEGORIES.slice(0, 6).forEach(catInfo => {
-          const itemsInThisCategory = inventoryEntries.filter(invDeets => {
-            const baseDef = getBaseItemById(invDeets.id);
-            return baseDef && baseDef.category === catInfo.name;
-          });
-
+          const itemsInThisCategory = inventoryEntries.filter(invDeets => getItemById(invDeets.id)?.category === catInfo.name);
           if (itemsInThisCategory.length > 0) {
-            let highestLevel = 0 as ItemLevel;
-            let representativeItemForCat: GameItemBase | null = null;
-            let totalQuantityInCategory = 0;
-            let aggCurrentStrength = 0;
-            let aggMaxStrength = 0;
-
-            itemsInThisCategory.forEach(invItem => {
-              const baseDef = getBaseItemById(invItem.id);
-              if (baseDef) {
-                totalQuantityInCategory += invItem.quantity;
-                if (baseDef.level > highestLevel) {
-                  highestLevel = baseDef.level;
-                  representativeItemForCat = baseDef;
-                }
-                aggCurrentStrength += (invItem.currentStrength ?? baseDef.strength?.current ?? 0) * invItem.quantity;
-                aggMaxStrength += (baseDef.strength?.max ?? 100) * invItem.quantity;
-              }
-            });
-
-            if (representativeItemForCat) {
-              itemsToDisplay.push({
-                id: `${catInfo.name}-categoryStack`,
-                baseItem: null,
-                title: catInfo.name,
-                quantityInStack: totalQuantityInCategory,
-                imageSrc: representativeItemForCat.tileImageSrc || representativeItemForCat.imageSrc || '/Spi vs Spi icon.png',
-                colorVar: ITEM_LEVEL_COLORS_CSS_VARS[highestLevel] || 'var(--level-1-color)',
-                levelForVisuals: highestLevel,
-                aggregateCurrentStrength: aggCurrentStrength,
-                aggregateMaxStrength: aggMaxStrength,
-                stackType: 'category',
-                itemCategory: catInfo.name as ItemCategory,
-                dataAiHint: representativeItemForCat.dataAiHint || catInfo.name.toLowerCase(),
-              });
-            }
+            let highestLevel = 0 as ItemLevel; let representativeItemForCat: GameItemBase | null = null; let totalQuantityInCategory = 0;
+            let aggCurrentStrength = 0; let aggMaxStrength = 0;
+            itemsInThisCategory.forEach(invItem => { const baseDef = getItemById(invItem.id); if (baseDef) { totalQuantityInCategory += invItem.quantity; if (baseDef.level > highestLevel) { highestLevel = baseDef.level; representativeItemForCat = baseDef; } aggCurrentStrength += (invItem.currentStrength ?? baseDef.strength?.current ?? 0) * invItem.quantity; aggMaxStrength += (baseDef.strength?.max ?? 100) * invItem.quantity; } });
+            if (representativeItemForCat) itemsToDisplay.push({ id: `${catInfo.name}-categoryStack`, baseItem: null, title: catInfo.name, quantityInStack: totalQuantityInCategory, imageSrc: representativeItemForCat.tileImageSrc || representativeItemForCat.imageSrc || '/Spi vs Spi icon.png', colorVar: ITEM_LEVEL_COLORS_CSS_VARS[highestLevel] || 'var(--level-1-color)', levelForVisuals: highestLevel, aggregateCurrentStrength: aggCurrentStrength, aggregateMaxStrength: aggMaxStrength, stackType: 'category', itemCategory: catInfo.name as ItemCategory, dataAiHint: representativeItemForCat.dataAiHint || catInfo.name.toLowerCase() });
           }
         });
       }
     } else if (currentPathLevel === 1) { // Path: [categoryName] -> Show ItemType Stacks + other initial items
       const categoryToExpand = expandedStackPath[0] as ItemCategory;
-      
-      // Add other top-level items/stacks (those not being expanded)
-      const otherTopLevelItems = (useMemo((): DisplayItem[] => { // Self-invoking to use existing logic for initial view
-          const tempItems: DisplayItem[] = [];
-          const totalIndividualPhysicalItems = inventoryEntries.reduce((sum, item) => sum + item.quantity, 0);
-          if (totalIndividualPhysicalItems <= INITIAL_CAROUSEL_TARGET_COUNT && totalIndividualPhysicalItems > 0) {
-                inventoryEntries.forEach(invItemDetails => {
-                    const baseDef = getBaseItemById(invItemDetails.id);
-                    if (baseDef && baseDef.category !== categoryToExpand) { // Exclude items from the category being expanded
-                         tempItems.push({
-                            id: invItemDetails.id, baseItem: baseDef, title: baseDef.title || baseDef.name, quantityInStack: invItemDetails.quantity,
-                            imageSrc: baseDef.imageSrc || '/Spi vs Spi icon.png', colorVar: ITEM_LEVEL_COLORS_CSS_VARS[baseDef.level] || 'var(--level-1-color)',
-                            levelForVisuals: baseDef.level, instanceCurrentStrength: invItemDetails.currentStrength, instanceCurrentCharges: invItemDetails.currentCharges,
-                            instanceCurrentUses: invItemDetails.currentUses, instanceCurrentAlerts: invItemDetails.currentAlerts,
-                            stackType: invItemDetails.quantity > 1 ? 'itemLevel' : 'individual', itemCategory: baseDef.category, itemBaseName: baseDef.name,
-                            itemLevel: baseDef.level, originalPlayerInventoryItemId: invItemDetails.id, dataAiHint: baseDef.dataAiHint,
-                        });
-                    }
-                });
-          } else if (totalIndividualPhysicalItems > 0) {
-             APP_SHOP_CATEGORIES.slice(0,6).forEach(catInfo => {
-                if (catInfo.name !== categoryToExpand) { // Exclude the category being expanded
-                    const itemsInThisCategory = inventoryEntries.filter(invDeets => getBaseItemById(invDeets.id)?.category === catInfo.name);
-                    if (itemsInThisCategory.length > 0) { /* ... logic to create category stack ... */
-                        let highestLevel = 0 as ItemLevel; let representativeItemForCat: GameItemBase | null = null; let totalQuantityInCategory = 0;
-                        let aggCurrentStrength = 0; let aggMaxStrength = 0;
-                        itemsInThisCategory.forEach(invItem => { const baseDef = getBaseItemById(invItem.id); if (baseDef) { totalQuantityInCategory += invItem.quantity; if (baseDef.level > highestLevel) { highestLevel = baseDef.level; representativeItemForCat = baseDef; } aggCurrentStrength += (invItem.currentStrength ?? baseDef.strength?.current ?? 0) * invItem.quantity; aggMaxStrength += (baseDef.strength?.max ?? 100) * invItem.quantity; }});
-                        if (representativeItemForCat) tempItems.push({ id: `${catInfo.name}-categoryStack`, baseItem: null, title: catInfo.name, quantityInStack: totalQuantityInCategory, imageSrc: representativeItemForCat.tileImageSrc || representativeItemForCat.imageSrc || '/Spi vs Spi icon.png', colorVar: ITEM_LEVEL_COLORS_CSS_VARS[highestLevel] || 'var(--level-1-color)', levelForVisuals: highestLevel, aggregateCurrentStrength: aggCurrentStrength, aggregateMaxStrength: aggMaxStrength, stackType: 'category', itemCategory: catInfo.name as ItemCategory, dataAiHint: representativeItemForCat.dataAiHint || catInfo.name.toLowerCase() });
-                    }
-                }
-             });
-          }
-          return tempItems;
-      }, [playerInventory, getItemById, categoryToExpand]))(); // Immediate execution with dependency
-      itemsToDisplay.push(...otherTopLevelItems);
+      itemsToDisplay.push(...otherTopLevelItemsForPathLevel1);
 
-
-      const itemsInCategory = inventoryEntries.filter(invDeets => getBaseItemById(invDeets.id)?.category === categoryToExpand);
+      const itemsInCategory = inventoryEntries.filter(invDeets => getItemById(invDeets.id)?.category === categoryToExpand);
       const groupedByItemBaseName: Record<string, PlayerInventoryItem[]> = {};
-      itemsInCategory.forEach(invItemDetails => {
-        const baseDef = getBaseItemById(invItemDetails.id);
-        if (baseDef) {
-          if (!groupedByItemBaseName[baseDef.name]) groupedByItemBaseName[baseDef.name] = [];
-          groupedByItemBaseName[baseDef.name].push(invItemDetails);
-        }
-      });
-
+      itemsInCategory.forEach(invItemDetails => { const baseDef = getItemById(invItemDetails.id); if (baseDef) { if (!groupedByItemBaseName[baseDef.name]) groupedByItemBaseName[baseDef.name] = []; groupedByItemBaseName[baseDef.name].push(invItemDetails); } });
       Object.entries(groupedByItemBaseName).forEach(([baseName, invItemsForType]) => {
-        let highestLevel = 0 as ItemLevel;
-        let representativeItem: GameItemBase | null = null;
-        let totalQuantity = 0;
-        let aggCurrentStrength = 0;
-        let aggMaxStrength = 0;
+        let highestLevel = 0 as ItemLevel; let representativeItem: GameItemBase | null = null; let totalQuantity = 0;
+        let aggCurrentStrength = 0; let aggMaxStrength = 0;
+        invItemsForType.forEach(invItem => { const baseDef = getItemById(invItem.id); if (baseDef) { totalQuantity += invItem.quantity; if (baseDef.level > highestLevel) { highestLevel = baseDef.level; representativeItem = baseDef; } aggCurrentStrength += (invItem.currentStrength ?? baseDef.strength?.current ?? 0) * invItem.quantity; aggMaxStrength += (baseDef.strength?.max ?? 100) * invItem.quantity; } });
+        if (representativeItem) itemsToDisplay.push({ id: `${categoryToExpand}-${baseName}-itemTypeStack`, baseItem: null, title: baseName, quantityInStack: totalQuantity, imageSrc: representativeItem.imageSrc || '/Spi vs Spi icon.png', colorVar: ITEM_LEVEL_COLORS_CSS_VARS[highestLevel] || 'var(--level-1-color)', levelForVisuals: highestLevel, aggregateCurrentStrength: aggCurrentStrength, aggregateMaxStrength: aggMaxStrength, stackType: 'itemType', itemCategory: categoryToExpand, itemBaseName: baseName, dataAiHint: representativeItem.dataAiHint });
+      });
+    } else if (currentPathLevel === 2) { // Path: [categoryName, itemBaseName] -> Show ItemLevel Stacks + others
+      const categoryName = expandedStackPath[0] as ItemCategory;
+      const itemBaseNameToExpand = expandedStackPath[1];
+      itemsToDisplay.push(...otherContextItemsForPathLevel2);
 
-        invItemsForType.forEach(invItem => {
-          const baseDef = getBaseItemById(invItem.id);
-          if (baseDef) {
-            totalQuantity += invItem.quantity;
-            if (baseDef.level > highestLevel) {
-              highestLevel = baseDef.level;
-              representativeItem = baseDef;
-            }
-            aggCurrentStrength += (invItem.currentStrength ?? baseDef.strength?.current ?? 0) * invItem.quantity;
-            aggMaxStrength += (baseDef.strength?.max ?? 100) * invItem.quantity;
-          }
-        });
-
-        if (representativeItem) {
+      inventoryEntries.forEach(invItemDetails => {
+        const baseDef = getItemById(invItemDetails.id);
+        if (baseDef && baseDef.category === categoryName && baseDef.name === itemBaseNameToExpand) {
           itemsToDisplay.push({
-            id: `${categoryToExpand}-${baseName}-itemTypeStack`,
-            baseItem: null, title: baseName, quantityInStack: totalQuantity,
-            imageSrc: representativeItem.imageSrc || '/Spi vs Spi icon.png',
-            colorVar: ITEM_LEVEL_COLORS_CSS_VARS[highestLevel] || 'var(--level-1-color)',
-            levelForVisuals: highestLevel, aggregateCurrentStrength: aggCurrentStrength, aggregateMaxStrength: aggMaxStrength,
-            stackType: 'itemType', itemCategory: categoryToExpand, itemBaseName: baseName,
-            dataAiHint: representativeItem.dataAiHint,
+            id: invItemDetails.id, baseItem: baseDef, title: baseDef.title || baseDef.name, quantityInStack: invItemDetails.quantity,
+            imageSrc: baseDef.imageSrc || '/Spi vs Spi icon.png', colorVar: ITEM_LEVEL_COLORS_CSS_VARS[baseDef.level] || 'var(--level-1-color)',
+            levelForVisuals: baseDef.level,
+            instanceCurrentStrength: invItemDetails.currentStrength, instanceMaxStrength: baseDef.strength?.max,
+            instanceCurrentCharges: invItemDetails.currentCharges, instanceMaxCharges: (baseDef as any).maxCharges,
+            instanceCurrentUses: invItemDetails.currentUses, instanceMaxUses: (baseDef as any).maxUses,
+            instanceCurrentAlerts: invItemDetails.currentAlerts, instanceMaxAlerts: (baseDef as any).maxAlerts,
+            stackType: invItemDetails.quantity > 1 ? 'itemLevel' : 'individual', itemCategory: categoryName, itemBaseName: itemBaseNameToExpand,
+            itemLevel: baseDef.level, originalPlayerInventoryItemId: invItemDetails.id, dataAiHint: baseDef.dataAiHint,
           });
         }
       });
-
-    } else if (currentPathLevel === 2) { // Path: [categoryName, itemBaseName] -> Show ItemLevel Stacks + others
-        const categoryName = expandedStackPath[0] as ItemCategory;
-        const itemBaseNameToExpand = expandedStackPath[1];
-
-        // Add other items/stacks from the previous level (itemTypeStacks or other categories)
-        const otherContextItems = (useMemo((): DisplayItem[] => {
-            const tempItems: DisplayItem[] = [];
-            // Logic to get items from path level 0 (categories)
-            const totalIndividualPhysicalItems = inventoryEntries.reduce((sum, item) => sum + item.quantity, 0);
-            if (totalIndividualPhysicalItems > INITIAL_CAROUSEL_TARGET_COUNT) { // implies category view was shown
-                APP_SHOP_CATEGORIES.slice(0,6).forEach(catInfo => {
-                    if (catInfo.name !== categoryName) { // Add other category stacks
-                        const itemsInThisCategory = inventoryEntries.filter(invDeets => getBaseItemById(invDeets.id)?.category === catInfo.name);
-                        if (itemsInThisCategory.length > 0) { /* ... logic to create category stack ... */
-                            let highestLevel = 0 as ItemLevel; let representativeItemForCat: GameItemBase | null = null; let totalQuantityInCategory = 0;
-                            let aggCurrentStrength = 0; let aggMaxStrength = 0;
-                            itemsInThisCategory.forEach(invItem => { const baseDef = getBaseItemById(invItem.id); if (baseDef) { totalQuantityInCategory += invItem.quantity; if (baseDef.level > highestLevel) { highestLevel = baseDef.level; representativeItemForCat = baseDef; } aggCurrentStrength += (invItem.currentStrength ?? baseDef.strength?.current ?? 0) * invItem.quantity; aggMaxStrength += (baseDef.strength?.max ?? 100) * invItem.quantity; }});
-                            if (representativeItemForCat) tempItems.push({ id: `${catInfo.name}-categoryStack`, baseItem: null, title: catInfo.name, quantityInStack: totalQuantityInCategory, imageSrc: representativeItemForCat.tileImageSrc || representativeItemForCat.imageSrc || '/Spi vs Spi icon.png', colorVar: ITEM_LEVEL_COLORS_CSS_VARS[highestLevel] || 'var(--level-1-color)', levelForVisuals: highestLevel, aggregateCurrentStrength: aggCurrentStrength, aggregateMaxStrength: aggMaxStrength, stackType: 'category', itemCategory: catInfo.name as ItemCategory, dataAiHint: representativeItemForCat.dataAiHint || catInfo.name.toLowerCase() });
-                        }
-                    }
-                });
-            }
-            // Logic to get itemTypeStacks from the *expanded category* (excluding the one being expanded further)
-            const itemsInExpandedCategory = inventoryEntries.filter(invDeets => getBaseItemById(invDeets.id)?.category === categoryName);
-            const groupedByItemBaseName: Record<string, PlayerInventoryItem[]> = {};
-            itemsInExpandedCategory.forEach(invItemDetails => { const baseDef = getBaseItemById(invItemDetails.id); if (baseDef) { if (!groupedByItemBaseName[baseDef.name]) groupedByItemBaseName[baseDef.name] = []; groupedByItemBaseName[baseDef.name].push(invItemDetails); }});
-            Object.entries(groupedByItemBaseName).forEach(([baseName, invItemsForType]) => {
-                if (baseName !== itemBaseNameToExpand) { // Exclude the itemType stack being expanded
-                    let highestLevel = 0 as ItemLevel; let representativeItem: GameItemBase | null = null; let totalQuantity = 0;
-                    let aggCurrentStrength = 0; let aggMaxStrength = 0;
-                    invItemsForType.forEach(invItem => { const baseDef = getBaseItemById(invItem.id); if (baseDef) { totalQuantity += invItem.quantity; if (baseDef.level > highestLevel) { highestLevel = baseDef.level; representativeItem = baseDef; } aggCurrentStrength += (invItem.currentStrength ?? baseDef.strength?.current ?? 0) * invItem.quantity; aggMaxStrength += (baseDef.strength?.max ?? 100) * invItem.quantity; }});
-                    if (representativeItem) tempItems.push({ id: `${categoryName}-${baseName}-itemTypeStack`, baseItem: null, title: baseName, quantityInStack: totalQuantity, imageSrc: representativeItem.imageSrc || '/Spi vs Spi icon.png', colorVar: ITEM_LEVEL_COLORS_CSS_VARS[highestLevel] || 'var(--level-1-color)', levelForVisuals: highestLevel, aggregateCurrentStrength: aggCurrentStrength, aggregateMaxStrength: aggMaxStrength, stackType: 'itemType', itemCategory: categoryName, itemBaseName: baseName, dataAiHint: representativeItem.dataAiHint });
-                }
-            });
-            return tempItems;
-        }, [playerInventory, getItemById, categoryName, itemBaseNameToExpand]))();
-        itemsToDisplay.push(...otherContextItems);
-
-        inventoryEntries.forEach(invItemDetails => {
-            const baseDef = getBaseItemById(invItemDetails.id);
-            if (baseDef && baseDef.category === categoryName && baseDef.name === itemBaseNameToExpand) {
-                itemsToDisplay.push({
-                    id: invItemDetails.id, baseItem: baseDef, title: baseDef.title || baseDef.name, quantityInStack: invItemDetails.quantity,
-                    imageSrc: baseDef.imageSrc || '/Spi vs Spi icon.png', colorVar: ITEM_LEVEL_COLORS_CSS_VARS[baseDef.level] || 'var(--level-1-color)',
-                    levelForVisuals: baseDef.level, instanceCurrentStrength: invItemDetails.currentStrength, instanceCurrentCharges: invItemDetails.currentCharges,
-                    instanceCurrentUses: invItemDetails.currentUses, instanceCurrentAlerts: invItemDetails.currentAlerts,
-                    stackType: invItemDetails.quantity > 1 ? 'itemLevel' : 'individual', itemCategory: categoryName, itemBaseName: itemBaseNameToExpand,
-                    itemLevel: baseDef.level, originalPlayerInventoryItemId: invItemDetails.id, dataAiHint: baseDef.dataAiHint,
-                });
-            }
-        });
-
     } else if (currentPathLevel === 3) { // Path: [categoryName, itemBaseName, itemLevelId] -> Show Individuals + others
-        const categoryName = expandedStackPath[0] as ItemCategory;
-        const itemBaseName = expandedStackPath[1];
-        const itemLevelIdToExpand = expandedStackPath[2];
+      const itemLevelIdToExpand = expandedStackPath[2];
+      itemsToDisplay.push(...otherContextItemsForPathLevel3);
 
-        // Add other items/stacks from the previous level
-        const otherContextItems = (useMemo((): DisplayItem[] => {
-            const tempItems: DisplayItem[] = [];
-            // Get other itemTypeStacks from the same category
-            const itemsInExpandedCategory = inventoryEntries.filter(invDeets => getBaseItemById(invDeets.id)?.category === categoryName);
-            const groupedByItemBaseName: Record<string, PlayerInventoryItem[]> = {};
-            itemsInExpandedCategory.forEach(invItemDetails => { const baseDef = getBaseItemById(invItemDetails.id); if (baseDef) { if (!groupedByItemBaseName[baseDef.name]) groupedByItemBaseName[baseDef.name] = []; groupedByItemBaseName[baseDef.name].push(invItemDetails); }});
-            Object.entries(groupedByItemBaseName).forEach(([baseName, invItemsForType]) => {
-                if (baseName !== itemBaseName) { // Add other itemType stacks
-                     let highestLevel = 0 as ItemLevel; let representativeItem: GameItemBase | null = null; let totalQuantity = 0;
-                    let aggCurrentStrength = 0; let aggMaxStrength = 0;
-                    invItemsForType.forEach(invItem => { const baseDef = getBaseItemById(invItem.id); if (baseDef) { totalQuantity += invItem.quantity; if (baseDef.level > highestLevel) { highestLevel = baseDef.level; representativeItem = baseDef; } aggCurrentStrength += (invItem.currentStrength ?? baseDef.strength?.current ?? 0) * invItem.quantity; aggMaxStrength += (baseDef.strength?.max ?? 100) * invItem.quantity; }});
-                    if (representativeItem) tempItems.push({ id: `${categoryName}-${baseName}-itemTypeStack`, baseItem: null, title: baseName, quantityInStack: totalQuantity, imageSrc: representativeItem.imageSrc || '/Spi vs Spi icon.png', colorVar: ITEM_LEVEL_COLORS_CSS_VARS[highestLevel] || 'var(--level-1-color)', levelForVisuals: highestLevel, aggregateCurrentStrength: aggCurrentStrength, aggregateMaxStrength: aggMaxStrength, stackType: 'itemType', itemCategory: categoryName, itemBaseName: baseName, dataAiHint: representativeItem.dataAiHint });
-                } else { // For the itemType being expanded, add its other levels as itemLevel stacks/individuals
-                    invItemsForType.forEach(invItem => {
-                        const baseDef = getBaseItemById(invItem.id);
-                        if (baseDef && invItem.id !== itemLevelIdToExpand) { // Add other levels of the same item type
-                            tempItems.push({
-                                id: invItem.id, baseItem: baseDef, title: baseDef.title || baseDef.name, quantityInStack: invItem.quantity,
-                                imageSrc: baseDef.imageSrc || '/Spi vs Spi icon.png', colorVar: ITEM_LEVEL_COLORS_CSS_VARS[baseDef.level] || 'var(--level-1-color)',
-                                levelForVisuals: baseDef.level, instanceCurrentStrength: invItem.currentStrength, instanceCurrentCharges: invItem.currentCharges,
-                                instanceCurrentUses: invItem.currentUses, instanceCurrentAlerts: invItem.currentAlerts,
-                                stackType: invItem.quantity > 1 ? 'itemLevel' : 'individual', itemCategory: categoryName, itemBaseName: baseName,
-                                itemLevel: baseDef.level, originalPlayerInventoryItemId: invItem.id, dataAiHint: baseDef.dataAiHint,
-                            });
-                        }
-                    });
-                }
-            });
-             // Add other category stacks if initial view was categories
-            const totalIndividualPhysicalItems = inventoryEntries.reduce((sum, item) => sum + item.quantity, 0);
-            if (totalIndividualPhysicalItems > INITIAL_CAROUSEL_TARGET_COUNT) {
-                 APP_SHOP_CATEGORIES.slice(0,6).forEach(catInfo => {
-                    if (catInfo.name !== categoryName) {
-                        const itemsInThisCategory = inventoryEntries.filter(invDeets => getBaseItemById(invDeets.id)?.category === catInfo.name);
-                        if (itemsInThisCategory.length > 0) { /* ... logic to create category stack ... */
-                            let highestLevel = 0 as ItemLevel; let representativeItemForCat: GameItemBase | null = null; let totalQuantityInCategory = 0;
-                            let aggCurrentStrength = 0; let aggMaxStrength = 0;
-                            itemsInThisCategory.forEach(invItem => { const baseDef = getBaseItemById(invItem.id); if (baseDef) { totalQuantityInCategory += invItem.quantity; if (baseDef.level > highestLevel) { highestLevel = baseDef.level; representativeItemForCat = baseDef; } aggCurrentStrength += (invItem.currentStrength ?? baseDef.strength?.current ?? 0) * invItem.quantity; aggMaxStrength += (baseDef.strength?.max ?? 100) * invItem.quantity; }});
-                            if (representativeItemForCat) tempItems.push({ id: `${catInfo.name}-categoryStack`, baseItem: null, title: catInfo.name, quantityInStack: totalQuantityInCategory, imageSrc: representativeItemForCat.tileImageSrc || representativeItemForCat.imageSrc || '/Spi vs Spi icon.png', colorVar: ITEM_LEVEL_COLORS_CSS_VARS[highestLevel] || 'var(--level-1-color)', levelForVisuals: highestLevel, aggregateCurrentStrength: aggCurrentStrength, aggregateMaxStrength: aggMaxStrength, stackType: 'category', itemCategory: catInfo.name as ItemCategory, dataAiHint: representativeItemForCat.dataAiHint || catInfo.name.toLowerCase() });
-                        }
-                    }
-                 });
-            }
-
-            return tempItems;
-        }, [playerInventory, getItemById, categoryName, itemBaseName, itemLevelIdToExpand]))();
-        itemsToDisplay.push(...otherContextItems);
-
-
-        const invItemToExpandDetails = playerInventory[itemLevelIdToExpand];
-        const baseItemDefinition = getBaseItemById(itemLevelIdToExpand);
-        if (invItemToExpandDetails && baseItemDefinition) {
-          for (let i = 0; i < invItemToExpandDetails.quantity; i++) {
-            itemsToDisplay.push({
-              id: `${itemLevelIdToExpand}-instance-${i}`,
-              baseItem: baseItemDefinition,
-              title: baseItemDefinition.title || baseItemDefinition.name,
-              quantityInStack: 1,
-              imageSrc: baseItemDefinition.imageSrc || '/Spi vs Spi icon.png',
-              colorVar: ITEM_LEVEL_COLORS_CSS_VARS[baseItemDefinition.level] || 'var(--level-1-color)',
-              levelForVisuals: baseItemDefinition.level,
-              instanceCurrentStrength: invItemToExpandDetails.currentStrength, // Individual instances share the parent stack's currentStrength for now
-              instanceCurrentCharges: invItemToExpandDetails.currentCharges,
-              instanceCurrentUses: invItemToExpandDetails.currentUses,
-              instanceCurrentAlerts: invItemToExpandDetails.currentAlerts,
-              stackType: 'individual',
-              itemCategory: categoryName,
-              itemBaseName: baseItemName,
-              itemLevel: baseItemDefinition.level,
-              originalPlayerInventoryItemId: itemLevelIdToExpand,
-              dataAiHint: baseItemDefinition.dataAiHint,
-            });
-          }
+      const invItemToExpandDetails = playerInventory[itemLevelIdToExpand];
+      const baseItemDefinition = getItemById(itemLevelIdToExpand);
+      if (invItemToExpandDetails && baseItemDefinition) {
+        for (let i = 0; i < invItemToExpandDetails.quantity; i++) {
+          itemsToDisplay.push({
+            id: `${itemLevelIdToExpand}-instance-${i}`,
+            baseItem: baseItemDefinition,
+            title: baseItemDefinition.title || baseItemDefinition.name,
+            quantityInStack: 1,
+            imageSrc: baseItemDefinition.imageSrc || '/Spi vs Spi icon.png',
+            colorVar: ITEM_LEVEL_COLORS_CSS_VARS[baseItemDefinition.level] || 'var(--level-1-color)',
+            levelForVisuals: baseItemDefinition.level,
+            instanceCurrentStrength: invItemToExpandDetails.currentStrength, instanceMaxStrength: baseItemDefinition.strength?.max,
+            instanceCurrentCharges: invItemToExpandDetails.currentCharges, instanceMaxCharges: (baseItemDefinition as any).maxCharges,
+            instanceCurrentUses: invItemToExpandDetails.currentUses, instanceMaxUses: (baseItemDefinition as any).maxUses,
+            instanceCurrentAlerts: invItemToExpandDetails.currentAlerts, instanceMaxAlerts: (baseItemDefinition as any).maxAlerts,
+            stackType: 'individual',
+            itemCategory: baseItemDefinition.category,
+            itemBaseName: baseItemDefinition.name,
+            itemLevel: baseItemDefinition.level,
+            originalPlayerInventoryItemId: itemLevelIdToExpand,
+            dataAiHint: baseItemDefinition.dataAiHint,
+          });
         }
+      }
     }
-    return itemsToDisplay;
-  }, [playerInventory, getItemById, expandedStackPath]);
+    return itemsToDisplay.sort((a,b) => (a.title.localeCompare(b.title))); // Keep sorted
+  }, [
+      playerInventory, 
+      getItemById, 
+      expandedStackPath, 
+      inventoryEntries, 
+      otherTopLevelItemsForPathLevel1, 
+      otherContextItemsForPathLevel2, 
+      otherContextItemsForPathLevel3
+    ]);
 
 
   const { dynamicCarouselRadius, dynamicCameraZ } = useMemo(() => {
@@ -880,83 +825,52 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
   }, [carouselDisplayItems.length]);
 
   const handleCarouselItemClick = useCallback((clickedDisplayItem: DisplayItem, mesh: THREE.Mesh) => {
-    // Clicking a stack should not stop auto-rotation by itself.
-    // autoRotateRef.current = false; // Temporarily disable auto-rotate on click
-
-    switch (clickedDisplayItem.stackType) {
-      case 'category':
-        if (clickedDisplayItem.itemCategory) {
-          setExpandedStackPath([clickedDisplayItem.itemCategory]);
-        }
-        break;
-      case 'itemType':
-        if (expandedStackPath.length === 1 && clickedDisplayItem.itemBaseName) {
-          setExpandedStackPath([expandedStackPath[0], clickedDisplayItem.itemBaseName]);
-        }
-        break;
-      case 'itemLevel':
-        if (expandedStackPath.length === 2 && clickedDisplayItem.originalPlayerInventoryItemId && clickedDisplayItem.quantityInStack > 1) {
-          setExpandedStackPath([...expandedStackPath, clickedDisplayItem.originalPlayerInventoryItemId]);
-        } else if (clickedDisplayItem.baseItem) { // Is an individual or a stack of 1
-          openTODWindow(
-            clickedDisplayItem.baseItem.title || clickedDisplayItem.baseItem.name,
-            <div className="font-rajdhani p-4 text-center">
-              <h3 className="text-xl font-bold mb-2" style={{ color: clickedDisplayItem.colorVar }}>{clickedDisplayItem.title}</h3>
-              <div className="w-32 h-32 mx-auto my-2 rounded bg-black/30 flex items-center justify-center">
-                <img
-                  src={clickedDisplayItem.imageSrc} alt={clickedDisplayItem.title} className="max-w-full max-h-full object-contain"
-                  data-ai-hint={clickedDisplayItem.dataAiHint || "item icon"}
-                  onError={(e) => { (e.target as HTMLImageElement).src = '/Spi vs Spi icon.png'; }}
-                />
-              </div>
-              <p className="text-muted-foreground mb-1 text-sm">{clickedDisplayItem.baseItem.description}</p>
-              <p className="text-xs text-muted-foreground/80">Cost: {clickedDisplayItem.baseItem.cost} ELINT</p>
-              {/* TODO: Display relevant stats like strength, charges etc. */}
-              <HolographicButton onClick={closeTODWindow} className="mt-4" explicitTheme={currentGlobalTheme}>Close</HolographicButton>
-            </div>,
-            { showCloseButton: true, explicitTheme: currentGlobalTheme, themeVersion }
-          );
-          setTodOpenedByLocker(true); // Flag that locker opened a TOD
-          autoRotateRef.current = false; // Stop rotation when TOD opens
-        }
-        break;
-      case 'individual':
-        if (clickedDisplayItem.baseItem) {
-          openTODWindow(
-            clickedDisplayItem.baseItem.title || clickedDisplayItem.baseItem.name,
-             <div className="font-rajdhani p-4 text-center">
-              <h3 className="text-xl font-bold mb-2" style={{ color: clickedDisplayItem.colorVar }}>{clickedDisplayItem.title}</h3>
-              <div className="w-32 h-32 mx-auto my-2 rounded bg-black/30 flex items-center justify-center">
-                <img
-                  src={clickedDisplayItem.imageSrc} alt={clickedDisplayItem.title} className="max-w-full max-h-full object-contain"
-                  data-ai-hint={clickedDisplayItem.dataAiHint || "item icon"}
-                  onError={(e) => { (e.target as HTMLImageElement).src = '/Spi vs Spi icon.png'; }}
-                />
-              </div>
-              <p className="text-muted-foreground mb-1 text-sm">{clickedDisplayItem.baseItem.description}</p>
-              <p className="text-xs text-muted-foreground/80">Cost: {clickedDisplayItem.baseItem.cost} ELINT</p>
-              <HolographicButton onClick={closeTODWindow} className="mt-4" explicitTheme={currentGlobalTheme}>Close</HolographicButton>
-            </div>,
-            { showCloseButton: true, explicitTheme: currentGlobalTheme, themeVersion }
-          );
-          setTodOpenedByLocker(true); // Flag that locker opened a TOD
-          autoRotateRef.current = false; // Stop rotation when TOD opens
-        }
-        break;
+    if (clickedDisplayItem.stackType === 'category' && clickedDisplayItem.itemCategory) {
+      setExpandedStackPath([clickedDisplayItem.itemCategory]);
+    } else if (clickedDisplayItem.stackType === 'itemType' && clickedDisplayItem.itemCategory && clickedDisplayItem.itemBaseName) {
+      setExpandedStackPath([clickedDisplayItem.itemCategory, clickedDisplayItem.itemBaseName]);
+    } else if (clickedDisplayItem.stackType === 'itemLevel' && clickedDisplayItem.originalPlayerInventoryItemId && clickedDisplayItem.quantityInStack > 1 && expandedStackPath.length === 2) {
+      setExpandedStackPath([...expandedStackPath, clickedDisplayItem.originalPlayerInventoryItemId]);
+    } else if (clickedDisplayItem.stackType === 'individual' || (clickedDisplayItem.stackType === 'itemLevel' && clickedDisplayItem.quantityInStack === 1)) {
+      if (clickedDisplayItem.baseItem) {
+        openTODWindow(
+          clickedDisplayItem.baseItem.title || clickedDisplayItem.baseItem.name,
+          <div className="font-rajdhani p-4 text-center">
+            <h3 className="text-xl font-bold mb-2" style={{ color: clickedDisplayItem.colorVar }}>{clickedDisplayItem.title}</h3>
+            <div className="w-32 h-32 mx-auto my-2 rounded bg-black/30 flex items-center justify-center">
+              <img
+                src={clickedDisplayItem.imageSrc} alt={clickedDisplayItem.title} className="max-w-full max-h-full object-contain"
+                data-ai-hint={clickedDisplayItem.dataAiHint || "item icon"}
+                onError={(e) => { (e.target as HTMLImageElement).src = '/Spi vs Spi icon.png'; }}
+              />
+            </div>
+            <p className="text-muted-foreground mb-1 text-sm">{clickedDisplayItem.baseItem.description}</p>
+            <p className="text-xs text-muted-foreground/80">Cost: {clickedDisplayItem.baseItem.cost} ELINT</p>
+            <HolographicButton onClick={closeTODWindow} className="mt-4" explicitTheme={currentGlobalTheme}>Close</HolographicButton>
+          </div>,
+          { showCloseButton: true, explicitTheme: currentGlobalTheme, themeVersion }
+        );
+        setTodOpenedByLocker(true);
+        autoRotateRef.current = false;
+      }
     }
   }, [openTODWindow, closeTODWindow, currentGlobalTheme, themeVersion, expandedStackPath, setTodOpenedByLocker, autoRotateRef]);
 
   const handleBackClick = () => {
     setExpandedStackPath(prev => prev.slice(0, -1));
   };
-  
-  // Effect to handle TOD window closing and resume rotation
+
   useEffect(() => {
     if (!isTODWindowOpen && todOpenedByLocker) {
-      autoRotateRef.current = true;
-      setTodOpenedByLocker(false); // Reset the flag
+      const resumeTimeout = setTimeout(() => {
+        if (!isDraggingRef.current && !appContext.isTODWindowOpen) { // Double check state
+            autoRotateRef.current = true;
+        }
+      }, AUTO_ROTATE_RESUME_DELAY);
+      setTodOpenedByLocker(false);
+      return () => clearTimeout(resumeTimeout);
     }
-  }, [isTODWindowOpen, todOpenedByLocker, autoRotateRef]);
+  }, [isTODWindowOpen, todOpenedByLocker, autoRotateRef, appContext.isTODWindowOpen]);
 
 
   useEffect(() => {
@@ -966,7 +880,9 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
       ([entry]) => {
         if (!entry.isIntersecting && expandedStackPath.length > 0) {
           setExpandedStackPath([]);
-          autoRotateRef.current = true; // Resume rotation if it was stopped
+          if (!isTODWindowOpen) { // Only resume if TOD window isn't open
+            autoRotateRef.current = true;
+          }
         }
       },
       { threshold: 0.1 }
@@ -975,7 +891,7 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
     return () => {
       if (currentSectionRef) observer.unobserve(currentSectionRef);
     };
-  }, [expandedStackPath]);
+  }, [expandedStackPath, isTODWindowOpen]);
 
 
   return (
@@ -995,10 +911,10 @@ export function EquipmentLockerSection({ parallaxOffset }: SectionProps) {
               <ArrowLeft className="w-5 h-5 icon-glow" />
             </HolographicButton>
           ) : (
-            <div className="w-9 h-9"></div> // Placeholder for spacing if no back button
+            <div className="w-9 h-9"></div>
           )}
           <h2 className="text-xl md:text-2xl font-orbitron holographic-text text-center flex-grow whitespace-nowrap overflow-hidden text-ellipsis px-2">
-            {expandedStackPath.length > 0 ? expandedStackPath[expandedStackPath.length - 1].replace(/-/g, ' ') : "Equipment Locker"}
+            {expandedStackPath.length > 0 ? expandedStackPath[expandedStackPath.length - 1].replace(/_/g, ' ').replace(/-/g, ' ') : "Equipment Locker"}
           </h2>
           <HolographicButton
             onClick={openSpyShop}
