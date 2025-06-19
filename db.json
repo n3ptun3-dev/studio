@@ -28,6 +28,14 @@
         "stealth_program_l2": { "id": "stealth_program_l2", "quantity": 1, "currentUses": 1 },
         "stealth_program_l3": { "id": "stealth_program_l3", "quantity": 1, "currentUses": 1 },
         "stealth_program_l4": { "id": "stealth_program_l4", "quantity": 1, "currentUses": 1 },
+        "plasma_conduit_lock_l1": { "id": "plasma_conduit_lock_l1", "quantity": 1, "currentStrength": 50 },
+        "plasma_conduit_lock_l2": { "id": "plasma_conduit_lock_l2", "quantity": 1, "currentStrength": 50 },
+        "plasma_conduit_lock_l3": { "id": "plasma_conduit_lock_l3", "quantity": 1, "currentStrength": 50 },
+        "plasma_conduit_lock_l4": { "id": "plasma_conduit_lock_l4", "quantity": 1, "currentStrength": 50 },
+        "plasma_conduit_lock_l5": { "id": "plasma_conduit_lock_l5", "quantity": 1, "currentStrength": 500 },
+        "plasma_conduit_lock_l6": { "id": "plasma_conduit_lock_l6", "quantity": 1, "currentStrength": 600 },
+        "plasma_conduit_lock_l7": { "id": "plasma_conduit_lock_l7", "quantity": 1, "currentStrength": 700 },
+        "plasma_conduit_lock_l8": { "id": "plasma_conduit_lock_l8", "quantity": 1, "currentStrength": 800 },
         "stealth_program_l5": { "id": "stealth_program_l5", "quantity": 1, "currentUses": 1 }
       },
       "vault": [

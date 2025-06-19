@@ -22,7 +22,7 @@ const CLICK_DURATION_THRESHOLD = 250; // ms
 
 // Constants for dynamic radius and camera calculations
 const MIN_RADIUS_FOR_TWO_ITEMS = 1.4;
-const CARD_SPACING_FACTOR = 0.3;
+const CARD_SPACING_FACTOR = 1.7;
 const CAMERA_DISTANCE_FROM_FRONT_CARD = 5.0;
 const MIN_CAMERA_Z = 3.5; // Absolute minimum camera Z to prevent clipping if radius is tiny
 
