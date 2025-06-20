@@ -3,13 +3,14 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { HolographicButton } from '@/components/game/shared/HolographicPanel';
-import { Fingerprint, Info, Zap, LockOpen, Lock, Trophy } from 'lucide-react';
+import { Fingerprint, Info, Zap, LockOpen, Lock, Trophy, BookOpen, Power, Brain, Puzzle } from 'lucide-react'; // Added Brain and Puzzle icons
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Progress } from "@/components/ui/progress";
-import { Settings, BookOpen, Power } from 'lucide-react';
+import { Settings } from 'lucide-react'; // Removed BookOpen, Power as they are imported above
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { XP_THRESHOLDS } from '@/lib/constants';
+import { HardwareItem, InfiltrationGearItem, LockFortifierItem, ITEM_LEVELS, HARDWARE_ITEMS, INFILTRATION_GEAR_ITEMS } from '@/lib/game-items'; // Import necessary item types and lists
 
 
 const PEEK_AMOUNT = 20; // Pixels for the screen peek
@@ -166,7 +167,53 @@ const SettingsView = React.memo(() => {
 });
 SettingsView.displayName = 'SettingsView';
 
-type PadScreenView = 'dossier' | 'intel' | 'settings';
+// NEW: TrainingView component
+const TrainingView = React.memo(() => {
+  const { openMinigame, addMessage } = useAppContext();
+  const { theme: currentGlobalTheme } = useTheme();
+
+  const handleStartMinigame = useCallback((lockType: string, lockLevel: ItemLevel, toolType: string) => {
+    // Find dummy lock and tool data for the minigame
+    const dummyLock = HARDWARE_ITEMS.find(item => item.name === lockType && item.level === lockLevel) as HardwareItem;
+    const dummyTool = INFILTRATION_GEAR_ITEMS.find(item => item.name === toolType && item.level === lockLevel) as InfiltrationGearItem;
+
+    if (!dummyLock || !dummyTool) {
+      addMessage({ type: 'error', text: `Training scenario data not found for ${lockType} with ${toolType} at L${lockLevel}.` });
+      return;
+    }
+
+    addMessage({ type: 'system', text: `Initiating training simulation: ${lockType} L${lockLevel} with ${toolType} L${lockLevel}.` });
+    openMinigame(dummyLock, dummyTool); // Pass dummy data to openMinigame
+  }, [openMinigame, addMessage]);
+
+  return (
+    <ScrollArea className="h-full p-3 font-rajdhani">
+      <h3 className="text-xl font-orbitron mb-4 holographic-text">Training Simulations</h3>
+      <p className="text-muted-foreground mb-4">Select a lock type to begin a training simulation:</p>
+      <div className="space-y-2 text-sm">
+        <HolographicButton
+          className="w-full justify-start text-left !bg-transparent hover:!bg-primary/10 !py-1.5"
+          explicitTheme={currentGlobalTheme}
+          onClick={() => handleStartMinigame('Cypher Lock', 1, 'Pick')}
+        >
+          Key Cracker: L1 Cypher Lock (w/ L1 Pick)
+        </HolographicButton>
+        <HolographicButton
+          className="w-full justify-start text-left !bg-transparent hover:!bg-primary/10 !py-1.5"
+          explicitTheme={currentGlobalTheme}
+          onClick={() => handleStartMinigame('Quantum Entanglement Lock', 1, 'Pick')}
+        >
+          Quantum Circuit Weaver: L1 Quantum Entanglement Lock (w/ L1 Pick)
+        </HolographicButton>
+        {/* Add more training scenarios as you implement more minigames */}
+      </div>
+    </ScrollArea>
+  );
+});
+TrainingView.displayName = 'TrainingView';
+
+
+type PadScreenView = 'dossier' | 'intel' | 'settings' | 'training'; // Added 'training'
 
 interface AgentSectionProps {
   parallaxOffset: number;
@@ -248,6 +295,7 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
       case 'dossier': return <AgentDossierView />;
       case 'intel': return <IntelFilesView />;
       case 'settings': return <SettingsView />;
+      case 'training': return <TrainingView />; // New case for training
       default: return <AgentDossierView />;
     }
   };
@@ -309,7 +357,7 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
         <div ref={statsAreaRef} className="flex-shrink-0 text-center pt-2 pb-4 px-2">
             <div className="w-full max-w-md mx-auto">
               <p className="text-sm text-muted-foreground">Agent Rank: {playerStats.level}</p>
-              <Progress value={xpProgress} className="w-full h-2 mt-1 bg-primary/20 [&>div]:bg-primary" />
+              <Progress value={xpProgress} className="w-full h-1.5 mt-1 bg-primary/20 [&>div]:bg-primary" />
               <p className="text-xs text-muted-foreground">{xpForCurrentLevel} / {xpToNextLevelSpan} XP ({playerStats.xp} total)</p>
             </div>
             <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-3 text-sm w-full max-w-md mx-auto font-rajdhani">
@@ -371,6 +419,15 @@ export function AgentSection({ parallaxOffset }: AgentSectionProps) {
                 explicitTheme={currentGlobalTheme}
               >
                 <BookOpen className="w-5 h-5" />
+              </HolographicButton>
+              {/* NEW: Training Button */}
+              <HolographicButton
+                onClick={() => setPadScreenView('training')}
+                className={cn("!p-1.5", padScreenView === 'training' && "active-pad-button")}
+                aria-label="Training Simulations"
+                explicitTheme={currentGlobalTheme}
+              >
+                <Brain className="w-5 h-5" />
               </HolographicButton>
               <HolographicButton
                 onClick={() => setPadScreenView('settings')}

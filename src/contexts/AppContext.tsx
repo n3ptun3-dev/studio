@@ -5,7 +5,7 @@
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import type { Theme } from './ThemeContext';
-import { useTheme } from './ThemeContext';
+import { useTheme } from './ThemeContext'; // Corrected: '=>' changed to 'from'
 import {
   initializePlayerData,
   getPlayer,
@@ -13,8 +13,14 @@ import {
   updatePlayer,
   type Player,
 } from '@/lib/player-data';
-import { getItemById, type ItemCategory, type GameItemBase, type PlayerInventoryItem, type VaultSlot, type ItemLevel } from '@/lib/game-items';
+import { getItemById, type ItemCategory, type GameItemBase, type PlayerInventoryItem, type VaultSlot, type ItemLevel, HardwareItem, InfiltrationGearItem } from '@/lib/game-items';
 import { CodenameInput } from '@/components/game/onboarding/CodenameInput';
+// Import the new master minigame mechanics
+import { getMinigameForLock, type MinigameArguments, MinigameType } from '@/lib/master-minigame-mechanics';
+// Import minigame components directly for rendering
+import QuantumCircuitWeaver from '@/components/game/minigames/QuantumCircuitWeaver';
+import KeyCracker from '@/components/game/minigames/KeyCracker';
+import { HolographicPanel, HolographicButton } from '@/components/game/shared/HolographicPanel';
 
 export type Faction = 'Cyphers' | 'Shadows' | 'Observer';
 export type OnboardingStep = 'welcome' | 'factionChoice' | 'authPrompt' | 'codenameInput' | 'fingerprint' | 'tod';
@@ -56,7 +62,7 @@ export interface GameMessage {
 }
 
 const DEFAULT_PLAYER_STATS_FOR_NEW_PLAYER: PlayerStats = {
-  xp: 0, level: 0, elintReserves: 0, elintTransferred: 0,
+  xp: 0, level: 1 as ItemLevel, elintReserves: 0, elintTransferred: 0,
   successfulVaultInfiltrations: 0, successfulLockInfiltrations: 0,
   elintObtainedTotal: 0, elintObtainedCycle: 0, elintLostTotal: 0, elintLostCycle: 0,
   elintGeneratedTotal: 0, elintGeneratedCycle: 0, elintTransferredToHQCyle: 0,
@@ -64,7 +70,7 @@ const DEFAULT_PLAYER_STATS_FOR_NEW_PLAYER: PlayerStats = {
   hasPlacedFirstLock: false,
 };
 
-const FIXED_DEV_PI_ID = "mock_pi_id_12345"; // Exposed for WelcomeScreen to use
+const FIXED_DEV_PI_ID = "mock_pi_id_12345";
 
 interface AppContextType {
   currentPlayer: Player | null;
@@ -121,12 +127,16 @@ interface AppContextType {
   openInventoryTOD: (context: AppContextType['todInventoryContext']) => void;
   closeInventoryTOD: () => void;
   playerInfo: Player | null;
-  isScrollLockActive: boolean; // New state for TOD scroll lock
-  setIsScrollLockActive: (locked: boolean) => void; // New setter
-  getItemById: (id: string) => GameItemBase | undefined; // Added getItemById
+  isScrollLockActive: boolean;
+  setIsScrollLockActive: (locked: boolean) => void;
+  getItemById: (id: string) => GameItemBase | undefined;
+
+  activeMinigame: MinigameArguments | null;
+  openMinigame: (lock: HardwareItem, attackingTool: InfiltrationGearItem, fortifiers?: LockFortifierItem[]) => void;
+  closeMinigame: (success: boolean, strengthReduced: number, toolDamageAmount?: number) => void;
 }
 
-const AppContext = createContext<AppContextType | undefined>(undefined);
+export const AppContext = createContext<AppContextType | undefined>(undefined);
 
 function generateFactionTeamCode(seedDate: Date, faction: Faction | 'Observer'): string {
   const start = new Date(seedDate.getFullYear(), 0, 0);
@@ -162,7 +172,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [_isShopAuthenticated, _setIsShopAuthenticated] = useState(false);
   const [_todInventoryContext, _setTodInventoryContext] = useState<AppContextType['todInventoryContext']>(null);
   const [_pendingPiId, _setPendingPiId] = useState<string | null>(null);
-  const [_isScrollLockActive, _setIsScrollLockActive] = useState(false); // New state for scroll lock
+  const [_isScrollLockActive, _setIsScrollLockActive] = useState(false);
+
+  const [_activeMinigame, _setActiveMinigame] = useState<MinigameArguments | null>(null);
 
   const { theme: currentGlobalTheme, themeVersion } = useTheme();
 
@@ -366,15 +378,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
   ) => {
     if (_currentPlayer) {
       const newInventory = { ..._currentPlayer.inventory };
+      // Get base item to infer max values for new items, if not provided in itemDetails
       const baseItem = getItemById(itemId);
-      const strengthToAdd = itemDetails?.currentStrength ?? baseItem?.maxStrength ?? undefined;
+      const initialStrength = itemDetails?.currentStrength ?? baseItem?.strength?.max;
+      const initialUses = itemDetails?.currentUses ?? baseItem?.maxUses;
+      const initialAlerts = itemDetails?.currentAlerts ?? baseItem?.maxAlerts;
+      const initialCharges = itemDetails?.currentCharges ?? baseItem?.maxCharges;
+      
       if (newInventory[itemId]) {
         newInventory[itemId].quantity += quantity;
-        if (strengthToAdd !== undefined && newInventory[itemId].currentStrength === undefined) {
-          newInventory[itemId].currentStrength = strengthToAdd;
+        // Only update current properties if they are undefined (i.e., not explicitly set)
+        if (initialStrength !== undefined && newInventory[itemId].currentStrength === undefined) {
+          newInventory[itemId].currentStrength = initialStrength;
+        }
+        if (initialUses !== undefined && newInventory[itemId].currentUses === undefined) {
+          newInventory[itemId].currentUses = initialUses;
+        }
+        if (initialAlerts !== undefined && newInventory[itemId].currentAlerts === undefined) {
+          newInventory[itemId].currentAlerts = initialAlerts;
+        }
+        if (initialCharges !== undefined && newInventory[itemId].currentCharges === undefined) {
+          newInventory[itemId].currentCharges = initialCharges;
         }
       } else {
-        newInventory[itemId] = { id: itemId, quantity, currentStrength: strengthToAdd, ...itemDetails };
+        newInventory[itemId] = { 
+          id: itemId, 
+          quantity, 
+          currentStrength: initialStrength,
+          currentUses: initialUses,
+          currentAlerts: initialAlerts,
+          currentCharges: initialCharges,
+          ...itemDetails 
+        };
       }
       const updatedPlayer = { ..._currentPlayer, inventory: newInventory };
       const result = await updatePlayer(updatedPlayer);
@@ -404,7 +439,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return false;
     }
     if (await spendElint(itemData.cost)) { 
-      await addItemToInventory(itemId, 1, { currentStrength: itemData.maxStrength });
+      // When purchasing, set initial current strength/uses/alerts/charges based on the item's max
+      const initialItemDetails: Partial<Omit<PlayerInventoryItem, 'id' | 'quantity'>> = {};
+      if (itemData.strength?.max !== undefined) initialItemDetails.currentStrength = itemData.strength.max;
+      if (itemData.maxUses !== undefined) initialItemDetails.currentUses = itemData.maxUses;
+      if (itemData.maxAlerts !== undefined) initialItemDetails.currentAlerts = itemData.maxAlerts;
+      if (itemData.maxCharges !== undefined) initialItemDetails.currentCharges = itemData.maxCharges;
+
+      await addItemToInventory(itemId, 1, initialItemDetails);
       addMessage({ text: `Purchased ${itemData.name} L${itemData.level}`, type: 'notification' });
       return true;
     }
@@ -416,6 +458,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!_currentPlayer) return;
     let itemBeingDeployed: GameItemBase | undefined = undefined;
     let itemBeingRemovedFromSlot: PlayerInventoryItem | null = null;
+    // Deep clone to ensure immutability before modification
     const newInventory = JSON.parse(JSON.stringify(_currentPlayer.inventory));
     const newVault = JSON.parse(JSON.stringify(_currentPlayer.vault));
     const slotIndex = newVault.findIndex((slot: VaultSlot) => slot.id === slotId);
@@ -423,29 +466,52 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (slotIndex === -1) {
       addMessage({ text: `Vault slot ${slotId} not found.`, type: 'error' }); return;
     }
-    itemBeingRemovedFromSlot = newVault[slotIndex].item;
+    
+    itemBeingRemovedFromSlot = newVault[slotIndex].item; // Get item currently in the slot
+
     if (itemIdToDeploy) {
       itemBeingDeployed = getItemById(itemIdToDeploy);
       if (!itemBeingDeployed) { addMessage({ text: `Item ${itemIdToDeploy} not found.`, type: 'error' }); return; }
       if (!newInventory[itemIdToDeploy] || newInventory[itemIdToDeploy].quantity <= 0) {
         addMessage({ text: `Cannot deploy ${itemBeingDeployed.name}: Not in inventory.`, type: 'error' }); return;
       }
+      
+      // When deploying, the item comes with its current instance-specific stats from inventory
       const deployedItemInstance: PlayerInventoryItem = {
-        id: itemBeingDeployed.id, quantity: 1, currentStrength: itemBeingDeployed.maxStrength,
+        id: itemBeingDeployed.id,
+        quantity: 1, // Always deploy 1 unit
+        currentStrength: newInventory[itemIdToDeploy].currentStrength, 
+        currentUses: newInventory[itemIdToDeploy].currentUses,
+        currentAlerts: newInventory[itemIdToDeploy].currentAlerts,
+        currentCharges: newInventory[itemIdToDeploy].currentCharges,
+        // Max values from base item definition (these are usually static)
+        maxUses: itemBeingDeployed.maxUses, 
+        maxAlerts: itemBeingDeployed.maxAlerts,
+        maxCharges: itemBeingDeployed.maxCharges,
       };
+      
       newVault[slotIndex].item = deployedItemInstance;
       newInventory[itemIdToDeploy].quantity -= 1;
       if (newInventory[itemIdToDeploy].quantity <= 0) delete newInventory[itemIdToDeploy];
     } else {
+      // If itemIdToDeploy is null, it means we are clearing the slot
       newVault[slotIndex].item = null;
     }
+
+    // Return the item that was in the slot back to inventory
     if (itemBeingRemovedFromSlot) {
       if (newInventory[itemBeingRemovedFromSlot.id]) {
+        // If item already exists in inventory, just increase quantity
         newInventory[itemBeingRemovedFromSlot.id].quantity += itemBeingRemovedFromSlot.quantity;
       } else {
-        newInventory[itemBeingRemovedFromSlot.id] = itemBeingRemovedFromSlot;
+        // If not, add the item back with its full instance properties (e.g., current strength)
+        newInventory[itemBeingRemovedFromSlot.id] = { 
+            ...itemBeingRemovedFromSlot,
+            quantity: itemBeingRemovedFromSlot.quantity,
+        };
       }
     }
+
     let newStats = { ..._currentPlayer.stats };
     if (itemBeingDeployed && itemBeingDeployed.category === 'Hardware' && !newStats.hasPlacedFirstLock) {
       newStats = { ...newStats, elintReserves: newStats.elintReserves + 10000, hasPlacedFirstLock: true };
@@ -494,6 +560,69 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } as Player; // Cast needed if Player type expects more stats for shop specifically
   }, [_currentPlayer]);
 
+  // --- Minigame Logic ---
+  const openMinigame = useCallback((lock: HardwareItem, attackingTool: InfiltrationGearItem, fortifiers: LockFortifierItem[] = []) => {
+    // Determine which minigame to load based on the lock type
+    const minigameArgs = getMinigameForLock(lock, attackingTool, fortifiers); // Pass attackingTool and fortifiers
+    _setActiveMinigame(minigameArgs);
+  }, []);
+
+  const closeMinigame = useCallback(async (success: boolean, strengthReduced: number, toolDamageAmount: number = 0) => {
+    if (_activeMinigame && _currentPlayer) {
+      let updatedPlayer = { ..._currentPlayer };
+
+      // 1. Update Lock Strength in Vault
+      const newVault = updatedPlayer.vault.map(slot => {
+        if (slot.item?.id === _activeMinigame.lockData.id && slot.item.currentStrength !== undefined) {
+          const updatedStrength = Math.max(0, slot.item.currentStrength - strengthReduced);
+          return { ...slot, item: { ...slot.item, currentStrength: updatedStrength } };
+        }
+        return slot;
+      });
+      updatedPlayer = { ...updatedPlayer, vault: newVault };
+
+      // 2. Apply Tool Damage (if any)
+      if (toolDamageAmount > 0 && _activeMinigame.props && 'attackingTool' in _activeMinigame.props && _activeMinigame.props.attackingTool) {
+        const toolInPlay = _activeMinigame.props.attackingTool as InfiltrationGearItem;
+        const newInventory = { ...updatedPlayer.inventory };
+        const toolInstance = newInventory[toolInPlay.id];
+
+        if (toolInstance && toolInstance.currentUses !== undefined) {
+          toolInstance.currentUses = Math.max(0, toolInstance.currentUses - toolDamageAmount);
+          addMessage({ text: `${toolInPlay.name} durability reduced by ${toolDamageAmount}. Remaining uses: ${toolInstance.currentUses}.`, type: 'alert' });
+
+          // If tool runs out of uses, remove it
+          if (toolInstance.currentUses <= 0) {
+            delete newInventory[toolInPlay.id];
+            addMessage({ text: `${toolInPlay.name} is depleted and removed from inventory.`, type: 'error' });
+          }
+        }
+        updatedPlayer = { ...updatedPlayer, inventory: newInventory };
+      }
+
+
+      const result = await updatePlayer(updatedPlayer);
+
+      if (result) {
+        _setCurrentPlayer(result);
+        if (success) {
+          addMessage({ text: `Successfully bypassed ${_activeMinigame.lockData.name}! Strength reduced by ${strengthReduced}.`, type: 'notification' });
+          await updatePlayerStatsAppContext({
+            successfulLockInfiltrations: (_currentPlayer.stats.successfulLockInfiltrations || 0) + 1
+          });
+        } else {
+          addMessage({ text: `Failed to bypass ${_activeMinigame.lockData.name}. Infiltration aborted.`, type: 'error' });
+          // TODO: Implement other failure penalties, e.g., ELINT loss, cooldowns
+        }
+      } else {
+        // Handle case where player update failed
+        addMessage({ text: `Error updating player data after minigame.`, type: 'error' });
+      }
+    }
+    _setActiveMinigame(null); // Close the minigame
+  }, [_activeMinigame, _currentPlayer, addMessage, updatePlayerStatsAppContext]);
+
+
   const contextValue = useMemo(() => ({
     currentPlayer: _currentPlayer,
     isLoading: _isLoading,
@@ -532,39 +661,110 @@ export function AppProvider({ children }: { children: ReactNode }) {
     removeItemFromInventory,
     deployItemToVault,
     isSpyShopActive: _isSpyShopActive,
-    setIsSpyShopActive: _setIsSpyShopActive,
+    setIsSpyShopActive: (isActive: boolean) => _setIsSpyShopActive(isActive),
     isSpyShopOpen: _isSpyShopOpen,
     openSpyShop: () => _setIsSpyShopOpen(true),
     closeSpyShop: () => _setIsSpyShopOpen(false),
     shopSearchTerm: _shopSearchTerm,
     setShopSearchTerm: _setShopSearchTerm,
     isShopAuthenticated: _isShopAuthenticated,
-    setIsShopAuthenticated: _setIsShopAuthenticated,
+    setIsShopAuthenticated: (isAuthenticated: boolean) => _setIsShopAuthenticated(isAuthenticated),
     todInventoryContext: _todInventoryContext,
     openInventoryTOD,
     closeInventoryTOD,
     playerInfo: playerInfoForShop,
     isScrollLockActive: _isScrollLockActive,
     setIsScrollLockActive: _setIsScrollLockActive,
-    getItemById: getItemById, // Explicitly include getItemById
+    getItemById: getItemById,
+
+    // Minigame context values
+    activeMinigame: _activeMinigame,
+    openMinigame,
+    closeMinigame,
   }), [
     _currentPlayer, _isLoading, _isPiBrowser, _onboardingStep, _messages, _dailyTeamCode, _pendingPiId,
     _isTODWindowOpen, _todWindowTitle, _todWindowContent, _todWindowOptions,
-    _isSpyShopActive, _isSpyShopOpen, _shopSearchTerm, _isShopAuthenticated, _todInventoryContext,
     playerInfoForShop, addMessage, openTODWindow, closeTODWindow, attemptLoginWithPiId, handleAuthentication,
     setFactionAppContext, setPlayerSpyNameAppContext, updatePlayerStatsAppContext, addXp, logout,
     updatePlayerInventoryItemStrength, spendElint, purchaseItem, addItemToInventory, removeItemFromInventory,
     deployItemToVault, openInventoryTOD, closeInventoryTOD, _setOnboardingStep, _setIsLoading,
-    _setIsSpyShopActive, _setShopSearchTerm, _setIsShopAuthenticated,
-    _isScrollLockActive, _setIsScrollLockActive // Add new scroll lock states
+    _isSpyShopActive, _setShopSearchTerm, _setIsShopAuthenticated,
+    _isScrollLockActive, _setIsScrollLockActive,
+    _activeMinigame, openMinigame, closeMinigame // Include minigame state and functions
   ]);
 
   return (
     <AppContext.Provider value={contextValue}>
       {children}
+      {/* Conditionally render the full-screen minigame */}
+      {_activeMinigame && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 backdrop-blur-md">
+          <MinigameRenderer activeMinigame={_activeMinigame} onMinigameComplete={closeMinigame} />
+        </div>
+      )}
     </AppContext.Provider>
   );
 }
+
+// Helper component to render the appropriate minigame
+interface MinigameRendererProps {
+  activeMinigame: MinigameArguments;
+  onMinigameComplete: (success: boolean, strengthReduced: number, toolDamageAmount?: number) => void;
+}
+
+const MinigameRenderer: React.FC<MinigameRendererProps> = ({ activeMinigame, onMinigameComplete }) => {
+  const { theme: currentGlobalTheme } = useTheme();
+
+  switch (activeMinigame.type) {
+    case 'QuantumCircuitWeaver':
+      const qcProps = activeMinigame.props as { lockLevel: ItemLevel };
+      return (
+        <QuantumCircuitWeaver
+          lockLevel={qcProps.lockLevel}
+          onGameComplete={(success, strengthReduced) => onMinigameComplete(success, strengthReduced)}
+        />
+      );
+    case 'KeyCracker':
+      const kcProps = activeMinigame.props as {
+        lock: HardwareItem;
+        attackingTool: InfiltrationGearItem;
+        fortifiers: LockFortifierItem[];
+        attackerLevel: ItemLevel;
+        defenderLevel?: ItemLevel;
+      };
+      return (
+        <KeyCracker
+          lockData={kcProps.lock}
+          attackingTool={kcProps.attackingTool}
+          fortifiers={kcProps.fortifiers}
+          attackerLevel={kcProps.attackerLevel}
+          defenderLevel={kcProps.defenderLevel}
+          onGameComplete={onMinigameComplete}
+        />
+      );
+    case 'NotImplemented':
+      const messageProps = activeMinigame.props as { message: string };
+      return (
+        <HolographicPanel title="Minigame Not Implemented" explicitTheme={currentGlobalTheme} className="w-full h-full max-w-2xl">
+          <p className="text-xl text-red-400 animate-pulse">{messageProps.message}</p>
+          <p className="text-sm text-muted-foreground mt-2">Lock: {activeMinigame.lockData.name} L{activeMinigame.lockData.level}</p>
+          <HolographicButton onClick={() => onMinigameComplete(false, 0)} className="mt-4">
+            Return to Vault
+          </HolographicButton>
+        </HolographicPanel>
+      );
+    default:
+      return (
+        <HolographicPanel title="Unknown Minigame" explicitTheme={currentGlobalTheme} className="w-full h-full max-w-2xl">
+          <p className="text-xl text-red-400">An unknown minigame type was requested.</p>
+          <HolographicButton onClick={() => onMinigameComplete(false, 0)} className="mt-4">
+            Return to Vault
+          </HolographicButton>
+        </HolographicPanel>
+      );
+  }
+};
+
 
 export function useAppContext() {
   const context = useContext(AppContext);
@@ -572,8 +772,8 @@ export function useAppContext() {
     throw new Error('useAppContext must be used within an AppProvider');
   }
   return {
-    ...context, // Spread existing context values
-    getItemById: getItemById, // Explicitly include getItemById
+    ...context,
+    getItemById: getItemById,
   };
 }
 

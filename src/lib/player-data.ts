@@ -68,7 +68,6 @@ export function initializePlayerData(): void {
   itemsStore = validDbData.items || [];
   droppedItemsStore = validDbData.droppedItems || [];
   dailyTeamCodesStore = validDbData.dailyTeamCodes || {};
-  console.log('[PlayerDataService] Initialized with:', { players: playersStore.length, items: itemsStore.length });
 }
 
 export async function getPlayer(playerId: string): Promise<Player | null> {
@@ -103,7 +102,6 @@ export async function createPlayer(
     })),
   };
   playersStore.push(newPlayer);
-  console.log('[PlayerDataService] Player created:', newPlayer);
   // Here you would typically also save to your db.json or actual backend
   return { ...newPlayer }; // Return a copy
 }
@@ -113,7 +111,6 @@ export async function updatePlayer(updatedPlayer: Player): Promise<Player | null
   const playerIndex = playersStore.findIndex(p => p.id === updatedPlayer.id);
   if (playerIndex !== -1) {
     playersStore[playerIndex] = { ...updatedPlayer }; // Store a copy
-    console.log('[PlayerDataService] Player updated:', playersStore[playerIndex]);
     // Here you would typically also save to your db.json or actual backend
     return { ...playersStore[playerIndex] }; // Return a copy
   }
