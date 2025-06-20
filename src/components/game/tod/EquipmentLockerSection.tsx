@@ -4,7 +4,7 @@
 
 import React, { useRef, useState, useEffect, useCallback, useLayoutEffect, useMemo } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
+import CardTextureRenderer from './CardTextureRenderer'; // Import the new renderer
 import * as THREE from 'three';
 import { useAppContext, type GameItemBase, type ItemLevel, type ItemCategory, type PlayerInventoryItem } from '@/contexts/AppContext';
 import { HolographicButton, HolographicPanel } from '@/components/game/shared/HolographicPanel';
@@ -99,9 +99,11 @@ interface CarouselItemProps {
 
 const CarouselItem = React.memo(function CarouselItem({ displayItem, index, totalItems, carouselRadius }: CarouselItemProps) {
   const meshRef = useRef<THREE.Mesh>(null!);
-  const { baseItem, quantityInStack, title, imageSrc, colorVar: itemColorCssVar, levelForVisuals } = displayItem;
-  const fallbackImageSrc = '/Spi vs Spi icon.png';
-  const actualImageSrc = imageSrc || fallbackImageSrc;
+  const [texture, setTexture] = useState<THREE.CanvasTexture | null>(null);
+  const { gl } = useThree(); // For renderer capabilities if needed for anisotropy
+
+  // Destructure only what's needed for CardTextureRenderer or mesh positioning/logic
+  // const { baseItem, quantityInStack, title, imageSrc, colorVar: itemColorCssVar, levelForVisuals } = displayItem;
 
   useLayoutEffect(() => {
     if (meshRef.current) {
@@ -123,104 +125,44 @@ const CarouselItem = React.memo(function CarouselItem({ displayItem, index, tota
     }
   });
 
-  const cardBgClass = LEVEL_TO_BG_CLASS[levelForVisuals] || 'bg-muted/30';
-  let detailContent = null;
-  let currentVal = 0;
-  let maxVal = 0;
-  let progressBarLabel: string | undefined = undefined;
+  const handleCanvasRendered = useCallback((newCanvas: HTMLCanvasElement) => {
+    const newTexture = new THREE.CanvasTexture(newCanvas);
+    // Optional: Configure texture (encoding, anisotropy)
+    // newTexture.encoding = THREE.sRGBEncoding; // If using WebGLRenderer with sRGB output
+    // newTexture.anisotropy = gl.capabilities.getMaxAnisotropy();
 
-  if (displayItem.stackType === 'individual') {
-    currentVal = displayItem.instanceCurrentStrength ?? displayItem.instanceCurrentCharges ?? displayItem.instanceCurrentUses ?? displayItem.instanceCurrentAlerts ?? 0;
-    maxVal = displayItem.instanceMaxStrength ?? displayItem.instanceMaxCharges ?? displayItem.instanceMaxUses ?? displayItem.instanceMaxAlerts ?? 100;
-    if (displayItem.instanceCurrentStrength !== undefined) progressBarLabel = "Strength";
-    else if (displayItem.instanceCurrentCharges !== undefined) progressBarLabel = "Charges";
-    else if (displayItem.instanceCurrentUses !== undefined) progressBarLabel = "Uses";
-    else if (displayItem.instanceCurrentAlerts !== undefined) progressBarLabel = "Alerts";
-  } else if (displayItem.stackType === 'itemLevel') {
-    currentVal = displayItem.aggregateCurrentStrength ?? displayItem.aggregateCurrentCharges ?? 0;
-    maxVal = displayItem.aggregateMaxStrength ?? displayItem.aggregateMaxCharges ?? (quantityInStack > 0 ? quantityInStack * 100 : 100);
-    if (displayItem.aggregateCurrentStrength !== undefined) progressBarLabel = "Total Strength";
-    else if (displayItem.aggregateCurrentCharges !== undefined) progressBarLabel = "Total Charges";
-  } else if (displayItem.stackType === 'category' || displayItem.stackType === 'itemType') {
-    currentVal = displayItem.aggregateCurrentStrength ?? displayItem.aggregateCurrentCharges ?? 0;
-    maxVal = displayItem.aggregateMaxStrength ?? displayItem.aggregateMaxCharges ?? (quantityInStack > 0 ? quantityInStack * 100 : 100);
-    progressBarLabel = displayItem.aggregateCurrentStrength !== undefined ? "Avg. Integrity" : "Avg. Charge";
-  }
+    setTexture(currentTexture => {
+      currentTexture?.dispose(); // Dispose the previous texture if it exists
+      return newTexture; // Set the new texture
+    });
+  }, [gl.capabilities]); // Dependency on gl.capabilities for anisotropy
 
-  const isSingleUseType = displayItem.baseItem?.type === 'One-Time Use' || displayItem.baseItem?.type === 'Consumable';
-  const isPermanentType = displayItem.baseItem?.type === 'Permanent';
+  useEffect(() => {
+    // This effect is primarily for unmounting.
+    // Texture updates are handled by handleCanvasRendered which disposes of the old texture.
+    return () => {
+      if (texture) {
+        texture.dispose();
+      }
+    };
+  }, [texture]); // Runs when texture state changes or on unmount.
 
-  if (displayItem.stackType === 'individual') {
-    if (isSingleUseType) {
-      detailContent = <p className="text-[9px] text-center font-semibold p-0.5 rounded bg-black/30 mt-auto mx-1" style={{ color: itemColorCssVar }}>Single Use</p>;
-    } else if (isPermanentType) {
-      detailContent = <p className="text-[9px] text-center font-semibold p-0.5 rounded bg-black/30 mt-auto mx-1" style={{ color: itemColorCssVar }}>Permanent</p>;
-    } else if (progressBarLabel && maxVal > 0) {
-      detailContent = <CardProgressBar label={progressBarLabel} current={currentVal} max={maxVal} colorVar={itemColorCssVar} />;
-    }
-  } else if ((displayItem.stackType === 'category' || displayItem.stackType === 'itemType' || displayItem.stackType === 'itemLevel') && progressBarLabel && maxVal > 0) {
-    detailContent = <CardProgressBar label={progressBarLabel} current={currentVal} max={maxVal} colorVar={itemColorCssVar} />;
-  }
-
+  // CardTextureRenderer is rendered but its output is captured by html2canvas,
+  // it does not need to be visible in the main DOM layout.
+  // Its own styling should handle off-screen rendering.
   return (
-    <mesh ref={meshRef} userData={{ displayItem, isCarouselItem: true, id: displayItem.id }}>
-      <planeGeometry args={[ITEM_WIDTH, ITEM_HEIGHT]} />
-      <meshBasicMaterial transparent opacity={0} />
-      <Html
-        center
-        distanceFactor={10} // Ensure perspective scaling for HTML
-        style={{
-          pointerEvents: 'none',
-          width: `${ITEM_WIDTH * 80}px`, // Adjusted multiplier for HTML overlay size
-          height: `${ITEM_HEIGHT * 80}px`,// Adjusted multiplier
-        }}
-      >
-        <div
-          className={cn(
-            "w-full h-full rounded-md border flex flex-col items-center justify-start overflow-hidden relative",
-            cardBgClass
-          )}
-          style={{
-            borderColor: itemColorCssVar,
-            fontFamily: 'var(--font-rajdhani)',
-            color: `hsl(var(--foreground-hsl))`,
-            boxShadow: `0 0 5px ${itemColorCssVar}`,
-          }}
-        >
-          {quantityInStack > 1 && (
-            <div
-              className="absolute top-1 right-1 bg-primary text-primary-foreground text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full z-10 shadow-md"
-              style={{ borderColor: itemColorCssVar, borderWidth: '1px' }}
-            >
-              {quantityInStack}
-            </div>
-          )}
-          <div className="w-full h-3/5 relative flex-shrink-0">
-            <img
-              src={actualImageSrc}
-              alt={title}
-              className="w-full h-full object-fill"
-              data-ai-hint={displayItem.dataAiHint || "item icon"}
-              onError={(e) => {
-                const target = e.currentTarget as HTMLImageElement;
-                if (target.src !== fallbackImageSrc) {
-                  target.src = fallbackImageSrc;
-                  target.onerror = null;
-                }
-              }}
-            />
-          </div>
-          <div className="w-full px-1 py-0.5 flex flex-col justify-between flex-grow min-h-0">
-            <p className="text-[10px] font-semibold text-center leading-tight mb-0.5" style={{ color: itemColorCssVar }}>
-              {title}
-            </p>
-            <div className="w-full text-xs space-y-0.5 overflow-y-auto scrollbar-hide flex-grow mt-auto">
-              {detailContent}
-            </div>
-          </div>
-        </div>
-      </Html>
-    </mesh>
+    <>
+      <CardTextureRenderer
+        displayItem={displayItem}
+        onRendered={handleCanvasRendered}
+        outputWidth={256} // Example width
+        outputHeight={427} // Example height (maintaining aspect ratio of 1.2/1.9 for 256 width would be ~405, using provided 427)
+      />
+      <mesh ref={meshRef} userData={{ displayItem, isCarouselItem: true, id: displayItem.id }}>
+        <planeGeometry args={[ITEM_WIDTH, ITEM_HEIGHT]} />
+        <meshBasicMaterial map={texture} transparent={true} />
+      </mesh>
+    </>
   );
 });
 CarouselItem.displayName = 'CarouselItem';
